@@ -16,10 +16,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.FloorControls
 import com.aistudio.trueidle.ui.components.LogView
 import com.aistudio.trueidle.ui.components.StatBar
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -33,6 +35,9 @@ fun CombatScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val p = state.player
+    val m = state.monster
+    val reqXp = Balance.playerXpReq(p.lvl)
 
     Column(
         modifier = modifier
@@ -44,30 +49,54 @@ fun CombatScreen(
     ) {
         // Floor Controls
         FloorControls(
-            currentFloor = state.player.currentFloor,
-            maxFloor = state.player.maxUnlockedFloor,
-            autoAdvance = state.player.autoAdvance,
-            killsOnFloor = state.player.killsOnFloor,
-            killsRequired = state.player.killsRequired,
+            currentFloor = p.currentFloor,
+            maxFloor = p.maxUnlockedFloor,
+            autoAdvance = p.autoAdvance,
+            killsOnFloor = p.killsOnFloor,
+            killsRequired = p.killsRequired,
             onNavFloor = onNavFloor,
             onToggleAuto = onToggleAuto
         )
 
-        // Combat Arena: Player Box vs Enemy Box
+        // Hero Player XP Bar on Combat Screen
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("combat_player_xp_card"),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
+        ) {
+            Box(modifier = Modifier.padding(8.dp)) {
+                XpProgressBar(
+                    skillName = "HERO PROGRESSION",
+                    level = p.lvl,
+                    currentXp = p.xp,
+                    requiredXp = reqXp,
+                    barColor = PrimaryNeon
+                )
+            }
+        }
+
+        // Combat Arena: Perfectly Symmetrical Player Box vs Enemy Box
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Player Box
+            // Player Box (Symmetrical Layout)
             Card(
                 modifier = Modifier.weight(1f).testTag("player_combat_box"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 shape = RectangleShape,
-                border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Header Row
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(26.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -80,141 +109,156 @@ fun CombatScreen(
                         )
                         Box(
                             modifier = Modifier
-                                .background(PrimaryNeon.copy(alpha = 0.12f), RectangleShape)
-                                .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                                .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                                .border(1.dp, PrimaryNeon, RectangleShape)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "LVL ${state.player.lvl}",
+                                text = "LVL ${p.lvl}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = PrimaryNeon,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
+                    // Stat Bars
                     StatBar(
                         label = "HP",
-                        current = state.player.hp,
-                        max = state.player.maxHp,
+                        current = p.hp,
+                        max = p.maxHp,
                         fillColor = HpRed,
                         tag = "player_hp_bar"
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
                         label = "SHIELD",
-                        current = state.player.shield,
-                        max = state.player.maxShield,
+                        current = p.shield,
+                        max = p.maxShield,
                         fillColor = ShieldBlue,
                         tag = "player_shield_bar"
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
                         label = "MANA",
-                        current = state.player.mana,
-                        max = state.player.maxMana,
+                        current = p.mana,
+                        max = p.maxMana,
                         fillColor = ManaTeal,
                         tag = "player_mana_bar"
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
-                    // Equipment Sync Slots
+                    // Equipment Telemetry (Fixed Height for symmetry)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(48.dp)
                             .background(Color(0xFF000000), RectangleShape)
                             .border(1.dp, BorderDark, RectangleShape)
-                            .padding(5.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                            .padding(4.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⚔ ", fontSize = 10.sp, color = SecondaryGold)
-                            Text(state.player.weaponSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
+                            Text("⚔ ", fontSize = 9.sp, color = SecondaryGold)
+                            Text(p.weaponSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1, fontSize = 9.sp)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🛡 ", fontSize = 10.sp, color = ShieldBlue)
-                            Text(state.player.armorSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
+                            Text("🛡 ", fontSize = 9.sp, color = ShieldBlue)
+                            Text(p.armorSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1, fontSize = 9.sp)
                         }
                     }
                 }
             }
 
-            // Enemy Box
+            // Enemy Box (Symmetrical Layout matching Player Box)
             Card(
                 modifier = Modifier.weight(1f).testTag("enemy_combat_box"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 shape = RectangleShape,
-                border = BorderStroke(1.dp, if (state.monster.isBoss) SecondaryGold.copy(alpha = 0.6f) else HpRed.copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, if (m.isBoss) SecondaryGold.copy(alpha = 0.6f) else HpRed.copy(alpha = 0.5f))
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Header Row
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(26.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = state.monster.name.uppercase(),
+                            text = m.name.uppercase(),
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (state.monster.isBoss) SecondaryGold else HpRed,
+                            color = if (m.isBoss) SecondaryGold else HpRed,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.8.sp,
                             maxLines = 1
                         )
                         Box(
                             modifier = Modifier
-                                .background(if (state.monster.isBoss) SecondaryGold.copy(alpha = 0.15f) else HpRed.copy(alpha = 0.12f), RectangleShape)
-                                .border(1.dp, if (state.monster.isBoss) SecondaryGold else HpRed, RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                .background(if (m.isBoss) SecondaryGold.copy(alpha = 0.15f) else HpRed.copy(alpha = 0.15f), RectangleShape)
+                                .border(1.dp, if (m.isBoss) SecondaryGold else HpRed, RectangleShape)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = state.monster.tag.uppercase(),
+                                text = m.tag.uppercase(),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (state.monster.isBoss) SecondaryGold else HpRed,
-                                fontWeight = FontWeight.Bold
+                                color = if (m.isBoss) SecondaryGold else HpRed,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
+                    // Stat Bars (Matching 3 rows for uniform height)
                     StatBar(
                         label = "HP",
-                        current = state.monster.hp,
-                        max = state.monster.maxHp,
+                        current = m.hp,
+                        max = m.maxHp,
                         fillColor = HpRed,
                         tag = "enemy_hp_bar"
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
                         label = "SHIELD",
-                        current = state.monster.shield,
-                        max = state.monster.maxShield,
+                        current = m.shield,
+                        max = m.maxShield.coerceAtLeast(1.0),
                         fillColor = ShieldBlue,
                         tag = "enemy_shield_bar"
                     )
+                    StatBar(
+                        label = "ARMOR RESIST",
+                        current = m.armor,
+                        max = (m.armor * 2.0).coerceAtLeast(10.0),
+                        fillColor = SecondaryGold,
+                        tag = "enemy_armor_bar"
+                    )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
+                    // Hostile Specs (Fixed Height for symmetry)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(48.dp)
                             .background(Color(0xFF000000), RectangleShape)
                             .border(1.dp, BorderDark, RectangleShape)
-                            .padding(5.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                            .padding(4.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "ATK: ${state.monster.damage.toInt()} DMG",
+                            text = "ATK: ${m.damage.toInt()} DMG",
                             style = MaterialTheme.typography.labelSmall,
-                            color = HpRed
+                            color = HpRed,
+                            fontSize = 9.sp
                         )
                         Text(
-                            text = "ARMOR: ${state.monster.armor.toInt()} DEF",
+                            text = "DEF: ${m.armor.toInt()} DEF",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted
+                            color = TextMuted,
+                            fontSize = 9.sp
                         )
                     }
                 }
@@ -276,9 +320,9 @@ fun CombatScreen(
                     if (state.necro.army.isEmpty()) {
                         Text("No minions active", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                     } else {
-                        state.necro.army.take(2).forEach { m ->
+                        state.necro.army.take(2).forEach { minion ->
                             Text(
-                                text = "› ${m.type.uppercase()} x${m.count} (${m.dps.toInt()} DPS)",
+                                text = "› ${minion.type.uppercase()} x${minion.count} (${minion.dps.toInt()} DPS)",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextLight,
                                 maxLines = 1

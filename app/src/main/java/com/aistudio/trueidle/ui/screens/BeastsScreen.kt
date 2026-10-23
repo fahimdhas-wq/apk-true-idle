@@ -16,8 +16,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.Beast
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -42,28 +44,38 @@ fun BeastsScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, GreenSuccess.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("BEAST SANCTUARY", style = MaterialTheme.typography.titleLarge, color = GreenSuccess, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text("Bio-capture telemetry: 15% rate on kill", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                }
-                Box(
-                    modifier = Modifier
-                        .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
-                        .border(1.dp, GreenSuccess, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "🐾 ${state.beasts.beasts.size}/8 SLOTS",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = GreenSuccess,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text("BEAST SANCTUARY", style = MaterialTheme.typography.titleLarge, color = GreenSuccess, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Bio-capture telemetry: 15% rate on kill", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, GreenSuccess, RectangleShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "🐾 ${state.beasts.beasts.size}/8 SLOTS",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = GreenSuccess,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                XpProgressBar(
+                    skillName = "BEAST TAMING",
+                    level = state.beasts.lvl,
+                    currentXp = state.beasts.xp,
+                    requiredXp = Balance.skillXpReq(state.beasts.lvl),
+                    barColor = GreenSuccess
+                )
             }
         }
 

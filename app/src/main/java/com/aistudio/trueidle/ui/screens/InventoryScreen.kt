@@ -24,6 +24,7 @@ import com.aistudio.trueidle.ui.theme.*
 fun InventoryScreen(
     state: GameState,
     onEquipItem: (String) -> Unit,
+    onUnequipItem: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedCategory by remember { mutableStateOf("All") }
@@ -93,7 +94,10 @@ fun InventoryScreen(
                         modifier = Modifier.fillMaxWidth().testTag("inventory_item_${item.id}"),
                         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                         shape = RectangleShape,
-                        border = BorderStroke(1.dp, BorderDark)
+                        border = BorderStroke(
+                            1.dp,
+                            if (item.isEquipped) PrimaryNeon else BorderDark
+                        )
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(10.dp),
@@ -102,29 +106,105 @@ fun InventoryScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(item.name.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                                    Text(
+                                        text = item.name.uppercase(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (item.isEquipped) PrimaryNeon else TextLight,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     if (item.count > 1) {
                                         Text("[x${item.count}]", style = MaterialTheme.typography.labelSmall, color = SecondaryGold)
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Spacer(modifier = Modifier.height(3.dp))
                                 Text(item.statDesc, style = MaterialTheme.typography.bodySmall, color = PrimaryNeon)
-                                Text("${item.category.uppercase()} • VALUE: ${item.sellValue} 🪙", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    // Equipment Status Indicator Badge
+                                    if (item.category == "Equipment") {
+                                        if (item.isEquipped) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(PrimaryNeon.copy(alpha = 0.2f), RectangleShape)
+                                                    .border(1.dp, PrimaryNeon, RectangleShape)
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "● EQUIPPED: ${item.slot.uppercase()}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = PrimaryNeon,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 9.sp
+                                                )
+                                            }
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(SurfaceVariantDark, RectangleShape)
+                                                    .border(1.dp, BorderDark, RectangleShape)
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "UNEQUIPPED (${item.slot.uppercase()})",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = TextMuted,
+                                                    fontSize = 9.sp
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = item.category.uppercase(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextMuted,
+                                            fontSize = 9.sp
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "• VALUE: ${item.sellValue} 🪙",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextMuted,
+                                        fontSize = 9.sp
+                                    )
+                                }
                             }
 
+                            // Action buttons
                             if (item.category == "Equipment") {
-                                OutlinedButton(
-                                    onClick = { onEquipItem(item.id) },
-                                    shape = RectangleShape,
-                                    border = BorderStroke(1.dp, PrimaryNeon),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = PrimaryNeon.copy(alpha = 0.15f),
-                                        contentColor = PrimaryNeon
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                                ) {
-                                    Text("EQUIP", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                if (item.isEquipped) {
+                                    OutlinedButton(
+                                        onClick = { onUnequipItem(item.id) },
+                                        shape = RectangleShape,
+                                        border = BorderStroke(1.dp, HpRed),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = HpRed.copy(alpha = 0.15f),
+                                            contentColor = HpRed
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("UNEQUIP", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { onEquipItem(item.id) },
+                                        shape = RectangleShape,
+                                        border = BorderStroke(1.dp, PrimaryNeon),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = PrimaryNeon.copy(alpha = 0.15f),
+                                            contentColor = PrimaryNeon
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("EQUIP", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             } else if (item.category == "Potion") {
                                 OutlinedButton(

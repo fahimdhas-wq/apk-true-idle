@@ -17,7 +17,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 data class CraftRecipe(
@@ -121,7 +123,37 @@ fun CraftingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Level & XP Bar Header for Current Crafting Discipline
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
+        ) {
+            Box(modifier = Modifier.padding(10.dp)) {
+                if (selectedTab == 0) {
+                    XpProgressBar(
+                        skillName = "SMITHING DISCIPLINE",
+                        level = state.crafting.smithingLvl,
+                        currentXp = state.crafting.smithingXp,
+                        requiredXp = Balance.skillXpReq(state.crafting.smithingLvl),
+                        barColor = SecondaryGold
+                    )
+                } else {
+                    XpProgressBar(
+                        skillName = "HERBLORE ALCHEMY",
+                        level = state.crafting.herbloreLvl,
+                        currentXp = state.crafting.herbloreXp,
+                        requiredXp = Balance.skillXpReq(state.crafting.herbloreLvl),
+                        barColor = GreenSuccess
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (selectedTab == 0) {
             LazyColumn(

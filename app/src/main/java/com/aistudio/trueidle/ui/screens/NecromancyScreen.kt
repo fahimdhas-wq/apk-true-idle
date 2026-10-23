@@ -16,7 +16,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 data class SummonOption(
@@ -54,28 +56,38 @@ fun NecromancyScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, NecroPurple.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("ALTAR OF BONES", style = MaterialTheme.typography.titleLarge, color = NecroPurple, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text("Reanimate defeated hostiles into combat servitors", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                }
-                Box(
-                    modifier = Modifier
-                        .background(NecroPurple.copy(alpha = 0.15f), RectangleShape)
-                        .border(1.dp, NecroPurple, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "💀 ${state.necro.boneEssence} BONES",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = NecroPurple,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text("ALTAR OF BONES", style = MaterialTheme.typography.titleLarge, color = NecroPurple, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Reanimate defeated hostiles into combat servitors", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(NecroPurple.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, NecroPurple, RectangleShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "💀 ${state.necro.boneEssence} BONES",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = NecroPurple,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                XpProgressBar(
+                    skillName = "NECROMANCY",
+                    level = state.necro.lvl,
+                    currentXp = state.necro.xp,
+                    requiredXp = Balance.skillXpReq(state.necro.lvl),
+                    barColor = NecroPurple
+                )
             }
         }
 

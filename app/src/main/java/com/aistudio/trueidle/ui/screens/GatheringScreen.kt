@@ -17,7 +17,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -92,7 +94,37 @@ fun GatheringScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Level & XP Bar Header for Current Gathering Discipline
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
+        ) {
+            Box(modifier = Modifier.padding(10.dp)) {
+                if (selectedTab == 0) {
+                    XpProgressBar(
+                        skillName = "FARMING DISCIPLINE",
+                        level = state.gathering.farmingLvl,
+                        currentXp = state.gathering.farmingXp,
+                        requiredXp = Balance.skillXpReq(state.gathering.farmingLvl),
+                        barColor = GreenSuccess
+                    )
+                } else {
+                    XpProgressBar(
+                        skillName = "MINING DISCIPLINE",
+                        level = state.gathering.miningLvl,
+                        currentXp = state.gathering.miningXp,
+                        requiredXp = Balance.skillXpReq(state.gathering.miningLvl),
+                        barColor = SecondaryGold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (selectedTab == 0) {
             // Bio-Farming Plots

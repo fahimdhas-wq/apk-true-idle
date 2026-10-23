@@ -16,7 +16,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -39,28 +41,38 @@ fun TrainingScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("CYBER DOJO PROTOCOL", style = MaterialTheme.typography.titleLarge, color = PrimaryNeon, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Text("Neural attribute enhancements via Credits", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                }
-                Box(
-                    modifier = Modifier
-                        .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
-                        .border(1.dp, SecondaryGold, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "🪙 ${state.player.gold}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = SecondaryGold,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text("CYBER DOJO PROTOCOL", style = MaterialTheme.typography.titleLarge, color = PrimaryNeon, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Neural attribute enhancements via Credits", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, SecondaryGold, RectangleShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "🪙 ${state.player.gold}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SecondaryGold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                XpProgressBar(
+                    skillName = "PHYSICAL TRAINING",
+                    level = state.training.lvl,
+                    currentXp = state.training.xp,
+                    requiredXp = Balance.skillXpReq(state.training.lvl),
+                    barColor = PrimaryNeon
+                )
             }
         }
 

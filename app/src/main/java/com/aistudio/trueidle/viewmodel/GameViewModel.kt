@@ -69,6 +69,10 @@ class GameViewModel : ViewModel() {
         _gameState.value = engine.equipItem(itemId)
     }
 
+    fun unequipItem(itemId: String) {
+        _gameState.value = engine.unequipItem(itemId)
+    }
+
     fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int) {
         _gameState.value = engine.craftEquipment(name, tier, slot, reqOre, reqQty)
     }
@@ -83,5 +87,29 @@ class GameViewModel : ViewModel() {
 
     fun setLogFilter(filter: String) {
         _logFilter.value = filter
+    }
+
+    fun dismissNotification(id: Long) {
+        _gameState.value = engine.dismissNotification(id)
+    }
+
+    fun claimOfflineLoot() {
+        _gameState.value = engine.claimOfflineLoot()
+    }
+
+    fun exportSave(): String {
+        return engine.exportSaveJson()
+    }
+
+    fun importSave(json: String): Boolean {
+        val success = engine.importSaveJson(json)
+        if (success) {
+            _gameState.value = engine.state
+        }
+        return success
+    }
+
+    fun resetGame() {
+        _gameState.value = engine.resetGame()
     }
 }

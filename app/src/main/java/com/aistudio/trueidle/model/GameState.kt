@@ -101,7 +101,7 @@ data class BeastTamingState(
 data class Plot(
     val id: Int,
     val herbName: String,
-    val growthProgress: Float = 0f, // 0.0 to 1.0
+    val growthProgress: Float = 0f,
     val durationSeconds: Float = 10f,
     val isReady: Boolean = false,
     val isCorrupted: Boolean = false
@@ -207,14 +207,35 @@ data class InventoryItem(
     val tier: Int = 1,
     val slot: String = "", // "Weapon", "Armor", ""
     val statDesc: String = "",
-    val sellValue: Long = 10L
+    val sellValue: Long = 10L,
+    val isEquipped: Boolean = false
 )
 
 @Serializable
 data class LogEntry(
     val id: Long,
     val text: String,
-    val type: String = "info" // "combat", "loot", "system", "gain"
+    val type: String = "info" // "combat", "loot", "system", "gain", "milestone"
+)
+
+@Serializable
+data class GameNotification(
+    val id: Long,
+    val title: String,
+    val message: String,
+    val type: String = "info", // "gear", "craft", "level", "tame", "save"
+    val count: Int = 1,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class OfflineLoot(
+    val timeAwaySeconds: Long = 0L,
+    val kills: Long = 0L,
+    val goldEarned: Long = 0L,
+    val xpEarned: Long = 0L,
+    val bonesEarned: Long = 0L,
+    val dropsSummary: List<String> = emptyList()
 )
 
 @Serializable
@@ -240,17 +261,21 @@ data class GameState(
     val sanctified: SanctifiedState = SanctifiedState(),
     val slayer: SlayerState = SlayerState(),
     val inventory: List<InventoryItem> = listOf(
-        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L),
-        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L),
+        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false),
+        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false),
+        InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true),
+        InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true),
         InventoryItem(id = "item_hp_pot", name = "Lesser Healing Potion", category = "Potion", count = 5, tier = 1, statDesc = "Restores 50 HP", sellValue = 10L),
         InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Crafting Ore", sellValue = 2L),
         InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L),
         InventoryItem(id = "item_wolf_fang", name = "Wolf Fang", category = "Trophy", count = 3, tier = 1, statDesc = "Beast Trophy", sellValue = 15L)
     ),
     val logs: List<LogEntry> = listOf(
-        LogEntry(id = 1L, text = "Welcome to True IDLE! Entered Floor 1.", type = "system"),
-        LogEntry(id = 2L, text = "Cave Rat appeared!", type = "combat")
+        LogEntry(id = 1L, text = "SYSTEM INITIALIZED: Welcome to True IDLE Sector 01.", type = "system"),
+        LogEntry(id = 2L, text = "RADAR CONTACT: Cave Rat engaged.", type = "combat")
     ),
+    val notifications: List<GameNotification> = emptyList(),
+    val pendingOfflineLoot: OfflineLoot? = null,
     val achievements: List<Achievement> = listOf(
         Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 1, target = 1, isUnlocked = true, rewardGold = 50L),
         Achievement(id = "ach_floor_10", title = "Dungeon Crawler", desc = "Reach Floor 10", progress = 1, target = 10, isUnlocked = false, rewardGold = 250L),

@@ -5,9 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,18 +20,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aistudio.trueidle.ui.components.NotificationBanner
+import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
 import com.aistudio.trueidle.viewmodel.GameViewModel
 
 enum class TrueIdleTab(val label: String, val icon: ImageVector) {
     COMBAT("COMBAT", Icons.Default.SportsMartialArts),
+    SKILLS("SKILLS", Icons.Default.AutoFixHigh),
     STATS("STATS", Icons.Default.BarChart),
-    TRAINING("TRAINING", Icons.Default.FitnessCenter),
-    GATHERING("GATHERING", Icons.Default.Agriculture),
-    CRAFTING("CRAFTING", Icons.Default.Build),
-    BEASTS("BEASTS", Icons.Default.Pets),
-    NECRO("NECRO", Icons.Default.Shield),
     INVENTORY("ARSENAL", Icons.Default.Inventory2),
     SETTINGS("SYSTEM", Icons.Default.Settings)
 }
@@ -50,6 +46,14 @@ fun TrueIdleApp(
     // Android system back button handler
     BackHandler(enabled = currentTab != TrueIdleTab.COMBAT) {
         currentTab = TrueIdleTab.COMBAT
+    }
+
+    // Offline Loot Claim Modal
+    if (state.pendingOfflineLoot != null) {
+        OfflineLootDialog(
+            loot = state.pendingOfflineLoot!!,
+            onClaim = { viewModel.claimOfflineLoot() }
+        )
     }
 
     Scaffold(
@@ -128,17 +132,21 @@ fun TrueIdleApp(
                         }
                     }
                 }
+
+                // Anti-stacking interactive notification banner
+                NotificationBanner(
+                    notifications = state.notifications,
+                    onDismiss = { viewModel.dismissNotification(it) }
+                )
             }
         },
         bottomBar = {
-            // Re-Engineered High-End Cyberpunk Navigation Rail
-            val scrollState = rememberScrollState()
+            // High-End Cyberpunk 5-Tab Navigation Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                    .horizontalScroll(scrollState)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(vertical = 4.dp, horizontal = 4.dp)
                     .testTag("main_navigation_bar")
@@ -147,6 +155,7 @@ fun TrueIdleApp(
                     val isSelected = (currentTab == tab)
                     Box(
                         modifier = Modifier
+                            .weight(1f)
                             .clickable { currentTab = tab }
                             .background(
                                 if (isSelected) PrimaryNeon.copy(alpha = 0.15f) else Color.Transparent,
@@ -159,7 +168,7 @@ fun TrueIdleApp(
                                 ),
                                 RectangleShape
                             )
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .padding(vertical = 8.dp)
                             .testTag("nav_tab_${tab.name.lowercase()}"),
                         contentAlignment = Alignment.Center
                     ) {
@@ -168,7 +177,7 @@ fun TrueIdleApp(
                                 imageVector = tab.icon,
                                 contentDescription = tab.label,
                                 tint = if (isSelected) PrimaryNeon else TextMuted,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
@@ -176,7 +185,8 @@ fun TrueIdleApp(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isSelected) PrimaryNeon else TextMuted,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp
+                                letterSpacing = 0.8.sp,
+                                fontSize = 9.sp
                             )
                         }
                     }
@@ -188,7 +198,7 @@ fun TrueIdleApp(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(BgDark) // Pure solid black
+                .background(BgDark)
         ) {
             when (currentTab) {
                 TrueIdleTab.COMBAT -> CombatScreen(
@@ -199,37 +209,29 @@ fun TrueIdleApp(
                     onSelectLogFilter = { filter -> viewModel.setLogFilter(filter) },
                     onClearLogs = { viewModel.clearLogs() }
                 )
+                TrueIdleTab.SKILLS -> SkillsScreen(
+                    state = state,
+                    onHarvestPlot = { id -> viewModel.harvestPlot(id) },
+                    onMineVein = { id -> viewModel.mineVein(id) },
+                    onCraftEquipment = { name, tier, slot, ore, qty -> viewModel.craftEquipment(name, tier, slot, ore, qty) },
+                    onBrewPotion = { name, herb, qty -> viewModel.brewPotion(name, herb, qty) },
+                    onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) },
+                    onSummonMinion = { type -> viewModel.summonMinion(type) },
+                    onTrainNode = { id -> viewModel.trainNode(id) }
+                )
                 TrueIdleTab.STATS -> StatsScreen(
                     state = state
                 )
-                TrueIdleTab.TRAINING -> TrainingScreen(
-                    state = state,
-                    onTrainNode = { id -> viewModel.trainNode(id) }
-                )
-                TrueIdleTab.GATHERING -> GatheringScreen(
-                    state = state,
-                    onHarvestPlot = { id -> viewModel.harvestPlot(id) },
-                    onMineVein = { id -> viewModel.mineVein(id) }
-                )
-                TrueIdleTab.CRAFTING -> CraftingScreen(
-                    state = state,
-                    onCraftEquipment = { name, tier, slot, ore, qty -> viewModel.craftEquipment(name, tier, slot, ore, qty) },
-                    onBrewPotion = { name, herb, qty -> viewModel.brewPotion(name, herb, qty) }
-                )
-                TrueIdleTab.BEASTS -> BeastsScreen(
-                    state = state,
-                    onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) }
-                )
-                TrueIdleTab.NECRO -> NecromancyScreen(
-                    state = state,
-                    onSummonMinion = { type -> viewModel.summonMinion(type) }
-                )
                 TrueIdleTab.INVENTORY -> InventoryScreen(
                     state = state,
-                    onEquipItem = { id -> viewModel.equipItem(id) }
+                    onEquipItem = { id -> viewModel.equipItem(id) },
+                    onUnequipItem = { id -> viewModel.unequipItem(id) }
                 )
                 TrueIdleTab.SETTINGS -> SettingsScreen(
-                    state = state
+                    state = state,
+                    onExportSave = { viewModel.exportSave() },
+                    onImportSave = { code -> viewModel.importSave(code) },
+                    onResetGame = { viewModel.resetGame() }
                 )
             }
         }
