@@ -1,16 +1,18 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,26 +39,41 @@ fun InventoryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(12.dp)
+            .background(BgDark)
+            .padding(10.dp)
             .testTag("inventory_screen")
     ) {
-        // Category Filter Chips
+        // High-end Cyberpunk Category Filter Switchers
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             categories.forEach { cat ->
                 val isSelected = (selectedCategory == cat)
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { selectedCategory = cat },
-                    label = { Text(cat, fontSize = 12.sp) },
-                    modifier = Modifier.testTag("inv_cat_$cat"),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = PrimaryNeon.copy(alpha = 0.2f),
-                        selectedLabelColor = PrimaryNeon
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { selectedCategory = cat }
+                        .background(if (isSelected) PrimaryNeon.copy(alpha = 0.15f) else SurfaceDark, RectangleShape)
+                        .border(
+                            BorderStroke(
+                                width = 1.dp,
+                                color = if (isSelected) PrimaryNeon else BorderDark
+                            ),
+                            RectangleShape
+                        )
+                        .padding(vertical = 8.dp)
+                        .testTag("inv_cat_$cat"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = cat.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) PrimaryNeon else TextMuted,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
                     )
-                )
+                }
             }
         }
 
@@ -64,7 +81,7 @@ fun InventoryScreen(
 
         if (filteredItems.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No items in this category.", color = TextMuted, fontSize = 14.sp)
+                Text("ARSENAL BAY EMPTY FOR THIS CATEGORY.", color = TextMuted, fontSize = 12.sp, letterSpacing = 0.5.sp)
             }
         } else {
             LazyColumn(
@@ -75,42 +92,52 @@ fun InventoryScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth().testTag("inventory_item_${item.id}"),
                         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                        shape = RoundedCornerShape(8.dp),
-                        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, BorderDark)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(item.name, style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold)
+                                    Text(item.name.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     if (item.count > 1) {
-                                        Text("x${item.count}", style = MaterialTheme.typography.labelSmall, color = SecondaryGold)
+                                        Text("[x${item.count}]", style = MaterialTheme.typography.labelSmall, color = SecondaryGold)
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(item.statDesc, style = MaterialTheme.typography.bodySmall, color = PrimaryNeon)
-                                Text("${item.category} • Value: ${item.sellValue} 🪙", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                                Text("${item.category.uppercase()} • VALUE: ${item.sellValue} 🪙", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                             }
 
                             if (item.category == "Equipment") {
-                                Button(
+                                OutlinedButton(
                                     onClick = { onEquipItem(item.id) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryNeon, contentColor = BgDark),
-                                    shape = RoundedCornerShape(6.dp)
+                                    shape = RectangleShape,
+                                    border = BorderStroke(1.dp, PrimaryNeon),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = PrimaryNeon.copy(alpha = 0.15f),
+                                        contentColor = PrimaryNeon
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
-                                    Text("Equip", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("EQUIP", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             } else if (item.category == "Potion") {
-                                Button(
+                                OutlinedButton(
                                     onClick = { onEquipItem(item.id) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = GreenSuccess, contentColor = BgDark),
-                                    shape = RoundedCornerShape(6.dp)
+                                    shape = RectangleShape,
+                                    border = BorderStroke(1.dp, GreenSuccess),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        containerColor = GreenSuccess.copy(alpha = 0.15f),
+                                        contentColor = GreenSuccess
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
-                                    Text("Use", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("DEPLOY", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

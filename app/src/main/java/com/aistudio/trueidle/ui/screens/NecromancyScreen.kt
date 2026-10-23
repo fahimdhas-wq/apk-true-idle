@@ -1,16 +1,17 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,24 +34,25 @@ fun NecromancyScreen(
     modifier: Modifier = Modifier
 ) {
     val summonOptions = listOf(
-        SummonOption("Skeleton", 10L, 4.0, 10.0, "Frontline bone soldier"),
-        SummonOption("Bone Mage", 25L, 8.0, 5.0, "Ranged necro-blast caster"),
-        SummonOption("Dread Knight", 50L, 16.0, 25.0, "Heavy armored death knight"),
-        SummonOption("Bone Lich", 100L, 35.0, 15.0, "High DPS undead sorcerer")
+        SummonOption("Skeleton", 10L, 4.0, 10.0, "Standard frontline bone combatant"),
+        SummonOption("Bone Mage", 25L, 8.0, 5.0, "High-frequency arcane death caster"),
+        SummonOption("Dread Knight", 50L, 16.0, 25.0, "Armored heavy vanguard unit"),
+        SummonOption("Bone Lich", 100L, 35.0, 15.0, "Supreme necro-sorcerer entity")
     )
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(12.dp)
+            .background(BgDark)
+            .padding(10.dp)
             .testTag("necromancy_screen")
     ) {
         // Necromancy Header
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-            shape = RoundedCornerShape(8.dp),
-            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, NecroPurple.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -58,17 +60,17 @@ fun NecromancyScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Necromancy Altar", style = MaterialTheme.typography.titleLarge, color = NecroPurple, fontWeight = FontWeight.Bold)
-                    Text("Raise the fallen to fight by your side", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    Text("ALTAR OF BONES", style = MaterialTheme.typography.titleLarge, color = NecroPurple, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("Reanimate defeated hostiles into combat servitors", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                 }
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NecroPurple.copy(alpha = 0.15f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .background(NecroPurple.copy(alpha = 0.15f), RectangleShape)
+                        .border(1.dp, NecroPurple, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "💀 ${state.necro.boneEssence} Bones",
+                        text = "💀 ${state.necro.boneEssence} BONES",
                         style = MaterialTheme.typography.titleMedium,
                         color = NecroPurple,
                         fontWeight = FontWeight.Bold
@@ -83,22 +85,22 @@ fun NecromancyScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-            shape = RoundedCornerShape(8.dp),
-            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text("Current Undead Legion", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text("ACTIVE UNDEAD CADRE", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Spacer(modifier = Modifier.height(6.dp))
                 if (state.necro.army.isEmpty()) {
-                    Text("No minions currently animated.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    Text("No entities currently animated.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                 } else {
                     state.necro.army.forEach { minion ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("• ${minion.type} x${minion.count}", style = MaterialTheme.typography.bodyMedium, color = NecroPurple)
-                            Text("DPS: ${(minion.dps * minion.count).toInt()} | Soak: ${(minion.soak * minion.count).toInt()}", style = MaterialTheme.typography.bodySmall, color = TextLight)
+                            Text("› ${minion.type.uppercase()} x${minion.count}", style = MaterialTheme.typography.bodyMedium, color = NecroPurple)
+                            Text("DPS: ${(minion.dps * minion.count).toInt()} | SOAK: ${(minion.soak * minion.count).toInt()}", style = MaterialTheme.typography.bodySmall, color = TextLight)
                         }
                     }
                 }
@@ -107,7 +109,7 @@ fun NecromancyScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("Summon Reinforcements", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold)
+        Text("ANIMATION PROTOCOLS", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(modifier = Modifier.height(6.dp))
 
         // Summoning Options
@@ -121,31 +123,33 @@ fun NecromancyScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth().testTag("summon_opt_${opt.type}"),
                     colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                    shape = RoundedCornerShape(8.dp),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+                    shape = RectangleShape,
+                    border = BorderStroke(1.dp, if (canSummon) NecroPurple.copy(alpha = 0.5f) else BorderDark)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(opt.type, style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold)
+                            Text(opt.type.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                             Text(opt.desc, style = MaterialTheme.typography.bodySmall, color = TextMuted)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("Base DPS: ${opt.dps.toInt()} • Soak: ${opt.soak.toInt()}", style = MaterialTheme.typography.labelSmall, color = NecroPurple)
+                            Text("BASE DPS: ${opt.dps.toInt()} • SOAK: ${opt.soak.toInt()}", style = MaterialTheme.typography.labelSmall, color = NecroPurple)
                         }
 
-                        Button(
+                        OutlinedButton(
                             onClick = { onSummonMinion(opt.type) },
                             enabled = canSummon,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (canSummon) NecroPurple else SurfaceVariantDark,
-                                contentColor = if (canSummon) BgDark else TextMuted
+                            shape = RectangleShape,
+                            border = BorderStroke(1.dp, if (canSummon) NecroPurple else BorderDark),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (canSummon) NecroPurple.copy(alpha = 0.2f) else SurfaceVariantDark,
+                                contentColor = if (canSummon) NecroPurple else TextMuted
                             ),
-                            shape = RoundedCornerShape(6.dp)
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
-                            Text("Summon (${opt.cost} 💀)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("ANIMATE [${opt.cost} 💀]", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

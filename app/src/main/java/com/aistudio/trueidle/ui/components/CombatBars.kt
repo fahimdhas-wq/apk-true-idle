@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,31 +39,32 @@ fun StatBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = label,
+                text = label.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
             )
             Text(
                 text = "${current.toInt()} / ${max.toInt()}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 11.sp
+                fontSize = 10.sp
             )
         }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(10.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xFF090C12))
-                .border(1.dp, BorderDark, RoundedCornerShape(3.dp))
+                .height(8.dp)
+                .clip(RectangleShape)
+                .background(Color(0xFF000000))
+                .border(1.dp, BorderDark, RectangleShape)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(animatedProgress)
-                    .clip(RoundedCornerShape(3.dp))
+                    .clip(RectangleShape)
                     .background(fillColor)
             )
         }

@@ -1,18 +1,20 @@
 package com.aistudio.trueidle.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,8 +47,8 @@ fun LogView(
     Card(
         modifier = modifier.fillMaxWidth().testTag("combat_logs_card"),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        shape = RoundedCornerShape(8.dp),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, BorderDark)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             // Header with filters & clear
@@ -56,36 +58,43 @@ fun LogView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("all" to "All", "combat" to "Combat", "loot" to "Loot", "system" to "System").forEach { (key, label) ->
+                    listOf("all" to "ALL", "combat" to "COMBAT", "loot" to "LOOT", "system" to "SYSTEM").forEach { (key, label) ->
                         val isSelected = (currentFilter == key)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { onFilterSelect(key) },
-                            label = { Text(label, fontSize = 11.sp) },
-                            modifier = Modifier.testTag("log_filter_$key"),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = when (key) {
-                                    "combat" -> HpRed.copy(alpha = 0.2f)
-                                    "loot" -> SecondaryGold.copy(alpha = 0.2f)
-                                    "system" -> PrimaryNeon.copy(alpha = 0.2f)
-                                    else -> SurfaceVariantDark
-                                },
-                                selectedLabelColor = when (key) {
-                                    "combat" -> HpRed
-                                    "loot" -> SecondaryGold
-                                    "system" -> PrimaryNeon
-                                    else -> PrimaryNeon
-                                }
+                        val accentColor = when (key) {
+                            "combat" -> HpRed
+                            "loot" -> SecondaryGold
+                            "system" -> PrimaryNeon
+                            else -> PrimaryNeon
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clickable { onFilterSelect(key) }
+                                .background(if (isSelected) accentColor.copy(alpha = 0.15f) else SurfaceVariantDark, RectangleShape)
+                                .border(1.dp, if (isSelected) accentColor else BorderDark, RectangleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .testTag("log_filter_$key")
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (isSelected) accentColor else TextMuted,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp
                             )
-                        )
+                        }
                     }
                 }
 
-                IconButton(
-                    onClick = onClear,
-                    modifier = Modifier.size(32.dp).testTag("clear_logs_button")
+                Box(
+                    modifier = Modifier
+                        .clickable { onClear() }
+                        .border(1.dp, BorderDark, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("clear_logs_button"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("✕", color = TextMuted, fontSize = 13.sp)
+                    Text("CLR", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                 }
             }
 
@@ -96,8 +105,8 @@ fun LogView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(130.dp)
-                    .background(Color(0xFF090C12), RoundedCornerShape(6.dp))
-                    .border(1.dp, BorderDark, RoundedCornerShape(6.dp))
+                    .background(Color(0xFF000000), RectangleShape)
+                    .border(1.dp, BorderDark, RectangleShape)
                     .padding(6.dp)
             ) {
                 LazyColumn(
@@ -114,9 +123,9 @@ fun LogView(
                         }
                         Text(
                             text = "› ${log.text}",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.bodySmall,
                             color = textColor,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             modifier = Modifier.padding(vertical = 1.dp)
                         )
                     }

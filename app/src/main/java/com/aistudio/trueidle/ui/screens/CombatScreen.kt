@@ -1,17 +1,17 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,9 +37,10 @@ fun CombatScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(BgDark)
             .verticalScroll(scrollState)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Floor Controls
         FloorControls(
@@ -55,32 +56,33 @@ fun CombatScreen(
         // Combat Arena: Player Box vs Enemy Box
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Player Box
             Card(
                 modifier = Modifier.weight(1f).testTag("player_combat_box"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                shape = RoundedCornerShape(8.dp),
-                border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.4f))
             ) {
-                Column(modifier = Modifier.padding(10.dp)) {
+                Column(modifier = Modifier.padding(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Hero",
+                            text = "HERO",
                             style = MaterialTheme.typography.titleMedium,
                             color = PrimaryNeon,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         )
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(PrimaryNeon.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .background(PrimaryNeon.copy(alpha = 0.12f), RectangleShape)
+                                .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
+                                .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "LVL ${state.player.lvl}",
@@ -100,17 +102,17 @@ fun CombatScreen(
                         fillColor = HpRed,
                         tag = "player_hp_bar"
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
-                        label = "Shield",
+                        label = "SHIELD",
                         current = state.player.shield,
                         max = state.player.maxShield,
                         fillColor = ShieldBlue,
                         tag = "player_shield_bar"
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
-                        label = "Mana",
+                        label = "MANA",
                         current = state.player.mana,
                         max = state.player.maxMana,
                         fillColor = ManaTeal,
@@ -123,18 +125,18 @@ fun CombatScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(SurfaceVariantDark)
-                            .padding(6.dp),
+                            .background(Color(0xFF000000), RectangleShape)
+                            .border(1.dp, BorderDark, RectangleShape)
+                            .padding(5.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⚔️ ", fontSize = 11.sp)
-                            Text(state.player.weaponSlot, style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
+                            Text("⚔ ", fontSize = 10.sp, color = SecondaryGold)
+                            Text(state.player.weaponSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🛡️ ", fontSize = 11.sp)
-                            Text(state.player.armorSlot, style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
+                            Text("🛡 ", fontSize = 10.sp, color = ShieldBlue)
+                            Text(state.player.armorSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1)
                         }
                     }
                 }
@@ -144,30 +146,31 @@ fun CombatScreen(
             Card(
                 modifier = Modifier.weight(1f).testTag("enemy_combat_box"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                shape = RoundedCornerShape(8.dp),
-                border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, if (state.monster.isBoss) SecondaryGold.copy(alpha = 0.6f) else HpRed.copy(alpha = 0.4f))
             ) {
-                Column(modifier = Modifier.padding(10.dp)) {
+                Column(modifier = Modifier.padding(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = state.monster.name,
+                            text = state.monster.name.uppercase(),
                             style = MaterialTheme.typography.titleMedium,
                             color = if (state.monster.isBoss) SecondaryGold else HpRed,
                             fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
                             maxLines = 1
                         )
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (state.monster.isBoss) SecondaryGold.copy(alpha = 0.2f) else HpRed.copy(alpha = 0.15f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .background(if (state.monster.isBoss) SecondaryGold.copy(alpha = 0.15f) else HpRed.copy(alpha = 0.12f), RectangleShape)
+                                .border(1.dp, if (state.monster.isBoss) SecondaryGold else HpRed, RectangleShape)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                text = state.monster.tag,
+                                text = state.monster.tag.uppercase(),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (state.monster.isBoss) SecondaryGold else HpRed,
                                 fontWeight = FontWeight.Bold
@@ -184,23 +187,23 @@ fun CombatScreen(
                         fillColor = HpRed,
                         tag = "enemy_hp_bar"
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     StatBar(
-                        label = "Shield",
+                        label = "SHIELD",
                         current = state.monster.shield,
                         max = state.monster.maxShield,
                         fillColor = ShieldBlue,
                         tag = "enemy_shield_bar"
                     )
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(SurfaceVariantDark)
-                            .padding(6.dp),
+                            .background(Color(0xFF000000), RectangleShape)
+                            .border(1.dp, BorderDark, RectangleShape)
+                            .padding(5.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
@@ -221,29 +224,31 @@ fun CombatScreen(
         // Active Summons Row (Beasts & Undead Army)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Beasts
             Card(
                 modifier = Modifier.weight(1f).testTag("combat_beasts_summary"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                shape = RoundedCornerShape(8.dp)
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, BorderDark)
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "🐾 Beasts (${state.beasts.beasts.size})",
+                        text = "🐾 BEASTS [${state.beasts.beasts.size}/8]",
                         style = MaterialTheme.typography.labelSmall,
                         color = GreenSuccess,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     if (state.beasts.beasts.isEmpty()) {
-                        Text("No active beasts", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("No active beasts", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                     } else {
                         state.beasts.beasts.take(2).forEach { b ->
                             Text(
-                                text = "• ${b.name} ⭐${b.stars} (${b.dps.toInt()} DPS)",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = "› ${b.name.uppercase()} ⭐${b.stars} (${b.dps.toInt()} DPS)",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = TextLight,
                                 maxLines = 1
                             )
@@ -256,23 +261,25 @@ fun CombatScreen(
             Card(
                 modifier = Modifier.weight(1f).testTag("combat_army_summary"),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                shape = RoundedCornerShape(8.dp)
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, BorderDark)
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        text = "💀 Undead Army",
+                        text = "💀 UNDEAD ARMY",
                         style = MaterialTheme.typography.labelSmall,
                         color = NecroPurple,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     if (state.necro.army.isEmpty()) {
-                        Text("No minions summoned", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("No minions active", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                     } else {
                         state.necro.army.take(2).forEach { m ->
                             Text(
-                                text = "• ${m.type} x${m.count} (${m.dps.toInt()} DPS)",
-                                style = MaterialTheme.typography.labelSmall,
+                                text = "› ${m.type.uppercase()} x${m.count} (${m.dps.toInt()} DPS)",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = TextLight,
                                 maxLines = 1
                             )

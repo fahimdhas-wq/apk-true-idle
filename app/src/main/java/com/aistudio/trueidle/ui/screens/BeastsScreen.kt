@@ -1,16 +1,17 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,15 +31,16 @@ fun BeastsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(12.dp)
+            .background(BgDark)
+            .padding(10.dp)
             .testTag("beasts_screen")
     ) {
         // Beasts Header
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-            shape = RoundedCornerShape(8.dp),
-            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(BorderDark))
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, GreenSuccess.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -46,17 +48,17 @@ fun BeastsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Beast Sanctuary", style = MaterialTheme.typography.titleLarge, color = GreenSuccess, fontWeight = FontWeight.Bold)
-                    Text("Monsters have 15% chance to be tamed on kill", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    Text("BEAST SANCTUARY", style = MaterialTheme.typography.titleLarge, color = GreenSuccess, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("Bio-capture telemetry: 15% rate on kill", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                 }
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(GreenSuccess.copy(alpha = 0.15f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
+                        .border(1.dp, GreenSuccess, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "🐾 ${state.beasts.beasts.size}/8 Slots",
+                        text = "🐾 ${state.beasts.beasts.size}/8 SLOTS",
                         style = MaterialTheme.typography.titleMedium,
                         color = GreenSuccess,
                         fontWeight = FontWeight.Bold
@@ -71,16 +73,22 @@ fun BeastsScreen(
         if (selectedBeast1 != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = SurfaceVariantDark)
+                colors = CardDefaults.cardColors(containerColor = SurfaceVariantDark),
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, SecondaryGold)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Selected: ${selectedBeast1?.name} ⭐${selectedBeast1?.stars}. Tap an identical beast to merge!", color = SecondaryGold, fontSize = 12.sp)
-                    TextButton(onClick = { selectedBeast1 = null }) {
-                        Text("Cancel", color = TextMuted)
+                    Text("SELECTED: ${selectedBeast1?.name?.uppercase()} ⭐${selectedBeast1?.stars}. TAP IDENTICAL BEAST TO MERGE", color = SecondaryGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = { selectedBeast1 = null },
+                        shape = RectangleShape,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("CANCEL", color = TextMuted, fontSize = 10.sp)
                     }
                 }
             }
@@ -90,7 +98,7 @@ fun BeastsScreen(
         // Beasts List
         if (state.beasts.beasts.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No beasts tamed yet. Defeat monsters in combat to capture companions!", color = TextMuted, fontSize = 13.sp)
+                Text("NO COMPANIONS CAPTURED. ENGAGE HOSTILES TO TAME BEASTS.", color = TextMuted, fontSize = 12.sp, letterSpacing = 0.5.sp)
             }
         } else {
             LazyColumn(
@@ -105,33 +113,29 @@ fun BeastsScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) SurfaceVariantDark else SurfaceDark
                         ),
-                        shape = RoundedCornerShape(8.dp),
-                        border = CardDefaults.outlinedCardBorder().copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(
-                                if (isSelected) SecondaryGold else BorderDark
-                            )
-                        )
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, if (isSelected) SecondaryGold else BorderDark)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(beast.name, style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold)
+                                    Text(beast.name.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("⭐".repeat(beast.stars), fontSize = 11.sp)
+                                    Text("⭐".repeat(beast.stars), fontSize = 10.sp)
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "DPS: ${beast.dps.toInt()} • HP: ${beast.hp.toInt()}/${beast.maxHp.toInt()} • Trait: ${beast.trait}",
+                                    text = "DPS: ${beast.dps.toInt()} • HP: ${beast.hp.toInt()}/${beast.maxHp.toInt()} • TRAIT: ${beast.trait.uppercase()}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = GreenSuccess
                                 )
                             }
 
-                            Button(
+                            OutlinedButton(
                                 onClick = {
                                     if (selectedBeast1 == null) {
                                         selectedBeast1 = beast
@@ -144,13 +148,15 @@ fun BeastsScreen(
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) SecondaryGold else PrimaryNeon,
-                                    contentColor = BgDark
+                                shape = RectangleShape,
+                                border = BorderStroke(1.dp, if (isSelected) SecondaryGold else PrimaryNeon),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSelected) SecondaryGold.copy(alpha = 0.2f) else PrimaryNeon.copy(alpha = 0.12f),
+                                    contentColor = if (isSelected) SecondaryGold else PrimaryNeon
                                 ),
-                                shape = RoundedCornerShape(6.dp)
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                             ) {
-                                Text(if (isSelected) "Selected" else "Merge", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isSelected) "ACTIVE" else "MERGE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
