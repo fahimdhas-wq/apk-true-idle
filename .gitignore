@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local env
+.env
+.env.*
+
+# Playwright MCP artifacts (console logs, page snapshots — must never be committed)
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# AI/design scratch files (screenshots are unreadable to the AI — never commit them)
+shots/
+/*.png
+
+# Dev server / local helpers
+dev-server.log
+start-dev.bat
+
+# Local agent/tooling config (machine-specific, never commit)
+.mcp.json
+.pi/
+.opencode/
+
+# Android & Gradle
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+debug.keystore
+debug.keystore.base64
+
