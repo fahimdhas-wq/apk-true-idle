@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -94,13 +95,13 @@ fun BeastsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("SELECTED: ${selectedBeast1?.name?.uppercase()} ⭐${selectedBeast1?.stars}. TAP IDENTICAL BEAST TO MERGE", color = SecondaryGold, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("SELECTED: ${selectedBeast1?.name?.uppercase()} ⭐${selectedBeast1?.stars}. TAP IDENTICAL BEAST TO MERGE", color = SecondaryGold, style = TrueIdleType.tag)
                     TextButton(
                         onClick = { selectedBeast1 = null },
                         shape = RectangleShape,
                         contentPadding = PaddingValues(0.dp)
                     ) {
-                        Text("CANCEL", color = TextMuted, fontSize = 10.sp)
+                        Text("CANCEL", color = TextMuted, style = TrueIdleType.tag)
                     }
                 }
             }
@@ -110,14 +111,14 @@ fun BeastsScreen(
         // Beasts List
         if (state.beasts.beasts.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("NO COMPANIONS CAPTURED. ENGAGE HOSTILES TO TAME BEASTS.", color = TextMuted, fontSize = 12.sp, letterSpacing = 0.5.sp)
+                Text("NO COMPANIONS CAPTURED. ENGAGE HOSTILES TO TAME BEASTS.", style = TrueIdleType.body, color = TextMuted)
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(state.beasts.beasts, key = { it.id }) { beast ->
+                itemsIndexed(state.beasts.beasts, key = { index, beast -> "${beast.id}_$index" }) { _, beast ->
                     val isSelected = (selectedBeast1?.id == beast.id)
 
                     Card(
@@ -137,7 +138,7 @@ fun BeastsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(beast.name.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("⭐".repeat(beast.stars), fontSize = 10.sp)
+                                    Text("⭐".repeat(beast.stars), style = TrueIdleType.label)
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -138,7 +139,7 @@ fun NotificationHistoryDialog(
                             .weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredList, key = { it.id }) { notif ->
+                        itemsIndexed(filteredList, key = { index, notif -> "${notif.id}_$index" }) { _, notif ->
                             val accentColor = when (notif.status) {
                                 "SUCCESS" -> if (notif.type == "level") GreenSuccess else PrimaryNeon
                                 "FAILED" -> HpRed

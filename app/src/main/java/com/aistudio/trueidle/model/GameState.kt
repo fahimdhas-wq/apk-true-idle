@@ -279,7 +279,7 @@ data class SaveMeta(
     val savedElapsedMs: Long = 0L,
     val bootCount: Int = 0,
     val offlineAppliedUntilWallMs: Long = 0L,
-    val nextId: Long = 1L,
+    val nextId: Long = 100L,
     val rngSeed: Long = 0L
 )
 

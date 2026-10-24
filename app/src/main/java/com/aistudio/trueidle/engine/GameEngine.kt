@@ -19,7 +19,7 @@ class GameEngine(
     var state: GameState = initialState
         private set
 
-    val ids = Ids(initialState.meta.nextId)
+    val ids = Ids(maxOf(initialState.meta.nextId, (initialState.logs.maxOfOrNull { it.id } ?: 0L) + 1L, 100L))
     private val notifCenter = NotificationCenter(ids)
 
     private var respawnLeft: Double = 0.0
@@ -34,7 +34,8 @@ class GameEngine(
 
     fun restore(newState: GameState) {
         state = newState
-        ids.reset(newState.meta.nextId)
+        val maxLogId = newState.logs.maxOfOrNull { it.id } ?: 0L
+        ids.reset(maxOf(newState.meta.nextId, maxLogId + 1L, 100L))
     }
 
     fun notifyRecovered(slot: String) {

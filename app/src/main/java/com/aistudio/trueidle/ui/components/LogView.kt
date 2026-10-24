@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -113,7 +114,7 @@ fun LogView(
                     state = listState,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(filteredLogs, key = { it.id }) { log ->
+                    itemsIndexed(filteredLogs, key = { index, log -> "${log.id}_$index" }) { _, log ->
                         val textColor = when (log.type) {
                             "combat" -> HpRed
                             "gain", "loot" -> GreenSuccess
@@ -123,9 +124,8 @@ fun LogView(
                         }
                         Text(
                             text = "› ${log.text}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = TrueIdleType.meta,
                             color = textColor,
-                            fontSize = 10.sp,
                             modifier = Modifier.padding(vertical = 1.dp)
                         )
                     }

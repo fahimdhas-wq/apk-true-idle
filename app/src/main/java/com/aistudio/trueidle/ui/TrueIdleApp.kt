@@ -4,22 +4,26 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.components.NotificationBanner
 import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
@@ -42,7 +46,7 @@ fun TrueIdleApp(
 ) {
     val state by viewModel.gameState.collectAsStateWithLifecycle()
     val logFilter by viewModel.logFilter.collectAsStateWithLifecycle()
-    var currentTab by remember { mutableStateOf(TrueIdleTab.COMBAT) }
+    var currentTab by rememberSaveable { mutableStateOf(TrueIdleTab.COMBAT) }
     var showNotificationHistory by remember { mutableStateOf(false) }
 
     // Android system back button handler
@@ -87,14 +91,11 @@ fun TrueIdleApp(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("◈ ", color = PrimaryNeon, fontSize = 14.sp)
+                        Text("◈ ", color = PrimaryNeon, style = TrueIdleType.title)
                         Text(
                             text = "TRUE IDLE",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = TextLight,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp,
-                            fontSize = 14.sp
+                            style = TrueIdleType.title,
+                            color = TextLight
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
@@ -105,10 +106,8 @@ fun TrueIdleApp(
                         ) {
                             Text(
                                 text = "SECTOR ${state.player.currentFloor.toString().padStart(2, '0')}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = PrimaryNeon,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                style = TrueIdleType.tag,
+                                color = PrimaryNeon
                             )
                         }
                     }
@@ -124,11 +123,9 @@ fun TrueIdleApp(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "🪙 ${state.player.gold}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = SecondaryGold,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                text = "🪙 ${NumberFormatter.short(state.player.gold)}",
+                                style = TrueIdleType.tag,
+                                color = SecondaryGold
                             )
                         }
                         Box(
@@ -138,11 +135,9 @@ fun TrueIdleApp(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = "💀 ${state.necro.boneEssence}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = NecroPurple,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                text = "💀 ${NumberFormatter.short(state.necro.boneEssence)}",
+                                style = TrueIdleType.tag,
+                                color = NecroPurple
                             )
                         }
                     }
@@ -158,54 +153,52 @@ fun TrueIdleApp(
             }
         },
         bottomBar = {
-            // High-End Cyberpunk 5-Tab Navigation Bar (Combat -> Skills -> Stats -> Arsenal -> System)
+            // Accessible Cyberpunk 5-Tab Navigation Bar (§7.4)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark), RectangleShape)
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(vertical = 4.dp, horizontal = 4.dp)
-                    .testTag("main_navigation_bar")
+                    .padding(vertical = 2.dp, horizontal = 2.dp)
+                    .testTag("main_navigation_bar"),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 TrueIdleTab.values().forEach { tab ->
                     val isSelected = (currentTab == tab)
-                    Box(
+                    val tint = if (isSelected) PrimaryNeon else TextMuted
+                    Column(
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { currentTab = tab }
-                            .background(
-                                if (isSelected) PrimaryNeon.copy(alpha = 0.15f) else Color.Transparent,
-                                RectangleShape
+                            .heightIn(min = 56.dp)
+                            .selectable(
+                                selected = isSelected,
+                                onClick = { currentTab = tab },
+                                role = Role.Tab
                             )
-                            .border(
-                                BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isSelected) PrimaryNeon else Color.Transparent
-                                ),
-                                RectangleShape
-                            )
-                            .padding(vertical = 8.dp)
+                            .drawBehind {
+                                if (isSelected) {
+                                    drawRect(PrimaryNeon, size = Size(size.width, 2.dp.toPx()))
+                                }
+                            }
+                            .padding(vertical = 6.dp)
                             .testTag("nav_tab_${tab.name.lowercase()}"),
-                        contentAlignment = Alignment.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = tab.icon,
-                                contentDescription = tab.label,
-                                tint = if (isSelected) PrimaryNeon else TextMuted,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = tab.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) PrimaryNeon else TextMuted,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp,
-                                fontSize = 8.sp
-                            )
-                        }
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.label,
+                            tint = tint,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = tab.label,
+                            style = TrueIdleType.tag,
+                            color = tint,
+                            maxLines = 1
+                        )
                     }
                 }
             }
@@ -224,7 +217,8 @@ fun TrueIdleApp(
                     onNavFloor = { delta -> viewModel.navFloor(delta) },
                     onToggleAuto = { viewModel.toggleAutoAdvance() },
                     onSelectLogFilter = { filter -> viewModel.setLogFilter(filter) },
-                    onClearLogs = { viewModel.clearLogs() }
+                    onClearLogs = { viewModel.clearLogs() },
+                    onManageSupport = { currentTab = TrueIdleTab.SKILLS }
                 )
                 TrueIdleTab.SKILLS -> SkillsScreen(
                     state = state,
@@ -234,7 +228,10 @@ fun TrueIdleApp(
                     onBrewPotion = { name, herb, qty -> viewModel.brewPotion(name, herb, qty) },
                     onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) },
                     onSummonMinion = { type -> viewModel.summonMinion(type) },
-                    onTrainNode = { id -> viewModel.trainNode(id) }
+                    onTrainNode = { id -> viewModel.trainNode(id) },
+                    onToggleSanctifiedAegis = { viewModel.toggleSanctifiedAegis() },
+                    onUpgradeSanctifiedSmite = { viewModel.upgradeSanctifiedSmite() },
+                    onRerollSlayerTask = { viewModel.rerollSlayerTask() }
                 )
                 TrueIdleTab.STATS -> StatsScreen(
                     state = state
@@ -242,7 +239,9 @@ fun TrueIdleApp(
                 TrueIdleTab.INVENTORY -> InventoryScreen(
                     state = state,
                     onEquipItem = { id -> viewModel.equipItem(id) },
-                    onUnequipItem = { id -> viewModel.unequipItem(id) }
+                    onUnequipItem = { id -> viewModel.unequipItem(id) },
+                    onSellItem = { id, count -> viewModel.sellItem(id, count) },
+                    onUsePotion = { id -> viewModel.usePotion(id) }
                 )
                 TrueIdleTab.SETTINGS -> SettingsScreen(
                     state = state,
@@ -250,7 +249,8 @@ fun TrueIdleApp(
                     onImportSave = { code -> viewModel.importSave(code) },
                     onResetGame = { viewModel.resetGame() },
                     onToggleNotifications = { viewModel.toggleNotificationBanners() },
-                    onClearNotificationHistory = { viewModel.clearNotificationHistory() }
+                    onClearNotificationHistory = { viewModel.clearNotificationHistory() },
+                    onClaimAchievement = { achId -> viewModel.claimAchievement(achId) }
                 )
             }
         }

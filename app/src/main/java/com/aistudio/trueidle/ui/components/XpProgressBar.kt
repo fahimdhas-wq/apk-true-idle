@@ -19,6 +19,7 @@ import com.aistudio.trueidle.ui.theme.BorderDark
 import com.aistudio.trueidle.ui.theme.PrimaryNeon
 import com.aistudio.trueidle.ui.theme.TextLight
 import com.aistudio.trueidle.ui.theme.TextMuted
+import com.aistudio.trueidle.ui.theme.TrueIdleType
 
 @Composable
 fun XpProgressBar(
@@ -55,18 +56,15 @@ fun XpProgressBar(
                 ) {
                     Text(
                         text = "LVL $level",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = barColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp
+                        style = TrueIdleType.tag,
+                        color = barColor
                     )
                 }
             }
             Text(
                 text = "$currentXp / $requiredXp XP (${(progress * 100).toInt()}%)",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontSize = 9.sp
+                style = TrueIdleType.meta,
+                color = TextMuted
             )
         }
         Spacer(modifier = Modifier.height(2.dp))

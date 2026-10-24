@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.XpProgressBar
@@ -31,7 +32,9 @@ enum class SkillSubSection(val label: String, val icon: String, val color: Color
     CRAFTING("CRAFTING", "🔨", SecondaryGold),
     BEASTS("BEASTS", "🐾", GreenSuccess),
     NECROMANCY("NECRO", "💀", NecroPurple),
-    TRAINING("TRAINING", "🥋", PrimaryNeon)
+    TRAINING("TRAINING", "🥋", PrimaryNeon),
+    SANCTIFIED("SANCTIFIED", "🕊", ManaTeal),
+    SLAYER("SLAYER", "⚔", HpRed)
 }
 
 @Composable
@@ -44,6 +47,9 @@ fun SkillsScreen(
     onMergeBeasts: (String, String) -> Unit,
     onSummonMinion: (String) -> Unit,
     onTrainNode: (String) -> Unit,
+    onToggleSanctifiedAegis: () -> Unit = {},
+    onUpgradeSanctifiedSmite: () -> Unit = {},
+    onRerollSlayerTask: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var currentSection by remember { mutableStateOf(SkillSubSection.OVERVIEW) }
@@ -58,7 +64,31 @@ fun SkillsScreen(
             .fillMaxSize()
             .background(BgDark)
     ) {
-        // True Idle Live sleek internal navigation tab bar
+        // Resource Header: GOLD · FAITH · SLAYER POINTS (§7.7)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF000000))
+                .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("🪙", style = TrueIdleType.value)
+                Text(NumberFormatter.short(state.player.gold), style = TrueIdleType.value, color = SecondaryGold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("🕊", style = TrueIdleType.value)
+                Text(NumberFormatter.short(state.sanctified.faith), style = TrueIdleType.value, color = ManaTeal)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("⚔", style = TrueIdleType.value)
+                Text("${state.slayer.slayerPoints} PTS", style = TrueIdleType.value, color = HpRed)
+            }
+        }
+
+        // True Idle Live internal navigation tab bar
         val navScroll = rememberScrollState()
         Row(
             modifier = Modifier
@@ -79,6 +109,8 @@ fun SkillsScreen(
                     SkillSubSection.BEASTS -> "LV ${state.beasts.lvl}"
                     SkillSubSection.NECROMANCY -> "LV ${state.necro.lvl}"
                     SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
+                    SkillSubSection.SANCTIFIED -> "LV ${state.sanctified.lvl}"
+                    SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
                 }
 
                 Box(
@@ -95,7 +127,7 @@ fun SkillsScreen(
                             ),
                             RectangleShape
                         )
-                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
                         .testTag("skills_sub_tab_${section.name.lowercase()}"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -105,16 +137,13 @@ fun SkillsScreen(
                     ) {
                         Text(
                             text = section.icon,
-                            fontSize = 10.sp,
+                            style = TrueIdleType.label,
                             color = if (isSelected) section.color else TextMuted
                         )
                         Text(
                             text = section.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isSelected) section.color else TextMuted,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp,
-                            fontSize = 9.sp
+                            style = TrueIdleType.tag,
+                            color = if (isSelected) section.color else TextMuted
                         )
                         if (levelText.isNotEmpty()) {
                             Box(
@@ -132,10 +161,8 @@ fun SkillsScreen(
                             ) {
                                 Text(
                                     text = levelText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) section.color else TextMuted,
-                                    fontSize = 7.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = TrueIdleType.meta,
+                                    color = if (isSelected) section.color else TextMuted
                                 )
                             }
                         }
@@ -197,6 +224,25 @@ fun SkillsScreen(
                     onTrainNode = onTrainNode
                 )
             }
+            SkillSubSection.SANCTIFIED -> Column(modifier = Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // SANCTIFIED CONCLAVE (FAITH & SMITE)") {
+                    currentSection = SkillSubSection.OVERVIEW
+                }
+                SanctifiedScreen(
+                    state = state,
+                    onToggleAegis = onToggleSanctifiedAegis,
+                    onUpgradeSmite = onUpgradeSanctifiedSmite
+                )
+            }
+            SkillSubSection.SLAYER -> Column(modifier = Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // SLAYER SECTOR (DIRECTIVES & HUNT)") {
+                    currentSection = SkillSubSection.OVERVIEW
+                }
+                SlayerScreen(
+                    state = state,
+                    onRerollTask = onRerollSlayerTask
+                )
+            }
         }
     }
 }
@@ -217,11 +263,9 @@ fun SubSectionHeader(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall,
+            style = TrueIdleType.tag,
             color = PrimaryNeon,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp,
-            fontSize = 9.sp
+            modifier = Modifier.weight(1f)
         )
         OutlinedButton(
             onClick = onBackToOverview,
@@ -231,9 +275,9 @@ fun SubSectionHeader(
                 containerColor = PrimaryNeon.copy(alpha = 0.12f),
                 contentColor = PrimaryNeon
             ),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
         ) {
-            Text("◀ OVERVIEW", fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text("◀ OVERVIEW", style = TrueIdleType.tag)
         }
     }
 }
@@ -245,9 +289,10 @@ fun SkillsOverviewPage(
 ) {
     val scrollState = rememberScrollState()
 
-    val totalSkillLevel = state.gathering.farmingLvl + state.gathering.miningLvl +
+    val totalSkillLevel = state.player.lvl + state.gathering.farmingLvl + state.gathering.miningLvl +
             state.crafting.smithingLvl + state.crafting.herbloreLvl +
-            state.beasts.lvl + state.necro.lvl + state.training.lvl
+            state.beasts.lvl + state.necro.lvl + state.training.lvl +
+            state.sanctified.lvl + state.slayer.lvl
 
     Column(
         modifier = Modifier
@@ -271,17 +316,14 @@ fun SkillsOverviewPage(
                 ) {
                     Column {
                         Text(
-                            text = "SKILLS PROGRESSION MATRIX",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryNeon,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            text = "10 INTERLOCKING DISCIPLINES",
+                            style = TrueIdleType.title,
+                            color = PrimaryNeon
                         )
                         Text(
-                            text = "Interlocking progression across all core specializations",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
-                            fontSize = 9.sp
+                            text = "All systems connected across gathering, combat & crafting",
+                            style = TrueIdleType.meta,
+                            color = TextMuted
                         )
                     }
 
@@ -289,25 +331,41 @@ fun SkillsOverviewPage(
                         modifier = Modifier
                             .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, SecondaryGold, RectangleShape)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "TOTAL LEVEL: $totalSkillLevel",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SecondaryGold,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 8.sp
+                            text = "TOTAL LVL: $totalSkillLevel",
+                            style = TrueIdleType.tag,
+                            color = SecondaryGold
                         )
                     }
                 }
             }
         }
 
-        // 1. GATHERING SECTION CARD
+        // 1. COMBAT DISCIPLINE
+        SkillCategoryCard(
+            title = "01. COMBAT DISCIPLINE",
+            icon = "⚔",
+            accentColor = PrimaryNeon,
+            quickSummary = "FLOOR ${state.player.currentFloor} · ${state.lifetime.totalKills} TOTAL KILLS",
+            actionLabel = "COMBAT",
+            onAction = { /* Handled via primary nav */ }
+        ) {
+            XpProgressBar(
+                skillName = "COMBAT LEVEL",
+                level = state.player.lvl,
+                currentXp = state.player.xp,
+                requiredXp = Balance.playerXpReq(state.player.lvl),
+                barColor = PrimaryNeon
+            )
+        }
+
+        // 2. GATHERING SECTION CARD
         val readyPlots = state.gathering.plots.count { it.isReady }
         val readyVeins = state.gathering.veins.count { it.isReady }
         SkillCategoryCard(
-            title = "01. GATHERING DISCIPLINE",
+            title = "02. GATHERING DISCIPLINE",
             icon = "🌿",
             accentColor = GreenSuccess,
             quickSummary = "READY: $readyPlots PLOTS | $readyVeins VEINS",
@@ -331,9 +389,9 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 2. CRAFTING SECTION CARD
+        // 3. CRAFTING SECTION CARD
         SkillCategoryCard(
-            title = "02. CRAFTING PROTOCOLS",
+            title = "03. CRAFTING PROTOCOLS",
             icon = "🔨",
             accentColor = SecondaryGold,
             quickSummary = "SMITHING & ALCHEMY SYNTHESIS",
@@ -357,10 +415,10 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 3. BEAST TAMING SECTION CARD
+        // 4. BEAST TAMING SECTION CARD
         val totalBeastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
         SkillCategoryCard(
-            title = "03. BEAST TAMING",
+            title = "04. BEAST TAMING",
             icon = "🐾",
             accentColor = GreenSuccess,
             quickSummary = "${state.beasts.beasts.size}/8 BEASTS | ${totalBeastDps.toInt()} TOTAL DPS",
@@ -376,11 +434,11 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 4. NECROMANCY SECTION CARD
+        // 5. NECROMANCY SECTION CARD
         val totalArmyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
         val totalMinions = state.necro.army.sumOf { it.count }
         SkillCategoryCard(
-            title = "04. NECROMANCY DISCIPLINE",
+            title = "05. NECROMANCY DISCIPLINE",
             icon = "💀",
             accentColor = NecroPurple,
             quickSummary = "${state.necro.boneEssence} 💀 ESSENCE | $totalMinions UNITS (${totalArmyDps.toInt()} DPS)",
@@ -396,10 +454,10 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 5. TRAINING SECTION CARD
+        // 6. TRAINING SECTION CARD
         val totalRanks = state.training.nodes.sumOf { it.rank }
         SkillCategoryCard(
-            title = "05. NEURAL DOJO TRAINING",
+            title = "06. NEURAL DOJO TRAINING",
             icon = "🥋",
             accentColor = PrimaryNeon,
             quickSummary = "$totalRanks RANKS ACQUIRED | PERMANENT STAT BUFFS",
@@ -412,6 +470,42 @@ fun SkillsOverviewPage(
                 currentXp = state.training.xp,
                 requiredXp = Balance.skillXpReq(state.training.lvl),
                 barColor = PrimaryNeon
+            )
+        }
+
+        // 7. SANCTIFIED SECTION CARD
+        SkillCategoryCard(
+            title = "07. SANCTIFIED DISCIPLINE",
+            icon = "🕊",
+            accentColor = ManaTeal,
+            quickSummary = "${state.sanctified.faith} FAITH | SMITE LVL ${state.sanctified.smiteLevel} (${if (state.sanctified.aegisActive) "AEGIS ON" else "AEGIS OFF"})",
+            actionLabel = "SANCTIFIED",
+            onAction = { onNavigate(SkillSubSection.SANCTIFIED) }
+        ) {
+            XpProgressBar(
+                skillName = "SANCTIFIED",
+                level = state.sanctified.lvl,
+                currentXp = state.sanctified.xp,
+                requiredXp = Balance.skillXpReq(state.sanctified.lvl),
+                barColor = ManaTeal
+            )
+        }
+
+        // 8. SLAYER SECTION CARD
+        SkillCategoryCard(
+            title = "08. SLAYER DIRECTIVES",
+            icon = "⚔",
+            accentColor = HpRed,
+            quickSummary = "TARGET: ${state.slayer.currentTask.targetName.uppercase()} (${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills}) | ${state.slayer.slayerPoints} PTS",
+            actionLabel = "SLAYER",
+            onAction = { onNavigate(SkillSubSection.SLAYER) }
+        ) {
+            XpProgressBar(
+                skillName = "SLAYER",
+                level = state.slayer.lvl,
+                currentXp = state.slayer.xp,
+                requiredXp = Balance.slayerXpReq(state.slayer.lvl),
+                barColor = HpRed
             )
         }
     }
@@ -441,16 +535,13 @@ fun SkillCategoryCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(icon, fontSize = 11.sp)
+                    Text(icon, style = TrueIdleType.title)
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp,
-                        fontSize = 11.sp
+                        style = TrueIdleType.title,
+                        color = accentColor
                     )
                 }
 
@@ -462,13 +553,11 @@ fun SkillCategoryCard(
                         containerColor = accentColor.copy(alpha = 0.15f),
                         contentColor = accentColor
                     ),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "$actionLabel ➔",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 8.sp
+                        style = TrueIdleType.tag
                     )
                 }
             }
@@ -476,10 +565,8 @@ fun SkillCategoryCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = quickSummary,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextMuted,
-                fontSize = 8.sp,
-                letterSpacing = 0.5.sp
+                style = TrueIdleType.meta,
+                color = TextMuted
             )
             Spacer(modifier = Modifier.height(6.dp))
 
