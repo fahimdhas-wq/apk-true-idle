@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,9 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.core.CombatMath
+import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.theme.*
 
@@ -25,14 +25,11 @@ fun CombatTelemetryCard(
     state: GameState,
     modifier: Modifier = Modifier
 ) {
-    val p = state.player
-    val strBonus = p.stats.str * 1.2
-    val weaponDmg = p.weaponDmg
-    val sanctifiedBonus = if (state.sanctified.aegisActive) state.sanctified.smiteLevel * 3.0 else 0.0
-    val playerDps = (strBonus + weaponDmg + sanctifiedBonus) * p.stats.atkSpeed
-    val beastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
-    val armyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
-    val totalDps = playerDps + beastDps + armyDps
+    val d = DerivedStats.of(state)
+    val playerDps = CombatMath.heroDps(d)
+    val beastDps = CombatMath.beastDps(state.beasts)
+    val armyDps = CombatMath.armyDps(state.necro)
+    val totalDps = CombatMath.totalDps(state, d)
 
     Card(
         modifier = modifier
@@ -42,7 +39,7 @@ fun CombatTelemetryCard(
         shape = RectangleShape,
         border = BorderStroke(1.dp, BorderDark)
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
             // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -51,34 +48,29 @@ fun CombatTelemetryCard(
             ) {
                 Text(
                     text = "COMBAT DPS MATRIX",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp,
-                    fontSize = 8.sp
+                    style = TrueIdleType.tag,
+                    color = TextMuted
                 )
                 Box(
                     modifier = Modifier
                         .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                         .border(1.dp, PrimaryNeon, RectangleShape)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "TOTAL: ${totalDps.toInt()} DPS",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PrimaryNeon,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp
+                        text = "TOTAL: ${NumberFormatter.short(totalDps)} DPS",
+                        style = TrueIdleType.tag,
+                        color = PrimaryNeon
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 3-Column Breakdown: Hero | Beasts | Legion
+            // 4-Column Breakdown: Hero | Beasts | Legion | Speed
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Hero DPS
                 Box(
@@ -86,12 +78,16 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("HERO", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 7.sp)
-                        Text("${playerDps.toInt()} DPS", style = MaterialTheme.typography.labelSmall, color = SecondaryGold, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        Text("HERO", style = TrueIdleType.meta, color = TextMuted)
+                        Text(
+                            "${playerDps.toInt()} DPS",
+                            style = TrueIdleType.label,
+                            color = SecondaryGold
+                        )
                     }
                 }
 
@@ -101,12 +97,16 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("BEASTS", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 7.sp)
-                        Text("${beastDps.toInt()} DPS", style = MaterialTheme.typography.labelSmall, color = GreenSuccess, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        Text("BEASTS", style = TrueIdleType.meta, color = TextMuted)
+                        Text(
+                            "${beastDps.toInt()} DPS",
+                            style = TrueIdleType.label,
+                            color = GreenSuccess
+                        )
                     }
                 }
 
@@ -116,27 +116,35 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("LEGION", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 7.sp)
-                        Text("${armyDps.toInt()} DPS", style = MaterialTheme.typography.labelSmall, color = NecroPurple, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        Text("LEGION", style = TrueIdleType.meta, color = TextMuted)
+                        Text(
+                            "${armyDps.toInt()} DPS",
+                            style = TrueIdleType.label,
+                            color = NecroPurple
+                        )
                     }
                 }
 
-                // Speed / Loot
+                // Atk Speed
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                        .padding(vertical = 6.dp, horizontal = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("ATK SPEED", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 7.sp)
-                        Text("${String.format("%.2f", p.stats.atkSpeed)}x", style = MaterialTheme.typography.labelSmall, color = TextLight, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                        Text("SPEED", style = TrueIdleType.meta, color = TextMuted)
+                        Text(
+                            String.format(java.util.Locale.ROOT, "%.2fx", d.atkSpeed),
+                            style = TrueIdleType.label,
+                            color = TextLight
+                        )
                     }
                 }
             }

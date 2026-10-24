@@ -14,9 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.model.GameNotification
 import com.aistudio.trueidle.ui.theme.*
@@ -36,7 +34,7 @@ fun NotificationHistoryDialog(
         "LEVEL" -> history.filter { it.type == "level" || it.type == "gain" }
         "MILESTONE" -> history.filter { it.type == "milestone" || it.type == "tame" }
         else -> history
-    }.reversed() // Most recent first
+    }.reversed()
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -53,7 +51,7 @@ fun NotificationHistoryDialog(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFF000000))
-                    .padding(12.dp)
+                    .padding(14.dp)
             ) {
                 // Header
                 Row(
@@ -61,33 +59,26 @@ fun NotificationHistoryDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("◈ ", color = PrimaryNeon, fontSize = 14.sp)
-                        Text(
-                            text = "NOTIFICATION ARCHIVE",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = PrimaryNeon,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
-                        )
-                    }
+                    Text(
+                        text = "NOTIFICATION ARCHIVE",
+                        style = TrueIdleType.title,
+                        color = PrimaryNeon
+                    )
                     Box(
                         modifier = Modifier
                             .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, PrimaryNeon, RectangleShape)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
                             text = "${history.size} LOGGED",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = PrimaryNeon,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp
+                            style = TrueIdleType.tag,
+                            color = PrimaryNeon
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Filter tabs
                 Row(
@@ -99,6 +90,7 @@ fun NotificationHistoryDialog(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
+                                .heightIn(min = 40.dp)
                                 .clickable { selectedFilter = f }
                                 .background(
                                     if (isSelected) PrimaryNeon.copy(alpha = 0.18f) else SurfaceVariantDark,
@@ -109,22 +101,19 @@ fun NotificationHistoryDialog(
                                     if (isSelected) PrimaryNeon else BorderDark,
                                     RectangleShape
                                 )
-                                .padding(vertical = 5.dp),
+                                .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = f,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (isSelected) PrimaryNeon else TextMuted,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 8.sp,
-                                letterSpacing = 0.5.sp
+                                style = TrueIdleType.tag,
+                                color = if (isSelected) PrimaryNeon else TextMuted
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Content list
                 if (filteredList.isEmpty()) {
@@ -137,10 +126,9 @@ fun NotificationHistoryDialog(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "NO TELEMETRY RECORDED IN THIS LOG",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted,
-                            letterSpacing = 0.5.sp
+                            text = "NO TELEMETRY RECORDED",
+                            style = TrueIdleType.body,
+                            color = TextMuted
                         )
                     }
                 } else {
@@ -148,13 +136,14 @@ fun NotificationHistoryDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(filteredList, key = { it.id }) { notif ->
                             val accentColor = when (notif.status) {
                                 "SUCCESS" -> if (notif.type == "level") GreenSuccess else PrimaryNeon
                                 "FAILED" -> HpRed
                                 "INFO" -> TextLight
+                                "ALERT" -> Warn
                                 else -> SecondaryGold
                             }
 
@@ -167,7 +156,7 @@ fun NotificationHistoryDialog(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(8.dp)
+                                        .padding(10.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -176,64 +165,47 @@ fun NotificationHistoryDialog(
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Box(
                                                 modifier = Modifier
                                                     .background(accentColor.copy(alpha = 0.15f), RectangleShape)
                                                     .border(1.dp, accentColor, RectangleShape)
-                                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = notif.status,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = accentColor,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 8.sp
+                                                    style = TrueIdleType.tag,
+                                                    color = accentColor
                                                 )
                                             }
                                             Text(
                                                 text = notif.title.uppercase(),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = accentColor,
-                                                fontWeight = FontWeight.Bold,
-                                                letterSpacing = 0.5.sp
+                                                style = TrueIdleType.tag,
+                                                color = accentColor
                                             )
                                             if (notif.count > 1) {
                                                 Text(
                                                     text = "[x${notif.count}]",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = SecondaryGold,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 8.sp
+                                                    style = TrueIdleType.tag,
+                                                    color = SecondaryGold
                                                 )
                                             }
                                         }
-
-                                        val agoSec = ((System.currentTimeMillis() - notif.timestamp) / 1000L).coerceAtLeast(0L)
-                                        val timeStr = if (agoSec < 60) "${agoSec}s ago" else "${agoSec / 60}m ago"
-                                        Text(
-                                            text = timeStr,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextMuted,
-                                            fontSize = 8.sp
-                                        )
                                     }
 
-                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = notif.message,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextLight,
-                                        fontSize = 10.sp
+                                        style = TrueIdleType.body,
+                                        color = TextLight
                                     )
                                     if (notif.detail.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "› ${notif.detail}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextMuted,
-                                            fontSize = 9.sp
+                                            style = TrueIdleType.meta,
+                                            color = TextMuted
                                         )
                                     }
                                 }
@@ -242,7 +214,7 @@ fun NotificationHistoryDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // Actions
                 Row(
@@ -251,30 +223,34 @@ fun NotificationHistoryDialog(
                 ) {
                     OutlinedButton(
                         onClick = onClear,
-                        modifier = Modifier.weight(1f).testTag("clear_history_btn"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("clear_history_btn"),
                         shape = RectangleShape,
                         border = BorderStroke(1.dp, BorderDark),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = SurfaceVariantDark,
                             contentColor = TextMuted
-                        ),
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                        )
                     ) {
-                        Text("CLEAR HISTORY", style = MaterialTheme.typography.labelSmall)
+                        Text("CLEAR HISTORY", style = TrueIdleType.tag)
                     }
 
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f).testTag("close_history_btn"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp)
+                            .testTag("close_history_btn"),
                         shape = RectangleShape,
                         border = BorderStroke(1.dp, PrimaryNeon),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = PrimaryNeon.copy(alpha = 0.15f),
                             contentColor = PrimaryNeon
-                        ),
-                        contentPadding = PaddingValues(vertical = 8.dp)
+                        )
                     ) {
-                        Text("DISMISS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        Text("DISMISS", style = TrueIdleType.tag)
                     }
                 }
             }

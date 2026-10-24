@@ -34,7 +34,9 @@ data class PlayerState(
     val weaponSlot: String = "Rusty Blade",
     val armorSlot: String = "Tattered Leather",
     val weaponDmg: Double = 8.0,
-    val armorDef: Double = 4.0
+    val armorDef: Double = 4.0,
+    val recoverLeft: Double = 0.0,
+    val failuresInRow: Int = 0
 )
 
 @Serializable
@@ -133,7 +135,9 @@ data class GatheringState(
         MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, hardness = 1, durationSeconds = 5f),
         MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 3, hardness = 2, durationSeconds = 7f),
         MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 5, hardness = 3, durationSeconds = 10f)
-    )
+    ),
+    val autoCollectUnlocked: Boolean = false,
+    val autoCollectEnabled: Boolean = true
 )
 
 @Serializable
@@ -208,7 +212,9 @@ data class InventoryItem(
     val slot: String = "", // "Weapon", "Armor", ""
     val statDesc: String = "",
     val sellValue: Long = 10L,
-    val isEquipped: Boolean = false
+    val isEquipped: Boolean = false,
+    val atk: Double = 0.0,
+    val def: Double = 0.0
 )
 
 @Serializable
@@ -225,9 +231,15 @@ data class GameNotification(
     val message: String,
     val type: String = "info", // "gear", "craft", "level", "tame", "save", "milestone"
     val count: Int = 1,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = 0L,
     val status: String = "SUCCESS", // "SUCCESS", "FAILED", "INFO", "ALERT"
     val detail: String = ""
+)
+
+@Serializable
+data class LootItem(
+    val name: String,
+    val count: Int
 )
 
 @Serializable
@@ -238,6 +250,12 @@ data class OfflineLoot(
     val xpEarned: Long = 0L,
     val bonesEarned: Long = 0L,
     val playerLevelsGained: Int = 0,
+    val floorsGained: Int = 0,
+    val finalFloor: Int = 1,
+    val efficiency: Double = 0.65,
+    val capApplied: Boolean = false,
+    val items: List<LootItem> = emptyList(),
+    val beastsTamed: Int = 0,
     val farmingGainsSummary: String = "",
     val miningGainsSummary: String = "",
     val dropsSummary: List<String> = emptyList()
@@ -251,11 +269,35 @@ data class Achievement(
     val progress: Int,
     val target: Int,
     val isUnlocked: Boolean = false,
+    val isClaimed: Boolean = false,
     val rewardGold: Long = 100L
 )
 
 @Serializable
+data class SaveMeta(
+    val savedWallMs: Long = 0L,
+    val savedElapsedMs: Long = 0L,
+    val bootCount: Int = 0,
+    val offlineAppliedUntilWallMs: Long = 0L,
+    val nextId: Long = 1L,
+    val rngSeed: Long = 0L
+)
+
+@Serializable
+data class LifetimeStats(
+    val totalKills: Long = 0L,
+    val oresMined: Long = 0L,
+    val herbsHarvested: Long = 0L,
+    val beastsTamed: Long = 0L,
+    val forged: Long = 0L,
+    val brewed: Long = 0L,
+    val defeats: Long = 0L
+)
+
+@Serializable
 data class GameState(
+    val meta: SaveMeta = SaveMeta(),
+    val lifetime: LifetimeStats = LifetimeStats(),
     val player: PlayerState = PlayerState(),
     val monster: Monster = Monster(),
     val beasts: BeastTamingState = BeastTamingState(),
@@ -266,10 +308,10 @@ data class GameState(
     val sanctified: SanctifiedState = SanctifiedState(),
     val slayer: SlayerState = SlayerState(),
     val inventory: List<InventoryItem> = listOf(
-        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false),
-        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false),
-        InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true),
-        InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true),
+        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false, atk = 18.0),
+        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false, def = 12.0),
+        InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true, atk = 8.0),
+        InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true, def = 4.0),
         InventoryItem(id = "item_hp_pot", name = "Lesser Healing Potion", category = "Potion", count = 5, tier = 1, statDesc = "Restores 50 HP", sellValue = 10L),
         InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Crafting Ore", sellValue = 2L),
         InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L),
@@ -284,13 +326,13 @@ data class GameState(
     val notificationBannersEnabled: Boolean = true,
     val pendingOfflineLoot: OfflineLoot? = null,
     val achievements: List<Achievement> = listOf(
-        Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 1, target = 1, isUnlocked = true, rewardGold = 50L),
+        Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 0, target = 1, isUnlocked = false, rewardGold = 50L),
         Achievement(id = "ach_floor_10", title = "Dungeon Crawler", desc = "Reach Floor 10", progress = 1, target = 10, isUnlocked = false, rewardGold = 250L),
         Achievement(id = "ach_tamer", title = "Beast Whisperer", desc = "Tame 3 companion beasts", progress = 1, target = 3, isUnlocked = false, rewardGold = 200L),
         Achievement(id = "ach_necro", title = "Lord of Bones", desc = "Summon an army of 10 minions", progress = 2, target = 10, isUnlocked = false, rewardGold = 300L),
-        Achievement(id = "ach_miner", title = "Master Miner", desc = "Mine 50 ores", progress = 12, target = 50, isUnlocked = false, rewardGold = 150L)
+        Achievement(id = "ach_miner", title = "Master Miner", desc = "Mine 50 ores", progress = 0, target = 50, isUnlocked = false, rewardGold = 150L)
     ),
     val totalKills: Long = 0L,
     val rank: Int = 0,
-    val lastSaveTimestamp: Long = System.currentTimeMillis()
+    val lastSaveTimestamp: Long = 0L
 )

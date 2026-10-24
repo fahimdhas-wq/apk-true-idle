@@ -4,22 +4,20 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.ui.theme.BorderDark
+import com.aistudio.trueidle.ui.theme.TextLight
 import com.aistudio.trueidle.ui.theme.TextMuted
+import com.aistudio.trueidle.ui.theme.TrueIdleType
 
 @Composable
 fun StatBar(
@@ -44,24 +42,20 @@ fun StatBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 2.dp, vertical = 1.dp),
+                .padding(horizontal = 2.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
+                style = TrueIdleType.label,
                 color = TextMuted,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.8.sp,
-                fontSize = 9.sp,
                 maxLines = 1
             )
             Text(
                 text = "$curInt / $maxInt",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 9.sp,
+                style = TrueIdleType.value,
+                color = TextLight,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -69,8 +63,7 @@ fun StatBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(7.dp)
-                .clip(RectangleShape)
+                .height(8.dp)
                 .background(Color(0xFF000000))
                 .border(1.dp, BorderDark, RectangleShape)
         ) {
@@ -78,7 +71,6 @@ fun StatBar(
                 modifier = Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(animatedProgress)
-                    .clip(RectangleShape)
                     .background(fillColor)
             )
         }

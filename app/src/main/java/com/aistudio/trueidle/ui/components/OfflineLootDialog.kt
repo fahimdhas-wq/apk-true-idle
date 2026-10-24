@@ -10,11 +10,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.OfflineLoot
 import com.aistudio.trueidle.ui.theme.*
 
@@ -23,10 +24,9 @@ fun OfflineLootDialog(
     loot: OfflineLoot,
     onClaim: () -> Unit
 ) {
-    val hours = loot.timeAwaySeconds / 3600
-    val minutes = (loot.timeAwaySeconds % 3600) / 60
-    val seconds = loot.timeAwaySeconds % 60
-    val timeFormatted = if (hours > 0) "${hours}h ${minutes}m ${seconds}s" else "${minutes}m ${seconds}s"
+    val haptic = LocalHapticFeedback.current
+    val timeFormatted = NumberFormatter.duration(loot.timeAwaySeconds)
+    val efficiencyPercent = NumberFormatter.percent(loot.efficiency)
 
     Dialog(onDismissRequest = onClaim) {
         Card(
@@ -42,7 +42,7 @@ fun OfflineLootDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
-                    .padding(14.dp)
+                    .padding(16.dp)
             ) {
                 // Header
                 Row(
@@ -51,21 +51,15 @@ fun OfflineLootDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("◈ ", color = PrimaryNeon, fontSize = 14.sp)
-                            Text(
-                                text = "OFFLINE PROGRESSION MATRIX",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = PrimaryNeon,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
                         Text(
-                            text = "Background automation executed while disconnected",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
-                            fontSize = 9.sp
+                            text = "OFFLINE REPORT",
+                            style = TrueIdleType.title,
+                            color = PrimaryNeon
+                        )
+                        Text(
+                            text = "EFFICIENCY: $efficiencyPercent",
+                            style = TrueIdleType.meta,
+                            color = TextMuted
                         )
                     }
 
@@ -73,39 +67,36 @@ fun OfflineLootDialog(
                         modifier = Modifier
                             .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, PrimaryNeon, RectangleShape)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = timeFormatted,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = PrimaryNeon,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp
+                            text = if (loot.capApplied) "CAP 8h APPLIED ($timeFormatted)" else timeFormatted,
+                            style = TrueIdleType.tag,
+                            color = if (loot.capApplied) Warn else PrimaryNeon
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Level-up banner if player leveled up during offline progress
-                if (loot.playerLevelsGained > 0) {
+                // Sector progression
+                if (loot.floorsGained > 0) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = GreenSuccess.copy(alpha = 0.15f)),
+                        colors = CardDefaults.cardColors(containerColor = GreenSuccess.copy(alpha = 0.12f)),
                         shape = RectangleShape,
                         border = BorderStroke(1.dp, GreenSuccess)
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("⚡ ", fontSize = 12.sp)
                             Text(
-                                text = "HERO PROMOTED: +${loot.playerLevelsGained} LEVEL(S) GAINED OFFLINE!",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GreenSuccess,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.5.sp
+                                text = "SECTORS ADVANCED: +${loot.floorsGained} (NOW SECTOR ${loot.finalFloor})",
+                                style = TrueIdleType.tag,
+                                color = GreenSuccess
                             )
                         }
                     }
@@ -115,70 +106,70 @@ fun OfflineLootDialog(
                 // 2x2 Telemetry Grid
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Kills
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RectangleShape,
-                            border = BorderStroke(1.dp, BorderDark)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(SurfaceDark)
+                                .border(1.dp, BorderDark)
+                                .padding(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text("HOSTILES CLEARED", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 8.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("${loot.kills} KILLS", style = MaterialTheme.typography.bodyMedium, color = HpRed, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text("HOSTILES CLEARED", style = TrueIdleType.meta, color = TextMuted)
+                                Text("${loot.kills} KILLS", style = TrueIdleType.value, color = HpRed)
                             }
                         }
 
                         // Gold
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RectangleShape,
-                            border = BorderStroke(1.dp, BorderDark)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(SurfaceDark)
+                                .border(1.dp, BorderDark)
+                                .padding(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text("CREDITS SECURED", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 8.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("+${loot.goldEarned} 🪙", style = MaterialTheme.typography.bodyMedium, color = SecondaryGold, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text("CREDITS SECURED", style = TrueIdleType.meta, color = TextMuted)
+                                Text("+${NumberFormatter.short(loot.goldEarned)} 🪙", style = TrueIdleType.value, color = SecondaryGold)
                             }
                         }
                     }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // XP
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RectangleShape,
-                            border = BorderStroke(1.dp, BorderDark)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(SurfaceDark)
+                                .border(1.dp, BorderDark)
+                                .padding(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text("TACTICAL EXPERIENCE", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 8.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("+${loot.xpEarned} XP", style = MaterialTheme.typography.bodyMedium, color = PrimaryNeon, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text("EXPERIENCE", style = TrueIdleType.meta, color = TextMuted)
+                                Text("+${NumberFormatter.short(loot.xpEarned)} XP", style = TrueIdleType.value, color = PrimaryNeon)
                             }
                         }
 
-                        // Bone Essence
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                            shape = RectangleShape,
-                            border = BorderStroke(1.dp, BorderDark)
+                        // Bones
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(SurfaceDark)
+                                .border(1.dp, BorderDark)
+                                .padding(8.dp)
                         ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Text("BONE ESSENCE", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 8.sp)
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text("+${loot.bonesEarned} 💀", style = MaterialTheme.typography.bodyMedium, color = NecroPurple, fontWeight = FontWeight.Bold)
+                            Column {
+                                Text("BONE ESSENCE", style = TrueIdleType.meta, color = TextMuted)
+                                Text("+${loot.bonesEarned} 💀", style = TrueIdleType.value, color = NecroPurple)
                             }
                         }
                     }
@@ -186,76 +177,55 @@ fun OfflineLootDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Gathering & Extraction telemetry
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, BorderDark)
-                ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        Text(
-                            text = "AUTONOMOUS LOGISTICS & GATHERING",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = GreenSuccess,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 8.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        if (loot.farmingGainsSummary.isNotEmpty()) {
-                            Text("🌿 ${loot.farmingGainsSummary}", style = MaterialTheme.typography.bodySmall, color = TextLight, fontSize = 9.sp)
-                        }
-                        if (loot.miningGainsSummary.isNotEmpty()) {
-                            Text("⛏ ${loot.miningGainsSummary}", style = MaterialTheme.typography.bodySmall, color = TextLight, fontSize = 9.sp)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Itemized drops summary
-                if (loot.dropsSummary.isNotEmpty()) {
+                // Items list
+                if (loot.items.isNotEmpty() || loot.beastsTamed > 0) {
                     Text(
-                        text = "ITEMIZED SALVAGE MANIFEST",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted,
-                        fontSize = 8.sp,
-                        letterSpacing = 0.8.sp
+                        text = "ACQUIRED ASSETS",
+                        style = TrueIdleType.tag,
+                        color = TextMuted
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceDark)
+                            .border(1.dp, BorderDark)
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        loot.dropsSummary.forEach { drop ->
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(SurfaceVariantDark, RectangleShape)
-                                    .border(1.dp, BorderDark, RectangleShape)
-                                    .padding(vertical = 4.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
+                        loot.items.forEach { item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = drop.uppercase(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = GreenSuccess,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 8.sp,
-                                    maxLines = 1
-                                )
+                                Text(item.name, style = TrueIdleType.body, color = TextLight)
+                                Text("+${item.count}", style = TrueIdleType.value, color = GreenSuccess)
+                            }
+                        }
+                        if (loot.beastsTamed > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Beasts Tamed", style = TrueIdleType.body, color = TextLight)
+                                Text("+${loot.beastsTamed} 🐾", style = TrueIdleType.value, color = GreenSuccess)
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Claim Button
                 OutlinedButton(
-                    onClick = onClaim,
-                    modifier = Modifier.fillMaxWidth().testTag("claim_offline_btn"),
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onClaim()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .testTag("claim_offline_btn"),
                     shape = RectangleShape,
                     border = BorderStroke(1.5.dp, PrimaryNeon),
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -265,10 +235,9 @@ fun OfflineLootDialog(
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
                     Text(
-                        text = "TRANSFER SALVAGE TO ARSENAL ➔",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
+                        text = "CLAIM SALVAGE",
+                        style = TrueIdleType.title,
+                        color = PrimaryNeon
                     )
                 }
             }

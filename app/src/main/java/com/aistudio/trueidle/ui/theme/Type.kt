@@ -8,12 +8,52 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.R
 
-// Exclusive typography using Orbitron font
 val OrbitronFontFamily = FontFamily(
     Font(R.font.orbitron, FontWeight.Normal),
     Font(R.font.orbitron, FontWeight.Medium),
     Font(R.font.orbitron, FontWeight.Bold)
 )
+
+object TrueIdleType {
+    val title = TextStyle(
+        fontFamily = OrbitronFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.8.sp
+    )
+    val tag = TextStyle(
+        fontFamily = OrbitronFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.5.sp
+    )
+    val label = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp
+    )
+    val value = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
+        fontFeatureSettings = "tnum"
+    )
+    val body = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontSize = 13.sp,
+        lineHeight = 18.sp
+    )
+    val meta = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontSize = 11.sp,
+        lineHeight = 14.sp
+    )
+}
 
 val Typography = Typography(
     displayLarge = TextStyle(
@@ -66,24 +106,24 @@ val Typography = Typography(
         letterSpacing = 0.4.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = OrbitronFontFamily,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.3.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = OrbitronFontFamily,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.3.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = OrbitronFontFamily,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
         letterSpacing = 0.2.sp
     ),
     labelLarge = TextStyle(
@@ -94,17 +134,17 @@ val Typography = Typography(
         letterSpacing = 0.8.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = OrbitronFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.5.sp
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp
     ),
     labelSmall = TextStyle(
         fontFamily = OrbitronFontFamily,
-        fontWeight = FontWeight.Medium,
-        fontSize = 9.sp,
-        lineHeight = 12.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
         letterSpacing = 0.5.sp
     )
 )

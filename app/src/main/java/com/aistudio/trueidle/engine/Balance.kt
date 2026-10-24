@@ -20,7 +20,8 @@ object Balance {
     private val BOSS_NAMES = listOf(
         "Broodmother Spider", "Goblin King Gorm", "Bone Dragon Malgok",
         "Overlord of Embers", "Arch-Lich Valok", "Hydra of the Deeps",
-        "Void Reaver Titan", "Grand Patriarch Xur"
+        "Void Reaver Titan", "Grand Patriarch Xur",
+        "Chronos Singularity", "Omega Prime Sovereign"
     )
 
     fun generateMonsterForFloor(floor: Int): Monster {
