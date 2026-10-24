@@ -726,6 +726,101 @@ class GameEngine(
         return state
     }
 
+    fun toggleAutoEquipBestGear(): GameState {
+        val next = !state.automation.autoEquipBestGear
+        state = state.copy(automation = state.automation.copy(autoEquipBestGear = next))
+        if (next) {
+            autoEquipBestGear()
+        }
+        pushNotification("AUTO-EQUIP", if (next) "Auto-equip best gear ENABLED" else "Auto-equip best gear DISABLED", "system")
+        return state
+    }
+
+    fun toggleAutoMergeBeasts(): GameState {
+        val next = !state.automation.autoMergeBeasts
+        state = state.copy(automation = state.automation.copy(autoMergeBeasts = next))
+        pushNotification("AUTO-MERGE", if (next) "Auto-merge beasts ENABLED" else "Auto-merge beasts DISABLED", "system")
+        return state
+    }
+
+    fun setCraftMaterialUsage(pct: Int): GameState {
+        state = state.copy(automation = state.automation.copy(craftMaterialUsagePct = pct.coerceIn(0, 100)))
+        return state
+    }
+
+    fun autoEquipBestGear(): GameState {
+        val slots = listOf("Weapon", "Armor", "Ring", "Amulet")
+        var inv = state.inventory.toMutableList()
+        var changed = false
+        for (slot in slots) {
+            val itemsForSlot = inv.filter { it.category == "Equipment" && it.slot.equals(slot, ignoreCase = true) }
+            if (itemsForSlot.isNotEmpty()) {
+                val best = itemsForSlot.maxByOrNull { if (slot == "Weapon" || slot == "Ring") it.atk else it.def }
+                if (best != null && !best.isEquipped) {
+                    inv = inv.map {
+                        if (it.slot.equals(slot, ignoreCase = true)) it.copy(isEquipped = (it.id == best.id))
+                        else it
+                    }.toMutableList()
+                    changed = true
+                }
+            }
+        }
+        if (changed) {
+            state = state.copy(inventory = inv)
+            val d = DerivedStats.of(state)
+            val weapon = inv.firstOrNull { it.isEquipped && it.slot == "Weapon" }
+            val armor = inv.firstOrNull { it.isEquipped && it.slot == "Armor" }
+            state = state.copy(
+                player = state.player.copy(
+                    weaponSlot = weapon?.name ?: state.player.weaponSlot,
+                    armorSlot = armor?.name ?: state.player.armorSlot,
+                    weaponDmg = d.weaponDmg,
+                    armorDef = d.armorDef
+                )
+            )
+        }
+        return state
+    }
+
+    fun fightPromotionBoss(): GameState {
+        val promo = state.promotion
+        val d = DerivedStats.of(state)
+        val floorOk = state.player.currentFloor >= promo.requiredFloor
+        val gearOk = d.gearScore >= promo.requiredGearScore
+        if (!floorOk || !gearOk) {
+            pushNotification("PROMOTION BLOCKED", "Requirements not yet fulfilled (${state.player.currentFloor}/${promo.requiredFloor} Floor, ${d.gearScore}/${promo.requiredGearScore} GS)", "alert", "FAILED")
+            return state
+        }
+        val nextTier = (promo.tier + 1).coerceAtMost(promo.maxTier)
+        val tierNames = listOf(
+            "Novice Vanguard", "Ironbound Warden", "Crypt Cleaver", "Aether Sentinel",
+            "Dawnbreaker", "Void Sovereign", "Abyssal Juggernaut", "Eclipse Titan",
+            "Solar Warlord", "Apex Immortal"
+        )
+        val nextName = tierNames.getOrElse(nextTier - 1) { "Apex Rank $nextTier" }
+        val nextReqFloor = (promo.requiredFloor + 15).coerceAtMost(100)
+        val nextReqGear = promo.requiredGearScore + 400
+        val nextBonus = promo.bonusPercent + 8
+
+        state = state.copy(
+            promotion = promo.copy(
+                tier = nextTier,
+                tierName = nextName,
+                requiredFloor = nextReqFloor,
+                requiredGearScore = nextReqGear,
+                bonusPercent = nextBonus
+            ),
+            logs = (state.logs + LogEntry(ids.next(), "PROMOTION ACHIEVED: Ascended to $nextName! Unlocked +${nextBonus}% All Stats Bonus.", "milestone")).takeLast(40)
+        )
+        pushNotification(
+            title = "PROMOTION TRIUMPH",
+            message = "Defeated Promotion Boss! Promoted to $nextName (+${nextBonus}% stats).",
+            type = "milestone",
+            status = "SUCCESS"
+        )
+        return state
+    }
+
     fun harvestPlot(plotId: Int): GameState {
         val plots = state.gathering.plots.toMutableList()
         val idx = plots.indexOfFirst { it.id == plotId }

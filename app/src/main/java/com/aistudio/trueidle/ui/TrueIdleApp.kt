@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
@@ -140,6 +141,29 @@ fun TrueIdleApp(
                                 color = NecroPurple
                             )
                         }
+                        // HTML Top bar shortcuts: ★ Promotions & ⚙ Settings / Arcana
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0xFF000000), RectangleShape)
+                                .border(1.dp, SecondaryGold.copy(alpha = 0.7f), RectangleShape)
+                                .clickable { currentTab = TrueIdleTab.SETTINGS }
+                                .testTag("topbar_promo_shortcut"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("★", style = TrueIdleType.tag, color = SecondaryGold)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0xFF000000), RectangleShape)
+                                .border(1.dp, PrimaryNeon.copy(alpha = 0.7f), RectangleShape)
+                                .clickable { currentTab = TrueIdleTab.SETTINGS }
+                                .testTag("topbar_settings_shortcut"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚙", style = TrueIdleType.tag, color = PrimaryNeon)
+                        }
                     }
                 }
 
@@ -250,7 +274,11 @@ fun TrueIdleApp(
                     onResetGame = { viewModel.resetGame() },
                     onToggleNotifications = { viewModel.toggleNotificationBanners() },
                     onClearNotificationHistory = { viewModel.clearNotificationHistory() },
-                    onClaimAchievement = { achId -> viewModel.claimAchievement(achId) }
+                    onClaimAchievement = { achId -> viewModel.claimAchievement(achId) },
+                    onToggleAutoEquip = { viewModel.toggleAutoEquipBestGear() },
+                    onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
+                    onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
+                    onFightPromotionBoss = { viewModel.fightPromotionBoss() }
                 )
             }
         }

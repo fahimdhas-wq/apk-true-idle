@@ -91,4 +91,45 @@ class GameEngineTest {
         // Two distinct messages should not collapse into one
         assertEquals(2, engine.state.notifications.size)
     }
+
+    @Test
+    fun testAutomationSettingsTogglesAndCraftSlider() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(1234))
+
+        val initialEquip = engine.state.automation.autoEquipBestGear
+        engine.toggleAutoEquipBestGear()
+        assertEquals(!initialEquip, engine.state.automation.autoEquipBestGear)
+
+        val initialMerge = engine.state.automation.autoMergeBeasts
+        engine.toggleAutoMergeBeasts()
+        assertEquals(!initialMerge, engine.state.automation.autoMergeBeasts)
+
+        engine.setCraftMaterialUsage(85)
+        assertEquals(85, engine.state.automation.craftMaterialUsagePct)
+    }
+
+    @Test
+    fun testPromotionBossAdvancesTierWhenRequirementsMet() {
+        val clock = FakeClock()
+        val engine = GameEngine(
+            initialState = GameState(
+                player = PlayerState(currentFloor = 65, maxUnlockedFloor = 65, lvl = 50),
+                promotion = com.aistudio.trueidle.model.PromotionState(
+                    tier = 5,
+                    maxTier = 20,
+                    tierName = "Dawnbreaker",
+                    requiredFloor = 60,
+                    requiredGearScore = 100,
+                    bonusPercent = 8
+                )
+            ),
+            clock = clock,
+            random = Random(1234)
+        )
+
+        val newState = engine.fightPromotionBoss()
+        assertEquals(6, newState.promotion.tier)
+        assertEquals(16, newState.promotion.bonusPercent)
+    }
 }

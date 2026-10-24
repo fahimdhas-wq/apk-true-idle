@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
@@ -36,10 +37,17 @@ fun SettingsScreen(
     onToggleNotifications: () -> Unit,
     onClearNotificationHistory: () -> Unit,
     onClaimAchievement: ((String) -> Unit)? = null,
+    onToggleAutoEquip: () -> Unit = {},
+    onToggleAutoMerge: () -> Unit = {},
+    onSetCraftUsage: (Int) -> Unit = {},
+    onFightPromotionBoss: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val d = DerivedStats.of(state)
+    val promo = state.promotion
+    val auto = state.automation
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
@@ -50,6 +58,10 @@ fun SettingsScreen(
     var importInputText by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
     var importError by remember { mutableStateOf("") }
+
+    val floorMet = state.player.currentFloor >= promo.requiredFloor
+    val gearMet = d.gearScore >= promo.requiredGearScore
+    val canPromote = floorMet && gearMet
 
     if (showNotificationHistory) {
         NotificationHistoryDialog(
@@ -68,35 +80,314 @@ fun SettingsScreen(
             .testTag("settings_screen"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Notification System & HUD Settings Card
+        // 1. PROMOTION SYSTEM CARD (Direct from HTML Journey view)
+        SciFiPanel(
+            title = "PROMOTION",
+            accent = SecondaryGold,
+            tag = "TIER ${promo.tier} / ${promo.maxTier}"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000), RectangleShape)
+                    .border(BorderStroke(1.dp, SecondaryGold.copy(alpha = 0.5f)))
+                    .padding(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = promo.tierName.uppercase(),
+                    style = TrueIdleType.title,
+                    color = SecondaryGold,
+                    fontSize = 18.sp,
+                    letterSpacing = 1.2.sp
+                )
+                Text(
+                    text = "CURRENT PROMOTION TIER (+${promo.bonusPercent}% ALL STATS BONUS)",
+                    style = TrueIdleType.meta,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Requirements Grid (Floor & Gear Score)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Floor Requirement
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("FLOOR", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = "${state.player.currentFloor} / ${promo.requiredFloor}",
+                                style = TrueIdleType.tag,
+                                color = if (floorMet) GreenSuccess else PrimaryNeon
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val floorProgress = (state.player.currentFloor.toFloat() / promo.requiredFloor.toFloat()).coerceIn(0f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .background(SurfaceVariantDark)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(floorProgress)
+                                    .background(if (floorMet) GreenSuccess else PrimaryNeon)
+                            )
+                        }
+                    }
+
+                    // Gear Score Requirement
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("GEAR SCORE", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = "${d.gearScore} / ${promo.requiredGearScore}",
+                                style = TrueIdleType.tag,
+                                color = if (gearMet) GreenSuccess else SecondaryGold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val gearProgress = (d.gearScore.toFloat() / promo.requiredGearScore.toFloat()).coerceIn(0f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .background(SurfaceVariantDark)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(gearProgress)
+                                    .background(if (gearMet) GreenSuccess else SecondaryGold)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Button(
+                    onClick = onFightPromotionBoss,
+                    enabled = canPromote,
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SecondaryGold,
+                        contentColor = Color(0xFF000000),
+                        disabledContainerColor = SurfaceVariantDark,
+                        disabledContentColor = TextMuted
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .testTag("fight_promotion_boss_btn")
+                ) {
+                    Text(
+                        text = if (canPromote) "⚔ FIGHT PROMOTION BOSS" else "LOCKED (REQUIREMENTS UNMET)",
+                        style = TrueIdleType.tag,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // 2. AUTOMATION PROTOCOLS (Direct from HTML Arcana view)
+        SciFiPanel(
+            title = "AUTOMATION",
+            accent = PrimaryNeon,
+            tag = "ARCANA PROTOCOLS"
+        ) {
+            // Auto-Equip Best Gear Switch
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("AUTO-EQUIP BEST GEAR", style = TrueIdleType.label, color = TextLight)
+                    Text("Equip highest-tier gear automatically on drop", style = TrueIdleType.meta, color = TextMuted)
+                }
+                Switch(
+                    checked = auto.autoEquipBestGear,
+                    onCheckedChange = { onToggleAutoEquip() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = PrimaryNeon,
+                        checkedTrackColor = PrimaryNeon.copy(alpha = 0.3f),
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = SurfaceVariantDark
+                    ),
+                    modifier = Modifier.testTag("auto_equip_switch")
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Auto-Merge Beasts Switch
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("AUTO-MERGE BEASTS", style = TrueIdleType.label, color = TextLight)
+                    Text("Merge identical companions automatically", style = TrueIdleType.meta, color = TextMuted)
+                }
+                Switch(
+                    checked = auto.autoMergeBeasts,
+                    onCheckedChange = { onToggleAutoMerge() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = PrimaryNeon,
+                        checkedTrackColor = PrimaryNeon.copy(alpha = 0.3f),
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = SurfaceVariantDark
+                    ),
+                    modifier = Modifier.testTag("auto_merge_switch")
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Craft Material Usage Slider
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("CRAFT MATERIAL USAGE", style = TrueIdleType.label, color = TextLight)
+                        Text("Max % of materials auto-crafters may use", style = TrueIdleType.meta, color = TextMuted)
+                    }
+                    Text("${auto.craftMaterialUsagePct}%", style = TrueIdleType.value, color = PrimaryNeon)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Slider(
+                    value = auto.craftMaterialUsagePct.toFloat(),
+                    onValueChange = { onSetCraftUsage(it.toInt()) },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                    colors = SliderDefaults.colors(
+                        thumbColor = PrimaryNeon,
+                        activeTrackColor = PrimaryNeon,
+                        inactiveTrackColor = SurfaceVariantDark
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // 3. ACHIEVEMENTS ARCHIVE
+        val claimedCount = state.achievements.count { it.isClaimed }
+        SciFiPanel(
+            title = "ACHIEVEMENTS",
+            accent = SecondaryGold,
+            tag = "$claimedCount / ${state.achievements.size} CLAIMED"
+        ) {
+            state.achievements.forEach { ach ->
+                val canClaim = ach.isUnlocked && !ach.isClaimed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .background(Color(0xFF000000))
+                        .border(1.dp, BorderDark)
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = ach.title.uppercase(),
+                            style = TrueIdleType.label,
+                            color = if (ach.isClaimed) SecondaryGold else TextLight
+                        )
+                        Text(
+                            text = ach.desc,
+                            style = TrueIdleType.meta,
+                            color = TextMuted
+                        )
+                    }
+
+                    if (ach.isClaimed) {
+                        Box(
+                            modifier = Modifier
+                                .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
+                                .border(1.dp, GreenSuccess, RectangleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("✓ CLAIMED", style = TrueIdleType.tag, color = GreenSuccess)
+                        }
+                    } else if (canClaim) {
+                        Button(
+                            onClick = { onClaimAchievement?.invoke(ach.id) },
+                            shape = RectangleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SecondaryGold,
+                                contentColor = Color(0xFF000000)
+                            ),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("claim_ach_${ach.id}")
+                        ) {
+                            Text("CLAIM (+${ach.rewardGold} 🪙)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .background(SurfaceVariantDark, RectangleShape)
+                                .border(1.dp, BorderDark, RectangleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "LOCKED (${ach.progress}/${ach.target})",
+                                style = TrueIdleType.meta,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. NOTIFICATION & SYSTEM LOGS
         SciFiPanel(
             title = "NOTIFICATION PROTOCOLS",
             accent = PrimaryNeon,
             tag = if (state.notificationBannersEnabled) "BANNERS ON" else "BANNERS MUTED"
         ) {
-            Text(
-                text = "Configure floating combat and loot telemetry banners. Access complete chronological log history.",
-                style = TrueIdleType.body,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Toggle Row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF000000), RectangleShape)
-                    .border(1.dp, BorderDark, RectangleShape)
+                    .background(Color(0xFF000000))
+                    .border(1.dp, BorderDark)
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = "FLOATING BANNERS",
-                        style = TrueIdleType.label,
-                        color = TextLight
-                    )
+                    Text("FLOATING TELEMETRY BANNERS", style = TrueIdleType.label, color = TextLight)
                     Text(
                         text = if (state.notificationBannersEnabled) "Real-time popups active" else "Popups silenced (recorded in archive)",
                         style = TrueIdleType.meta,
@@ -112,14 +403,12 @@ fun SettingsScreen(
                         checkedTrackColor = PrimaryNeon.copy(alpha = 0.3f),
                         uncheckedThumbColor = TextMuted,
                         uncheckedTrackColor = SurfaceVariantDark
-                    ),
-                    modifier = Modifier.testTag("notification_banner_switch")
+                    )
                 )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // History Log Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -154,19 +443,12 @@ fun SettingsScreen(
             }
         }
 
-        // Data Management & Persistence Card
+        // 5. DATA PERSISTENCE & DANGER ZONE
         SciFiPanel(
-            title = "SAVE & DATA ARCHIVE",
+            title = "DATA PERSISTENCE",
             accent = SecondaryGold,
-            tag = "PERSISTENCE"
+            tag = "STORAGE"
         ) {
-            Text(
-                text = "Progression is automatically committed every 30s and on app lifecycle suspend. Supports export and import across devices.",
-                style = TrueIdleType.body,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -224,94 +506,6 @@ fun SettingsScreen(
                 Text("RESET PROTOCOL (START FRESH)", style = TrueIdleType.tag)
             }
         }
-
-        // Achievements Card (§4.9)
-        SciFiPanel(
-            title = "ACHIEVEMENTS ARCHIVE",
-            accent = SecondaryGold,
-            tag = "${state.achievements.count { it.isClaimed }}/${state.achievements.size} CLAIMED"
-        ) {
-            state.achievements.forEach { ach ->
-                val canClaim = ach.isUnlocked && !ach.isClaimed
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .background(Color(0xFF000000))
-                        .border(1.dp, BorderDark)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = ach.title.uppercase(),
-                            style = TrueIdleType.label,
-                            color = if (ach.isClaimed) SecondaryGold else TextLight
-                        )
-                        Text(
-                            text = ach.desc,
-                            style = TrueIdleType.meta,
-                            color = TextMuted
-                        )
-                        Text(
-                            text = "REWARD: +${ach.rewardGold} 🪙",
-                            style = TrueIdleType.meta,
-                            color = SecondaryGold
-                        )
-                    }
-
-                    if (ach.isClaimed) {
-                        Box(
-                            modifier = Modifier
-                                .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
-                                .border(1.dp, GreenSuccess, RectangleShape)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("CLAIMED", style = TrueIdleType.tag, color = GreenSuccess)
-                        }
-                    } else if (canClaim) {
-                        Button(
-                            onClick = { onClaimAchievement?.invoke(ach.id) },
-                            shape = RectangleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = SecondaryGold,
-                                contentColor = Color(0xFF000000)
-                            ),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            modifier = Modifier.testTag("claim_ach_${ach.id}")
-                        ) {
-                            Text("CLAIM", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .background(SurfaceVariantDark, RectangleShape)
-                                .border(1.dp, BorderDark, RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "${ach.progress}/${ach.target}",
-                                style = TrueIdleType.meta,
-                                color = TextMuted
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Engine & System Telemetry
-        SciFiPanel(
-            title = "SYSTEM DIAGNOSTICS",
-            accent = TextLight,
-            tag = "TELEMETRY"
-        ) {
-            Text("• AUTO-SAVE: ACTIVE (ATOMIC DISK REPOSITORY)", style = TrueIdleType.meta, color = TextMuted)
-            Text("• OFFLINE ACCUMULATOR: SYNCHRONIZED (MONOTONIC TIME)", style = TrueIdleType.meta, color = TextMuted)
-            Text("• CORE CLOCK: 4 TICKS/SEC (250MS DETERMINISTIC LOOP)", style = TrueIdleType.meta, color = PrimaryNeon)
-            Text("• BUILD REVISION: TRUE IDLE V1.0.0 (CYBERPUNK ENGINE)", style = TrueIdleType.meta, color = TextLight)
-        }
     }
 
     // Export Save Dialog
@@ -326,17 +520,9 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)
                 ) {
-                    Text(
-                        text = "EXPORT SAVE CODE",
-                        style = TrueIdleType.title,
-                        color = PrimaryNeon
-                    )
+                    Text("EXPORT SAVE CODE", style = TrueIdleType.title, color = PrimaryNeon)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Copy the raw JSON archive below and save it to your clipboard:",
-                        style = TrueIdleType.body,
-                        color = TextMuted
-                    )
+                    Text("Copy the raw JSON archive below and save it to your clipboard:", style = TrueIdleType.body, color = TextMuted)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
@@ -359,11 +545,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     if (copyStatus.isNotEmpty()) {
-                        Text(
-                            text = copyStatus,
-                            style = TrueIdleType.tag,
-                            color = GreenSuccess
-                        )
+                        Text(text = copyStatus, style = TrueIdleType.tag, color = GreenSuccess)
                         Spacer(modifier = Modifier.height(6.dp))
                     }
 
@@ -412,17 +594,9 @@ fun SettingsScreen(
                 Column(
                     modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)
                 ) {
-                    Text(
-                        text = "IMPORT SAVE ARCHIVE",
-                        style = TrueIdleType.title,
-                        color = SecondaryGold
-                    )
+                    Text("IMPORT SAVE ARCHIVE", style = TrueIdleType.title, color = SecondaryGold)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Paste a valid exported JSON save archive below:",
-                        style = TrueIdleType.body,
-                        color = TextMuted
-                    )
+                    Text("Paste a valid exported JSON save archive below:", style = TrueIdleType.body, color = TextMuted)
                     Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
@@ -504,11 +678,7 @@ fun SettingsScreen(
                     modifier = Modifier.background(Color(0xFF000000)).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "CRITICAL RESET PROTOCOL",
-                        style = TrueIdleType.title,
-                        color = HpRed
-                    )
+                    Text("CRITICAL RESET PROTOCOL", style = TrueIdleType.title, color = HpRed)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "WARNING: This irreversible action will wipe all active floor progression, inventory, trained dojo ranks, tamed companions, and undead legions.",

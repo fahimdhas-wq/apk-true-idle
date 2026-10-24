@@ -17,7 +17,12 @@ data class Derived(
     val armorDef: Double,
     val lootChance: Double,
     val tameChance: Double,
-    val smiteBonus: Double
+    val smiteBonus: Double,
+    val critChance: Double = 0.124,
+    val critDamage: Double = 1.85,
+    val xpGain: Double = 1.18,
+    val physicalDamage: Double = 412.0,
+    val gearScore: Int = 1840
 )
 
 object DerivedStats {
@@ -29,8 +34,17 @@ object DerivedStats {
         val luck = base.luck + 5.0 * rank("luck_bonus")
         val weapon = s.inventory.firstOrNull { it.isEquipped && it.slot == "Weapon" }
         val armor = s.inventory.firstOrNull { it.isEquipped && it.slot == "Armor" }
+        val ring = s.inventory.firstOrNull { it.isEquipped && it.slot == "Ring" }
+        val amulet = s.inventory.firstOrNull { it.isEquipped && it.slot == "Amulet" }
+
         val weaponDmg = weapon?.let { if (it.atk > 0.0) it.atk else it.tier * 12.0 } ?: 2.0
         val armorDef = armor?.let { if (it.def > 0.0) it.def else it.tier * 8.0 } ?: 0.0
+        val ringBonus = ring?.atk ?: 0.0
+        val amuletBonus = amulet?.def ?: 0.0
+
+        val physicalDmg = (str * 1.2 + weaponDmg + ringBonus) * (base.atkSpeed * 1.05.pow(rank("speed_bonus")))
+        val computedGearScore = 1200 + (lvl * 15) + (weaponDmg * 20).toInt() + (armorDef * 20).toInt() + ((ringBonus + amuletBonus) * 15).toInt()
+
         return Derived(
             str = str,
             intVal = base.intVal,
@@ -44,7 +58,12 @@ object DerivedStats {
             armorDef = armorDef,
             lootChance = 0.30 + luck / 100.0,                                      // 0.35 at luck 5
             tameChance = 0.10 + luck / 100.0,                                      // 0.15 at luck 5
-            smiteBonus = if (s.sanctified.aegisActive) s.sanctified.smiteLevel * 3.0 else 0.0
+            smiteBonus = if (s.sanctified.aegisActive) s.sanctified.smiteLevel * 3.0 else 0.0,
+            critChance = 0.124 + (luck * 0.001),
+            critDamage = 1.85,
+            xpGain = 1.18,
+            physicalDamage = physicalDmg,
+            gearScore = computedGearScore
         )
     }
 }

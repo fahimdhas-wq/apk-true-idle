@@ -194,6 +194,26 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         saveNow()
     }
 
+    fun toggleAutoEquipBestGear() {
+        _gameState.value = engine.toggleAutoEquipBestGear()
+        saveNow()
+    }
+
+    fun toggleAutoMergeBeasts() {
+        _gameState.value = engine.toggleAutoMergeBeasts()
+        saveNow()
+    }
+
+    fun setCraftMaterialUsage(pct: Int) {
+        _gameState.value = engine.setCraftMaterialUsage(pct)
+        saveNow()
+    }
+
+    fun fightPromotionBoss() {
+        _gameState.value = engine.fightPromotionBoss()
+        saveNow()
+    }
+
     fun clearLogs() {
         _gameState.value = engine.clearLogs()
     }

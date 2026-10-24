@@ -294,6 +294,18 @@ fun SkillsOverviewPage(
             state.beasts.lvl + state.necro.lvl + state.training.lvl +
             state.sanctified.lvl + state.slayer.lvl
 
+    val growingPlots = state.gathering.plots.count { !it.isReady }
+    val readyPlots = state.gathering.plots.count { it.isReady }
+    val activeVeins = state.gathering.veins.count { !it.isReady }
+    val readyVeins = state.gathering.veins.count { it.isReady }
+    val oresInSupply = state.inventory.filter { it.category == "Resource" || it.name.contains("Ore", ignoreCase = true) }.sumOf { it.count }
+    val potionsReady = state.inventory.filter { it.category == "Potion" }.sumOf { it.count }
+    val runningCount = (if (growingPlots > 0 || readyPlots > 0) 1 else 0) +
+            (if (activeVeins > 0 || readyVeins > 0) 1 else 0) +
+            (if (state.beasts.beasts.isNotEmpty()) 1 else 0) +
+            (if (state.necro.army.isNotEmpty()) 1 else 0) +
+            (if (state.sanctified.aegisActive) 1 else 0) + 1
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -301,7 +313,7 @@ fun SkillsOverviewPage(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Master Matrix Header
+        // Master Matrix Header (featuring HTML Active Skills '4 RUNNING' badge & Total Level)
         Card(
             modifier = Modifier.fillMaxWidth().testTag("skills_master_card"),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
@@ -316,28 +328,42 @@ fun SkillsOverviewPage(
                 ) {
                     Column {
                         Text(
-                            text = "10 INTERLOCKING DISCIPLINES",
+                            text = "ACTIVE DISCIPLINES",
                             style = TrueIdleType.title,
                             color = PrimaryNeon
                         )
                         Text(
-                            text = "All systems connected across gathering, combat & crafting",
+                            text = "10 Interlocking automated systems",
                             style = TrueIdleType.meta,
                             color = TextMuted
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
-                            .border(1.dp, SecondaryGold, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "TOTAL LVL: $totalSkillLevel",
-                            style = TrueIdleType.tag,
-                            color = SecondaryGold
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                                .border(1.dp, PrimaryNeon, RectangleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "$runningCount RUNNING",
+                                style = TrueIdleType.tag,
+                                color = PrimaryNeon
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
+                                .border(1.dp, SecondaryGold, RectangleShape)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "TOTAL: $totalSkillLevel",
+                                style = TrueIdleType.tag,
+                                color = SecondaryGold
+                            )
+                        }
                     }
                 }
             }
@@ -362,13 +388,11 @@ fun SkillsOverviewPage(
         }
 
         // 2. GATHERING SECTION CARD
-        val readyPlots = state.gathering.plots.count { it.isReady }
-        val readyVeins = state.gathering.veins.count { it.isReady }
         SkillCategoryCard(
             title = "02. GATHERING DISCIPLINE",
             icon = "🌿",
             accentColor = GreenSuccess,
-            quickSummary = "READY: $readyPlots PLOTS | $readyVeins VEINS",
+            quickSummary = "$activeVeins VEINS ACTIVE · $growingPlots PLOTS GROWING · ($readyPlots PLOTS, $readyVeins VEINS READY)",
             actionLabel = "GATHERING",
             onAction = { onNavigate(SkillSubSection.GATHERING) }
         ) {
@@ -394,7 +418,7 @@ fun SkillsOverviewPage(
             title = "03. CRAFTING PROTOCOLS",
             icon = "🔨",
             accentColor = SecondaryGold,
-            quickSummary = "SMITHING & ALCHEMY SYNTHESIS",
+            quickSummary = "$oresInSupply ORES IN SUPPLY · $potionsReady POTIONS READY",
             actionLabel = "CRAFTING",
             onAction = { onNavigate(SkillSubSection.CRAFTING) }
         ) {

@@ -274,6 +274,23 @@ data class Achievement(
 )
 
 @Serializable
+data class AutomationSettings(
+    val autoEquipBestGear: Boolean = true,
+    val autoMergeBeasts: Boolean = false,
+    val craftMaterialUsagePct: Int = 75
+)
+
+@Serializable
+data class PromotionState(
+    val tier: Int = 5,
+    val maxTier: Int = 20,
+    val tierName: String = "Dawnbreaker",
+    val requiredFloor: Int = 60,
+    val requiredGearScore: Int = 2200,
+    val bonusPercent: Int = 8
+)
+
+@Serializable
 data class SaveMeta(
     val savedWallMs: Long = 0L,
     val savedElapsedMs: Long = 0L,
@@ -307,11 +324,15 @@ data class GameState(
     val training: TrainingState = TrainingState(),
     val sanctified: SanctifiedState = SanctifiedState(),
     val slayer: SlayerState = SlayerState(),
+    val automation: AutomationSettings = AutomationSettings(),
+    val promotion: PromotionState = PromotionState(),
     val inventory: List<InventoryItem> = listOf(
         InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false, atk = 18.0),
         InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false, def = 12.0),
         InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true, atk = 8.0),
         InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true, def = 4.0),
+        InventoryItem(id = "item_ember_band", name = "Ember Band", category = "Equipment", count = 1, tier = 2, slot = "Ring", statDesc = "Crit +2.1%", sellValue = 60L, isEquipped = true, atk = 6.0),
+        InventoryItem(id = "item_warden_sigil", name = "Warden Sigil", category = "Equipment", count = 1, tier = 2, slot = "Amulet", statDesc = "Vit +18", sellValue = 60L, isEquipped = true, def = 6.0),
         InventoryItem(id = "item_hp_pot", name = "Lesser Healing Potion", category = "Potion", count = 5, tier = 1, statDesc = "Restores 50 HP", sellValue = 10L),
         InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Crafting Ore", sellValue = 2L),
         InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L),

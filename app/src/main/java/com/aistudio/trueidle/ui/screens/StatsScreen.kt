@@ -35,12 +35,16 @@ fun StatsScreen(
     val p = state.player
     val reqXp = Balance.playerXpReq(p.lvl)
 
-    // D7 Fix: Authoritative single source of truth from DerivedStats and CombatMath
     val d = DerivedStats.of(state)
     val playerDps = CombatMath.heroDps(d)
     val beastDps = CombatMath.beastDps(state.beasts)
     val armyDps = CombatMath.armyDps(state.necro)
     val totalDps = CombatMath.totalDps(state, d)
+
+    val weapon = state.inventory.firstOrNull { it.isEquipped && it.slot == "Weapon" }
+    val armor = state.inventory.firstOrNull { it.isEquipped && it.slot == "Armor" }
+    val ring = state.inventory.firstOrNull { it.isEquipped && it.slot == "Ring" }
+    val amulet = state.inventory.firstOrNull { it.isEquipped && it.slot == "Amulet" }
 
     Column(
         modifier = modifier
@@ -94,17 +98,168 @@ fun StatsScreen(
             }
         }
 
-        // Real-Time Total Combat Power & DPS Matrix
+        // 1. EQUIPMENT 2x2 GEAR GRID (Direct from HTML preview)
+        SciFiPanel(
+            title = "EQUIPMENT",
+            accent = PrimaryNeon,
+            tag = "GS ${d.gearScore}"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Top Row: Weapon & Armor
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Weapon Cell
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(SurfaceVariantDark, RectangleShape)
+                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(PrimaryNeon))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("WEAPON", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = (weapon?.name ?: p.weaponSlot).uppercase(),
+                                style = TrueIdleType.label,
+                                color = TextLight,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "DMG +${d.weaponDmg.toInt()}",
+                                style = TrueIdleType.tag,
+                                color = PrimaryNeon
+                            )
+                        }
+                    }
+
+                    // Armor Cell
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(SurfaceVariantDark, RectangleShape)
+                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(ShieldBlue))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("ARMOR", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = (armor?.name ?: p.armorSlot).uppercase(),
+                                style = TrueIdleType.label,
+                                color = TextLight,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = "DEF +${d.armorDef.toInt()}",
+                                style = TrueIdleType.tag,
+                                color = ShieldBlue
+                            )
+                        }
+                    }
+                }
+
+                // Bottom Row: Ring & Amulet
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Ring Cell
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(SurfaceVariantDark, RectangleShape)
+                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(SecondaryGold))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("RING", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = (ring?.name ?: "EMBER BAND").uppercase(),
+                                style = TrueIdleType.label,
+                                color = TextLight,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = ring?.statDesc ?: "CRIT +2.1%",
+                                style = TrueIdleType.tag,
+                                color = SecondaryGold
+                            )
+                        }
+                    }
+
+                    // Amulet Cell
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .background(SurfaceVariantDark, RectangleShape)
+                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(NecroPurple))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("AMULET", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                text = (amulet?.name ?: "WARDEN SIGIL").uppercase(),
+                                style = TrueIdleType.label,
+                                color = TextLight,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = amulet?.statDesc ?: "VIT +18",
+                                style = TrueIdleType.tag,
+                                color = NecroPurple
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. DERIVED STATS CARD (With Colored Indicator Dots as in HTML)
+        SciFiPanel(
+            title = "DERIVED STATS",
+            accent = SecondaryGold,
+            tag = "LVL ${p.lvl}"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Strength
+                StatDotRow(label = "STRENGTH", value = "${d.str.toInt()}", dotColor = PrimaryNeon, valueColor = PrimaryNeon)
+                // Intelligence
+                StatDotRow(label = "INTELLIGENCE", value = "${d.intVal.toInt()}", dotColor = SecondaryGold, valueColor = SecondaryGold)
+                // Vitality
+                StatDotRow(label = "VITALITY", value = "${d.vit.toInt()}", dotColor = GreenSuccess, valueColor = GreenSuccess)
+                // Defense
+                StatDotRow(label = "DEFENSE", value = "${d.armorDef.toInt()}", dotColor = NecroPurple, valueColor = NecroPurple)
+                // Physical Damage
+                StatDotRow(label = "PHYSICAL DAMAGE", value = "${d.physicalDamage.toInt()}", dotColor = null, valueColor = TextLight)
+                // Crit Chance
+                StatDotRow(label = "CRIT CHANCE", value = String.format(Locale.ROOT, "%.1f%%", d.critChance * 100), dotColor = null, valueColor = TextLight)
+                // Crit Damage
+                StatDotRow(label = "CRIT DAMAGE", value = "${(d.critDamage * 100).toInt()}%", dotColor = null, valueColor = SecondaryGold)
+                // XP Gain
+                StatDotRow(label = "XP GAIN", value = "${(d.xpGain * 100).toInt()}%", dotColor = null, valueColor = TextLight)
+            }
+        }
+
+        // 3. COMBAT POWER BREAKDOWN
         SciFiPanel(
             title = "COMBAT TELEMETRY",
             accent = PrimaryNeon,
             tag = "COMBINED: ${NumberFormatter.short(totalDps)} DPS"
         ) {
             listOf(
-                "HERO SOLO DPS" to "${NumberFormatter.short(playerDps)} DPS (STR + WEAPON)",
+                "HERO SOLO DPS" to "${NumberFormatter.short(playerDps)} DPS",
                 "BEAST COMPANIONS DPS" to "${NumberFormatter.short(beastDps)} DPS (${state.beasts.beasts.size} BEASTS)",
                 "UNDEAD LEGION DPS" to "${NumberFormatter.short(armyDps)} DPS (${state.necro.army.sumOf { it.count }} UNITS)",
-                "EFFECTIVE ARMOR DEFENSE" to "${d.armorDef.toInt()} DEF (${(d.armorDef * 2).toInt()}% MITIGATION)"
+                "ARMOR MITIGATION" to "${d.armorDef.toInt()} DEF (${(100 - (CombatMath.mitigation(d.armorDef) * 100)).toInt()}% REDUCTION)"
             ).forEach { (label, value) ->
                 Row(
                     modifier = Modifier
@@ -119,61 +274,7 @@ fun StatsScreen(
             }
         }
 
-        // Core Attributes Card (Derived)
-        SciFiPanel(
-            title = "CORE ATTRIBUTES",
-            accent = SecondaryGold,
-            tag = "ATTRIBUTES"
-        ) {
-            listOf(
-                "STRENGTH (STR)" to "${d.str.toInt()} (+${(d.str * 1.2).toInt()} DPS)",
-                "INTELLIGENCE (INT)" to "${d.intVal.toInt()} (+${d.maxMana.toInt()} MAX MANA)",
-                "VITALITY (VIT)" to "${d.vit.toInt()} (+${d.maxHp.toInt()} MAX HP)",
-                "LUCK INDEX" to "${(d.luck).toInt()}% (${(d.lootChance * 100).toInt()}% LOOT RATE)",
-                "ATTACK FREQUENCY" to "${String.format(Locale.ROOT, "%.2f", d.atkSpeed)}x MULTIPLIER"
-            ).forEach { (label, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(label, style = TrueIdleType.label, color = TextMuted)
-                    Text(value, style = TrueIdleType.value, color = PrimaryNeon)
-                }
-            }
-        }
-
-        // Equipped Gear
-        SciFiPanel(
-            title = "EQUIPPED ARSENAL",
-            accent = ShieldBlue,
-            tag = "GEAR"
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("⚔ MAIN WEAPON", style = TrueIdleType.label, color = TextMuted)
-                Text("${p.weaponSlot.uppercase()} (+${d.weaponDmg.toInt()} ATK)", style = TrueIdleType.value, color = SecondaryGold)
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("🛡 ARMOR PLATING", style = TrueIdleType.label, color = TextMuted)
-                Text("${p.armorSlot.uppercase()} (+${d.armorDef.toInt()} DEF)", style = TrueIdleType.value, color = ShieldBlue)
-            }
-        }
-
-        // Lifetime Telemetry
+        // 4. LIFETIME TACTICAL TELEMETRY
         SciFiPanel(
             title = "TACTICAL TELEMETRY",
             accent = TextLight,
@@ -200,5 +301,35 @@ fun StatsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun StatDotRow(
+    label: String,
+    value: String,
+    dotColor: Color?,
+    valueColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(BorderStroke(1.dp, BorderDark))
+            .background(Color(0xFF000000))
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (dotColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(dotColor)
+                )
+            }
+            Text(label, style = TrueIdleType.label, color = TextMuted)
+        }
+        Text(value, style = TrueIdleType.value, color = valueColor)
     }
 }
