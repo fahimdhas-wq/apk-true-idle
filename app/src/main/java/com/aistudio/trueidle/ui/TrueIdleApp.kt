@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.ui.components.NotificationBanner
+import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
@@ -42,6 +43,7 @@ fun TrueIdleApp(
     val state by viewModel.gameState.collectAsStateWithLifecycle()
     val logFilter by viewModel.logFilter.collectAsStateWithLifecycle()
     var currentTab by remember { mutableStateOf(TrueIdleTab.COMBAT) }
+    var showNotificationHistory by remember { mutableStateOf(false) }
 
     // Android system back button handler
     BackHandler(enabled = currentTab != TrueIdleTab.COMBAT) {
@@ -53,6 +55,15 @@ fun TrueIdleApp(
         OfflineLootDialog(
             loot = state.pendingOfflineLoot!!,
             onClaim = { viewModel.claimOfflineLoot() }
+        )
+    }
+
+    // Notification History Modal ("Show All")
+    if (showNotificationHistory) {
+        NotificationHistoryDialog(
+            history = state.notificationHistory,
+            onClear = { viewModel.clearNotificationHistory() },
+            onDismiss = { showNotificationHistory = false }
         )
     }
 
@@ -71,18 +82,19 @@ fun TrueIdleApp(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("◆ ", color = PrimaryNeon, fontSize = 14.sp)
+                        Text("◈ ", color = PrimaryNeon, fontSize = 14.sp)
                         Text(
                             text = "TRUE IDLE",
                             style = MaterialTheme.typography.titleLarge,
                             color = TextLight,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.5.sp
+                            letterSpacing = 1.5.sp,
+                            fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
@@ -95,7 +107,8 @@ fun TrueIdleApp(
                                 text = "SECTOR ${state.player.currentFloor.toString().padStart(2, '0')}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = PrimaryNeon,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
                             )
                         }
                     }
@@ -114,7 +127,8 @@ fun TrueIdleApp(
                                 text = "🪙 ${state.player.gold}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = SecondaryGold,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
                             )
                         }
                         Box(
@@ -127,21 +141,24 @@ fun TrueIdleApp(
                                 text = "💀 ${state.necro.boneEssence}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = NecroPurple,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
                             )
                         }
                     }
                 }
 
-                // Anti-stacking interactive notification banner
+                // Anti-stacking interactive notification banner with Show All option
                 NotificationBanner(
                     notifications = state.notifications,
-                    onDismiss = { viewModel.dismissNotification(it) }
+                    onDismiss = { viewModel.dismissNotification(it) },
+                    onShowAll = { showNotificationHistory = true },
+                    historyCount = state.notificationHistory.size
                 )
             }
         },
         bottomBar = {
-            // High-End Cyberpunk 5-Tab Navigation Bar
+            // High-End Cyberpunk 5-Tab Navigation Bar (Combat -> Skills -> Stats -> Arsenal -> System)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -186,7 +203,7 @@ fun TrueIdleApp(
                                 color = if (isSelected) PrimaryNeon else TextMuted,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.8.sp,
-                                fontSize = 9.sp
+                                fontSize = 8.sp
                             )
                         }
                     }
@@ -231,7 +248,9 @@ fun TrueIdleApp(
                     state = state,
                     onExportSave = { viewModel.exportSave() },
                     onImportSave = { code -> viewModel.importSave(code) },
-                    onResetGame = { viewModel.resetGame() }
+                    onResetGame = { viewModel.resetGame() },
+                    onToggleNotifications = { viewModel.toggleNotificationBanners() },
+                    onClearNotificationHistory = { viewModel.clearNotificationHistory() }
                 )
             }
         }

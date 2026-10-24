@@ -23,14 +23,15 @@ import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
+import kotlin.math.max
 
-enum class SkillSubSection(val label: String) {
-    OVERVIEW("OVERVIEW"),
-    GATHERING("GATHERING"),
-    CRAFTING("CRAFTING"),
-    BEASTS("BEASTS"),
-    NECROMANCY("NECRO"),
-    TRAINING("TRAINING")
+enum class SkillSubSection(val label: String, val icon: String, val color: Color) {
+    OVERVIEW("OVERVIEW", "⬡", PrimaryNeon),
+    GATHERING("GATHERING", "🌿", GreenSuccess),
+    CRAFTING("CRAFTING", "🔨", SecondaryGold),
+    BEASTS("BEASTS", "🐾", GreenSuccess),
+    NECROMANCY("NECRO", "💀", NecroPurple),
+    TRAINING("TRAINING", "🥋", PrimaryNeon)
 }
 
 @Composable
@@ -57,7 +58,7 @@ fun SkillsScreen(
             .fillMaxSize()
             .background(BgDark)
     ) {
-        // High-End Cyberpunk Sub-Category Navigation Bar
+        // True Idle Live sleek internal navigation tab bar
         val navScroll = rememberScrollState()
         Row(
             modifier = Modifier
@@ -65,37 +66,80 @@ fun SkillsScreen(
                 .background(Color(0xFF000000))
                 .border(BorderStroke(1.dp, BorderDark), RectangleShape)
                 .horizontalScroll(navScroll)
-                .padding(4.dp)
+                .padding(horizontal = 6.dp, vertical = 6.dp)
                 .testTag("skills_sub_nav_row"),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             SkillSubSection.values().forEach { section ->
                 val isSelected = (currentSection == section)
+                val levelText = when (section) {
+                    SkillSubSection.OVERVIEW -> ""
+                    SkillSubSection.GATHERING -> "LV ${max(state.gathering.farmingLvl, state.gathering.miningLvl)}"
+                    SkillSubSection.CRAFTING -> "LV ${max(state.crafting.smithingLvl, state.crafting.herbloreLvl)}"
+                    SkillSubSection.BEASTS -> "LV ${state.beasts.lvl}"
+                    SkillSubSection.NECROMANCY -> "LV ${state.necro.lvl}"
+                    SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
+                }
+
                 Box(
                     modifier = Modifier
                         .clickable { currentSection = section }
                         .background(
-                            if (isSelected) PrimaryNeon.copy(alpha = 0.15f) else SurfaceDark,
+                            if (isSelected) section.color.copy(alpha = 0.2f) else SurfaceDark,
                             RectangleShape
                         )
                         .border(
                             BorderStroke(
-                                width = 1.dp,
-                                color = if (isSelected) PrimaryNeon else BorderDark
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) section.color else BorderDark
                             ),
                             RectangleShape
                         )
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(horizontal = 10.dp, vertical = 7.dp)
                         .testTag("skills_sub_tab_${section.name.lowercase()}"),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = section.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) PrimaryNeon else TextMuted,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = section.icon,
+                            fontSize = 10.sp,
+                            color = if (isSelected) section.color else TextMuted
+                        )
+                        Text(
+                            text = section.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSelected) section.color else TextMuted,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            fontSize = 9.sp
+                        )
+                        if (levelText.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        if (isSelected) section.color.copy(alpha = 0.25f) else SurfaceVariantDark,
+                                        RectangleShape
+                                    )
+                                    .border(
+                                        0.5.dp,
+                                        if (isSelected) section.color else BorderDark,
+                                        RectangleShape
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = levelText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) section.color else TextMuted,
+                                    fontSize = 7.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -107,7 +151,7 @@ fun SkillsScreen(
                 onNavigate = { currentSection = it }
             )
             SkillSubSection.GATHERING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("GATHERING MATRIX (FARMING & MINING)") {
+                SubSectionHeader("SKILLS // GATHERING MATRIX (FARMING & MINING)") {
                     currentSection = SkillSubSection.OVERVIEW
                 }
                 GatheringScreen(
@@ -117,7 +161,7 @@ fun SkillsScreen(
                 )
             }
             SkillSubSection.CRAFTING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("CRAFTING PROTOCOLS (SMITHING & HERBLORE)") {
+                SubSectionHeader("SKILLS // CRAFTING PROTOCOLS (SMITHING & ALCHEMY)") {
                     currentSection = SkillSubSection.OVERVIEW
                 }
                 CraftingScreen(
@@ -127,7 +171,7 @@ fun SkillsScreen(
                 )
             }
             SkillSubSection.BEASTS -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("BEAST SANCTUARY (TAMING & SYNTHESIS)") {
+                SubSectionHeader("SKILLS // BEAST SANCTUARY (TAMING & SYNTHESIS)") {
                     currentSection = SkillSubSection.OVERVIEW
                 }
                 BeastsScreen(
@@ -136,7 +180,7 @@ fun SkillsScreen(
                 )
             }
             SkillSubSection.NECROMANCY -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("ALTAR OF BONES (NECROMANCY PROTOCOLS)") {
+                SubSectionHeader("SKILLS // ALTAR OF BONES (NECROMANCY PROTOCOLS)") {
                     currentSection = SkillSubSection.OVERVIEW
                 }
                 NecromancyScreen(
@@ -145,7 +189,7 @@ fun SkillsScreen(
                 )
             }
             SkillSubSection.TRAINING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("NEURAL DOJO (CORE TRAINING)") {
+                SubSectionHeader("SKILLS // NEURAL DOJO (CORE TRAINING)") {
                     currentSection = SkillSubSection.OVERVIEW
                 }
                 TrainingScreen(
@@ -165,7 +209,7 @@ fun SubSectionHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SurfaceDark)
+            .background(Color(0xFF000000))
             .border(BorderStroke(1.dp, BorderDark), RectangleShape)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -176,19 +220,20 @@ fun SubSectionHeader(
             style = MaterialTheme.typography.labelSmall,
             color = PrimaryNeon,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp
+            letterSpacing = 0.8.sp,
+            fontSize = 9.sp
         )
         OutlinedButton(
             onClick = onBackToOverview,
             shape = RectangleShape,
-            border = BorderStroke(1.dp, BorderDark),
+            border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.6f)),
             colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = SurfaceVariantDark,
-                contentColor = TextLight
+                containerColor = PrimaryNeon.copy(alpha = 0.12f),
+                contentColor = PrimaryNeon
             ),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
         ) {
-            Text("◀ OVERVIEW", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("◀ OVERVIEW", fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -200,12 +245,16 @@ fun SkillsOverviewPage(
 ) {
     val scrollState = rememberScrollState()
 
+    val totalSkillLevel = state.gathering.farmingLvl + state.gathering.miningLvl +
+            state.crafting.smithingLvl + state.crafting.herbloreLvl +
+            state.beasts.lvl + state.necro.lvl + state.training.lvl
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Master Matrix Header
         Card(
@@ -214,41 +263,67 @@ fun SkillsOverviewPage(
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "SKILLS OVERVIEW & PROGRESSION",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = PrimaryNeon,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Active progression matrix for all 6 disciplines. Each skill unlocks passive perks, production yields, and combat stats.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
-                )
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "SKILLS PROGRESSION MATRIX",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = PrimaryNeon,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = "Interlocking progression across all core specializations",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted,
+                            fontSize = 9.sp
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, SecondaryGold, RectangleShape)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "TOTAL LEVEL: $totalSkillLevel",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryGold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 8.sp
+                        )
+                    }
+                }
             }
         }
 
-        // 1. GATHERING SECTION
+        // 1. GATHERING SECTION CARD
+        val readyPlots = state.gathering.plots.count { it.isReady }
+        val readyVeins = state.gathering.veins.count { it.isReady }
         SkillCategoryCard(
             title = "01. GATHERING DISCIPLINE",
+            icon = "🌿",
             accentColor = GreenSuccess,
-            description = "Farming herb plots and excavating mining veins.",
-            actionLabel = "OPEN GATHERING",
+            quickSummary = "READY: $readyPlots PLOTS | $readyVeins VEINS",
+            actionLabel = "GATHERING",
             onAction = { onNavigate(SkillSubSection.GATHERING) }
         ) {
             XpProgressBar(
-                skillName = "🌿 FARMING",
+                skillName = "BIO-FARMING",
                 level = state.gathering.farmingLvl,
                 currentXp = state.gathering.farmingXp,
                 requiredXp = Balance.skillXpReq(state.gathering.farmingLvl),
                 barColor = GreenSuccess
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             XpProgressBar(
-                skillName = "⛏ MINING",
+                skillName = "ORE MINING",
                 level = state.gathering.miningLvl,
                 currentXp = state.gathering.miningXp,
                 requiredXp = Balance.skillXpReq(state.gathering.miningLvl),
@@ -256,24 +331,25 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 2. CRAFTING SECTION
+        // 2. CRAFTING SECTION CARD
         SkillCategoryCard(
             title = "02. CRAFTING PROTOCOLS",
+            icon = "🔨",
             accentColor = SecondaryGold,
-            description = "Smithing weapons and armors; alchemy flask synthesis.",
-            actionLabel = "OPEN CRAFTING",
+            quickSummary = "SMITHING & ALCHEMY SYNTHESIS",
+            actionLabel = "CRAFTING",
             onAction = { onNavigate(SkillSubSection.CRAFTING) }
         ) {
             XpProgressBar(
-                skillName = "🔨 SMITHING",
+                skillName = "CYBER SMITHING",
                 level = state.crafting.smithingLvl,
                 currentXp = state.crafting.smithingXp,
                 requiredXp = Balance.skillXpReq(state.crafting.smithingLvl),
                 barColor = SecondaryGold
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             XpProgressBar(
-                skillName = "🧪 HERBLORE",
+                skillName = "HERBLORE LAB",
                 level = state.crafting.herbloreLvl,
                 currentXp = state.crafting.herbloreXp,
                 requiredXp = Balance.skillXpReq(state.crafting.herbloreLvl),
@@ -281,75 +357,61 @@ fun SkillsOverviewPage(
             )
         }
 
-        // 3. BEAST TAMING SECTION
+        // 3. BEAST TAMING SECTION CARD
+        val totalBeastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
         SkillCategoryCard(
             title = "03. BEAST TAMING",
+            icon = "🐾",
             accentColor = GreenSuccess,
-            description = "Taming combat companions and star merging for higher DPS.",
-            actionLabel = "MANAGE BEASTS",
+            quickSummary = "${state.beasts.beasts.size}/8 BEASTS | ${totalBeastDps.toInt()} TOTAL DPS",
+            actionLabel = "BEASTS",
             onAction = { onNavigate(SkillSubSection.BEASTS) }
         ) {
             XpProgressBar(
-                skillName = "🐾 BEAST TAMING",
+                skillName = "BEAST TAMING",
                 level = state.beasts.lvl,
                 currentXp = state.beasts.xp,
                 requiredXp = Balance.skillXpReq(state.beasts.lvl),
                 barColor = GreenSuccess
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "ACTIVE ROSTER: ${state.beasts.beasts.size}/8 BEASTS | TROPHIES: ${state.beasts.trophies}",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontSize = 9.sp
-            )
         }
 
-        // 4. NECROMANCY SECTION
+        // 4. NECROMANCY SECTION CARD
+        val totalArmyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
+        val totalMinions = state.necro.army.sumOf { it.count }
         SkillCategoryCard(
             title = "04. NECROMANCY DISCIPLINE",
+            icon = "💀",
             accentColor = NecroPurple,
-            description = "Raising skeletal legions and bone sorcerers using essence.",
-            actionLabel = "ENTER ALTAR",
+            quickSummary = "${state.necro.boneEssence} 💀 ESSENCE | $totalMinions UNITS (${totalArmyDps.toInt()} DPS)",
+            actionLabel = "NECRO",
             onAction = { onNavigate(SkillSubSection.NECROMANCY) }
         ) {
             XpProgressBar(
-                skillName = "💀 NECROMANCY",
+                skillName = "NECROMANCY",
                 level = state.necro.lvl,
                 currentXp = state.necro.xp,
                 requiredXp = Balance.skillXpReq(state.necro.lvl),
                 barColor = NecroPurple
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "BONE ESSENCE: ${state.necro.boneEssence} 💀 | LEGION COUNT: ${state.necro.army.sumOf { it.count }} UNITS",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontSize = 9.sp
-            )
         }
 
-        // 5. TRAINING SECTION
+        // 5. TRAINING SECTION CARD
+        val totalRanks = state.training.nodes.sumOf { it.rank }
         SkillCategoryCard(
             title = "05. NEURAL DOJO TRAINING",
+            icon = "🥋",
             accentColor = PrimaryNeon,
-            description = "Permanent attribute rank enhancements funded by gold credits.",
-            actionLabel = "UPGRADE DOJO",
+            quickSummary = "$totalRanks RANKS ACQUIRED | PERMANENT STAT BUFFS",
+            actionLabel = "TRAINING",
             onAction = { onNavigate(SkillSubSection.TRAINING) }
         ) {
             XpProgressBar(
-                skillName = "🥋 TRAINING",
+                skillName = "CORE TRAINING",
                 level = state.training.lvl,
                 currentXp = state.training.xp,
                 requiredXp = Balance.skillXpReq(state.training.lvl),
                 barColor = PrimaryNeon
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "TALENT POINTS: ${state.training.talentPoints} | ENHANCED NODES: ${state.training.nodes.sumOf { it.rank }} RANKS",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontSize = 9.sp
             )
         }
     }
@@ -358,8 +420,9 @@ fun SkillsOverviewPage(
 @Composable
 fun SkillCategoryCard(
     title: String,
+    icon: String,
     accentColor: Color,
-    description: String,
+    quickSummary: String,
     actionLabel: String,
     onAction: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
@@ -376,13 +439,21 @@ fun SkillCategoryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = accentColor,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.8.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(icon, fontSize = 11.sp)
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp,
+                        fontSize = 11.sp
+                    )
+                }
+
                 OutlinedButton(
                     onClick = onAction,
                     shape = RectangleShape,
@@ -391,25 +462,26 @@ fun SkillCategoryCard(
                         containerColor = accentColor.copy(alpha = 0.15f),
                         contentColor = accentColor
                     ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "$actionLabel ➔",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 9.sp
+                        fontSize = 8.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = description,
+                text = quickSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
-                fontSize = 10.sp
+                fontSize = 8.sp,
+                letterSpacing = 0.5.sp
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             content()
         }

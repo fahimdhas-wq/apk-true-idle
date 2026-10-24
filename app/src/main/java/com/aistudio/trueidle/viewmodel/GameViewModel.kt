@@ -93,6 +93,14 @@ class GameViewModel : ViewModel() {
         _gameState.value = engine.dismissNotification(id)
     }
 
+    fun toggleNotificationBanners() {
+        _gameState.value = engine.toggleNotificationBanners()
+    }
+
+    fun clearNotificationHistory() {
+        _gameState.value = engine.clearNotificationHistory()
+    }
+
     fun claimOfflineLoot() {
         _gameState.value = engine.claimOfflineLoot()
     }

@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -28,7 +29,14 @@ fun StatsScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val reqXp = Balance.playerXpReq(p.lvl)
-    val xpProgress = (p.xp.toFloat() / reqXp.toFloat()).coerceIn(0f, 1f)
+
+    val strBonus = p.stats.str * 1.2
+    val weaponDmg = p.weaponDmg
+    val sanctifiedBonus = if (state.sanctified.aegisActive) state.sanctified.smiteLevel * 3.0 else 0.0
+    val playerDps = (strBonus + weaponDmg + sanctifiedBonus) * p.stats.atkSpeed
+    val beastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
+    val armyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
+    val totalDps = playerDps + beastDps + armyDps
 
     Column(
         modifier = modifier
@@ -39,7 +47,7 @@ fun StatsScreen(
             .testTag("stats_screen"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Hero Header Card
+        // Hero Header Card with XP Bar
         Card(
             modifier = Modifier.fillMaxWidth().testTag("stats_header_card"),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
@@ -64,27 +72,56 @@ fun StatsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
+                XpProgressBar(
+                    skillName = "HERO EXPERIENCE",
+                    level = p.lvl,
+                    currentXp = p.xp,
+                    requiredXp = reqXp,
+                    barColor = PrimaryNeon
+                )
+            }
+        }
+
+        // Real-Time Total Combat Power & DPS Matrix
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("combat_power_card"),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("EXPERIENCE PROGRESSION", style = MaterialTheme.typography.labelSmall, color = TextMuted, letterSpacing = 0.5.sp)
-                    Text("${p.xp} / $reqXp XP", style = MaterialTheme.typography.labelSmall, color = TextLight)
-                }
-                Spacer(modifier = Modifier.height(3.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .background(Color(0xFF000000), RectangleShape)
-                        .border(1.dp, BorderDark, RectangleShape)
-                ) {
+                    Text("COMBAT TELEMETRY", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Box(
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(xpProgress)
-                            .background(PrimaryNeon, RectangleShape)
-                    )
+                            .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, PrimaryNeon, RectangleShape)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("COMBINED DPS: ${totalDps.toInt()}", style = MaterialTheme.typography.labelSmall, color = PrimaryNeon, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                listOf(
+                    "HERO SOLO DPS" to "${playerDps.toInt()} DPS (STR + Weapon)",
+                    "BEAST COMPANIONS DPS" to "${beastDps.toInt()} DPS (${state.beasts.beasts.size} Beasts)",
+                    "UNDEAD LEGION DPS" to "${armyDps.toInt()} DPS (${state.necro.army.sumOf { it.count }} Minions)",
+                    "EFFECTIVE ARMOR DEFENSE" to "${p.armorDef.toInt()} DEF (${(p.armorDef * 2).toInt()}% Reduction)"
+                ).forEach { (label, value) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 3.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(label, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                        Text(value, style = MaterialTheme.typography.bodySmall, color = TextLight, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

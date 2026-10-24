@@ -40,8 +40,30 @@ class GameEngine(initialState: GameState = GameState()) {
             val estXp = estKills * state.monster.xpReward
             val estBones = estKills * 2L
 
-            val oreDrops = (seconds / 60L).toInt().coerceAtLeast(1)
-            val herbDrops = (seconds / 45L).toInt().coerceAtLeast(1)
+            // Calculate potential level ups from offline XP
+            var tempXp = state.player.xp + estXp
+            var tempLvl = state.player.lvl
+            var lvlsGained = 0
+            while (true) {
+                val req = Balance.playerXpReq(tempLvl)
+                if (tempXp >= req) {
+                    tempXp -= req
+                    tempLvl++
+                    lvlsGained++
+                } else {
+                    break
+                }
+            }
+
+            val oreDrops = (seconds / 40L).toInt().coerceIn(1, 120)
+            val herbDrops = (seconds / 30L).toInt().coerceIn(1, 150)
+
+            val drops = mutableListOf<String>()
+            drops.add("$oreDrops Copper Ore")
+            drops.add("$herbDrops Felweed")
+            if (seconds > 300L) {
+                drops.add("${(seconds / 300L).toInt().coerceAtMost(20)} Wolf Fang")
+            }
 
             val offline = OfflineLoot(
                 timeAwaySeconds = seconds,
@@ -49,7 +71,10 @@ class GameEngine(initialState: GameState = GameState()) {
                 goldEarned = estGold,
                 xpEarned = estXp,
                 bonesEarned = estBones,
-                dropsSummary = listOf("$oreDrops Copper Ore", "$herbDrops Felweed")
+                playerLevelsGained = lvlsGained,
+                farmingGainsSummary = "$herbDrops Herbs gathered via autonomous hydroponics",
+                miningGainsSummary = "$oreDrops Ores extracted via deep-core drill units",
+                dropsSummary = drops
             )
 
             state = state.copy(pendingOfflineLoot = offline, lastSaveTimestamp = now)
@@ -60,39 +85,47 @@ class GameEngine(initialState: GameState = GameState()) {
         val loot = state.pendingOfflineLoot ?: return state
         val inv = state.inventory.toMutableList()
 
-        // Add ore & herb
+        // Add ore & herb to inventory
         val oreIdx = inv.indexOfFirst { it.name == "Copper Ore" }
+        val oreCount = (loot.timeAwaySeconds / 40L).toInt().coerceIn(1, 120)
         if (oreIdx >= 0) {
-            inv[oreIdx] = inv[oreIdx].copy(count = inv[oreIdx].count + 5)
+            inv[oreIdx] = inv[oreIdx].copy(count = inv[oreIdx].count + oreCount)
         } else {
-            inv.add(InventoryItem("item_${System.currentTimeMillis()}_ore", "Copper Ore", "Resource", 5, 1, "", "Crafting metal ore", 2L))
+            inv.add(InventoryItem("item_${System.currentTimeMillis()}_ore", "Copper Ore", "Resource", oreCount, 1, "", "Crafting metal ore", 2L))
         }
 
         val herbIdx = inv.indexOfFirst { it.name == "Felweed" }
+        val herbCount = (loot.timeAwaySeconds / 30L).toInt().coerceIn(1, 150)
         if (herbIdx >= 0) {
-            inv[herbIdx] = inv[herbIdx].copy(count = inv[herbIdx].count + 5)
+            inv[herbIdx] = inv[herbIdx].copy(count = inv[herbIdx].count + herbCount)
         } else {
-            inv.add(InventoryItem("item_${System.currentTimeMillis()}_herb", "Felweed", "Resource", 5, 1, "", "Alchemy herb", 3L))
+            inv.add(InventoryItem("item_${System.currentTimeMillis()}_herb", "Felweed", "Resource", herbCount, 1, "", "Alchemy herb", 3L))
         }
 
         var curXp = state.player.xp + loot.xpEarned
         var curLvl = state.player.lvl
-        val reqXp = Balance.playerXpReq(curLvl)
-        if (curXp >= reqXp) {
-            curXp -= reqXp
-            curLvl++
+        while (true) {
+            val reqXp = Balance.playerXpReq(curLvl)
+            if (curXp >= reqXp) {
+                curXp -= reqXp
+                curLvl++
+            } else {
+                break
+            }
         }
 
         val newLogs = state.logs + LogEntry(
             id = logCounter++,
-            text = "OFFLINE REPORT: Recovered ${loot.goldEarned} 🪙, ${loot.xpEarned} XP, ${loot.kills} kills.",
-            type = "gain"
+            text = "OFFLINE PROGRESS CLAIMED: +${loot.goldEarned} 🪙, +${loot.xpEarned} XP, +${loot.bonesEarned} 💀 (${loot.kills} kills).",
+            type = "milestone"
         )
 
         pushNotification(
             title = "OFFLINE GAINS CLAIMED",
-            message = "Added ${loot.goldEarned} 🪙, ${loot.xpEarned} XP, and ${loot.bonesEarned} 💀 to reserves.",
-            type = "gain"
+            message = "Recovered ${loot.goldEarned} 🪙, ${loot.xpEarned} XP, and ${loot.bonesEarned} 💀",
+            type = "gain",
+            status = "SUCCESS",
+            detail = "${loot.kills} hostiles neutralized | Disconnected: ${loot.timeAwaySeconds}s"
         )
 
         state = state.copy(
@@ -109,30 +142,73 @@ class GameEngine(initialState: GameState = GameState()) {
         return state
     }
 
-    fun pushNotification(title: String, message: String, type: String = "info") {
+    fun pushNotification(
+        title: String,
+        message: String,
+        type: String = "info",
+        status: String = "SUCCESS",
+        detail: String = ""
+    ) {
+        val notif = GameNotification(
+            id = notifCounter++,
+            title = title,
+            message = message,
+            type = type,
+            count = 1,
+            timestamp = System.currentTimeMillis(),
+            status = status,
+            detail = detail
+        )
+
+        // Always record to full notification history (capped at 50)
+        val history = (state.notificationHistory + notif).takeLast(50)
+
+        if (!state.notificationBannersEnabled) {
+            state = state.copy(notifications = emptyList(), notificationHistory = history)
+            return
+        }
+
         val currentList = state.notifications.toMutableList()
-        // Anti-stacking: check if identical notification occurred in recent queue
-        val existingIndex = currentList.indexOfFirst { it.title == title && it.message == message }
+        // Anti-stacking: merge if identical title or message is already in active queue
+        val existingIndex = currentList.indexOfFirst { it.title == title || (it.type == type && it.message == message) }
         if (existingIndex >= 0) {
             val existing = currentList[existingIndex]
             currentList[existingIndex] = existing.copy(
                 count = existing.count + 1,
+                message = message,
+                status = status,
+                detail = detail,
                 timestamp = System.currentTimeMillis()
             )
         } else {
-            currentList.add(
-                GameNotification(
-                    id = notifCounter++,
-                    title = title,
-                    message = message,
-                    type = type,
-                    count = 1,
-                    timestamp = System.currentTimeMillis()
-                )
-            )
+            currentList.add(notif)
         }
-        // Retain only latest 3 notifications to prevent clutter
-        state = state.copy(notifications = currentList.takeLast(3))
+        // Retain only latest 3 notifications on banner to prevent clutter
+        state = state.copy(
+            notifications = currentList.takeLast(3),
+            notificationHistory = history
+        )
+    }
+
+    fun toggleNotificationBanners(): GameState {
+        val next = !state.notificationBannersEnabled
+        state = state.copy(
+            notificationBannersEnabled = next,
+            notifications = if (next) state.notifications else emptyList()
+        )
+        pushNotification(
+            title = "SYSTEM SETTINGS",
+            message = if (next) "Notification Banners ENABLED" else "Notification Banners MUTED",
+            type = "system",
+            status = "INFO",
+            detail = "Configure in System Settings anytime"
+        )
+        return state
+    }
+
+    fun clearNotificationHistory(): GameState {
+        state = state.copy(notificationHistory = emptyList())
+        return state
     }
 
     fun dismissNotification(id: Long): GameState {
@@ -529,9 +605,9 @@ class GameEngine(initialState: GameState = GameState()) {
                 bXp -= req
                 bLvl++
                 newLogs.add(LogEntry(logCounter++, "SKILL LEVEL UP: Beast Taming reached Level $bLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Beast Taming reached Level $bLvl!", "level")
+                pushNotification("SKILL LEVEL UP", "Beast Taming reached Level $bLvl!", "level", "SUCCESS", "Unlocked higher tier synthesis capabilities")
             } else {
-                pushNotification("BEAST MERGE SUCCESS", "${upgraded.name} upgraded to ⭐${upgraded.stars} (+${upgraded.dps.toInt()} DPS)", "tame")
+                pushNotification("BEAST MERGE SUCCESS", "${upgraded.name} upgraded to ⭐${upgraded.stars}", "tame", "SUCCESS", "+${upgraded.dps.toInt()} DPS | Base HP: ${upgraded.maxHp.toInt()}")
             }
 
             state = state.copy(
@@ -568,9 +644,9 @@ class GameEngine(initialState: GameState = GameState()) {
                     tXp -= req
                     tLvl++
                     newLogs.add(LogEntry(logCounter++, "SKILL LEVEL UP: Training reached Level $tLvl!", "milestone"))
-                    pushNotification("SKILL LEVEL UP", "Training reached Level $tLvl!", "level")
+                    pushNotification("SKILL LEVEL UP", "Training reached Level $tLvl!", "level", "SUCCESS", "Enhanced Neural matrix efficiency")
                 } else {
-                    pushNotification("ENHANCEMENT COMPLETE", "${node.name} Rank ${node.rank + 1} acquired (${node.stat})", "gear")
+                    pushNotification("ENHANCEMENT COMPLETE", "${node.name} Rank ${node.rank + 1} acquired", "gear", "SUCCESS", node.stat)
                 }
 
                 state = state.copy(
@@ -591,6 +667,7 @@ class GameEngine(initialState: GameState = GameState()) {
             if (item.category == "Equipment") {
                 var p = state.player
                 if (item.slot == "Weapon") {
+                    val prevWeapon = p.weaponSlot
                     // Unequip any existing weapon
                     for (i in inv.indices) {
                         if (inv[i].slot == "Weapon" && inv[i].isEquipped) {
@@ -600,10 +677,11 @@ class GameEngine(initialState: GameState = GameState()) {
                     inv[idx] = item.copy(isEquipped = true)
                     val newDmg = item.tier * 12.0
                     p = p.copy(weaponSlot = item.name, weaponDmg = newDmg)
-                    pushNotification("EQUIP SUCCESS", "Equipped ${item.name} (+${newDmg.toInt()} DMG) in Main Hand", "gear")
-                    val newLogs = state.logs + LogEntry(logCounter++, "GEAR EQUIPPED: ${item.name.uppercase()} (+${newDmg.toInt()} DMG)", "system")
+                    pushNotification("EQUIP: MAIN HAND", "Equipped ${item.name}", "gear", "SUCCESS", "+${newDmg.toInt()} DMG | Replaced $prevWeapon")
+                    val newLogs = state.logs + LogEntry(logCounter++, "GEAR EQUIPPED: ${item.name.uppercase()} (+${newDmg.toInt()} DMG) assigned to Weapon Slot", "system")
                     state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
                 } else if (item.slot == "Armor") {
+                    val prevArmor = p.armorSlot
                     // Unequip any existing armor
                     for (i in inv.indices) {
                         if (inv[i].slot == "Armor" && inv[i].isEquipped) {
@@ -613,8 +691,8 @@ class GameEngine(initialState: GameState = GameState()) {
                     inv[idx] = item.copy(isEquipped = true)
                     val newDef = item.tier * 8.0
                     p = p.copy(armorSlot = item.name, armorDef = newDef)
-                    pushNotification("EQUIP SUCCESS", "Equipped ${item.name} (+${newDef.toInt()} DEF) in Body Armor", "gear")
-                    val newLogs = state.logs + LogEntry(logCounter++, "GEAR EQUIPPED: ${item.name.uppercase()} (+${newDef.toInt()} DEF)", "system")
+                    pushNotification("EQUIP: BODY ARMOR", "Equipped ${item.name}", "gear", "SUCCESS", "+${newDef.toInt()} DEF | Replaced $prevArmor")
+                    val newLogs = state.logs + LogEntry(logCounter++, "GEAR EQUIPPED: ${item.name.uppercase()} (+${newDef.toInt()} DEF) assigned to Armor Slot", "system")
                     state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
                 }
             } else if (item.category == "Potion") {
@@ -624,7 +702,7 @@ class GameEngine(initialState: GameState = GameState()) {
                 } else {
                     inv.removeAt(idx)
                 }
-                pushNotification("FLASK DEPLOYED", "${item.name} applied (+50 HP restored)", "gain")
+                pushNotification("FLASK CONSUMED", "${item.name} deployed", "gain", "SUCCESS", "Restored 50 HP (Now ${healed.toInt()}/${state.player.maxHp.toInt()} HP)")
                 val newLogs = state.logs + LogEntry(logCounter++, "FLASK DEPLOYED: Restored 50 HP (Now ${healed.toInt()}/${state.player.maxHp.toInt()} HP)", "gain")
                 state = state.copy(
                     player = state.player.copy(hp = healed),
@@ -648,8 +726,8 @@ class GameEngine(initialState: GameState = GameState()) {
             } else if (item.slot == "Armor") {
                 p = p.copy(armorSlot = "None", armorDef = 0.0)
             }
-            pushNotification("UNEQUIPPED", "Removed ${item.name} from ${item.slot} slot", "gear")
-            val newLogs = state.logs + LogEntry(logCounter++, "GEAR UNEQUIPPED: ${item.name.uppercase()} returned to Arsenal", "system")
+            pushNotification("UNEQUIPPED", "Removed ${item.name} from ${item.slot} slot", "gear", "INFO", "Reverted slot to default unarmed condition")
+            val newLogs = state.logs + LogEntry(logCounter++, "GEAR UNEQUIPPED: ${item.name.uppercase()} unequipped and returned to Arsenal", "system")
             state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
         }
         return state
@@ -679,9 +757,9 @@ class GameEngine(initialState: GameState = GameState()) {
                 sXp -= req
                 sLvl++
                 newLogs.add(LogEntry(logCounter++, "SKILL LEVEL UP: Smithing reached Level $sLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Smithing reached Level $sLvl!", "level")
+                pushNotification("SKILL LEVEL UP", "Smithing reached Level $sLvl!", "level", "SUCCESS", "Higher tier blueprints accessible")
             } else {
-                pushNotification("FORGE SUCCESS", "Forged $name ($statDesc, Slot: $slot)", "craft")
+                pushNotification("FORGE SUCCESS", "Forged $name ($statDesc)", "craft", "SUCCESS", "Slot: $slot | Consumed ${reqQty}x $reqOre")
             }
 
             state = state.copy(
@@ -690,7 +768,8 @@ class GameEngine(initialState: GameState = GameState()) {
                 logs = newLogs.takeLast(40)
             )
         } else {
-            pushNotification("FORGE FAILED", "Insufficient materials ($reqQty $reqOre required)", "combat")
+            val have = inv.find { it.name == reqOre }?.count ?: 0
+            pushNotification("FORGE FAILED", "Insufficient materials for $name", "combat", "FAILED", "Requires: ${reqQty}x $reqOre | Have: $have")
         }
         return state
     }
@@ -717,9 +796,9 @@ class GameEngine(initialState: GameState = GameState()) {
                 hXp -= req
                 hLvl++
                 newLogs.add(LogEntry(logCounter++, "SKILL LEVEL UP: Herblore reached Level $hLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Herblore reached Level $hLvl!", "level")
+                pushNotification("SKILL LEVEL UP", "Herblore reached Level $hLvl!", "level", "SUCCESS", "Potency coefficient increased")
             } else {
-                pushNotification("SYNTHESIS SUCCESS", "Brewed $name successfully", "craft")
+                pushNotification("ALCHEMY SUCCESS", "Brewed $name successfully", "craft", "SUCCESS", "Restores 75 HP | Consumed ${reqQty}x $reqHerb")
             }
 
             state = state.copy(
@@ -728,7 +807,8 @@ class GameEngine(initialState: GameState = GameState()) {
                 logs = newLogs.takeLast(40)
             )
         } else {
-            pushNotification("SYNTHESIS FAILED", "Insufficient materials ($reqQty $reqHerb required)", "combat")
+            val have = inv.find { it.name == reqHerb }?.count ?: 0
+            pushNotification("ALCHEMY FAILED", "Insufficient materials for $name", "combat", "FAILED", "Requires: ${reqQty}x $reqHerb | Have: $have")
         }
         return state
     }

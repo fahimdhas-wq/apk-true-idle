@@ -223,9 +223,11 @@ data class GameNotification(
     val id: Long,
     val title: String,
     val message: String,
-    val type: String = "info", // "gear", "craft", "level", "tame", "save"
+    val type: String = "info", // "gear", "craft", "level", "tame", "save", "milestone"
     val count: Int = 1,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val status: String = "SUCCESS", // "SUCCESS", "FAILED", "INFO", "ALERT"
+    val detail: String = ""
 )
 
 @Serializable
@@ -235,6 +237,9 @@ data class OfflineLoot(
     val goldEarned: Long = 0L,
     val xpEarned: Long = 0L,
     val bonesEarned: Long = 0L,
+    val playerLevelsGained: Int = 0,
+    val farmingGainsSummary: String = "",
+    val miningGainsSummary: String = "",
     val dropsSummary: List<String> = emptyList()
 )
 
@@ -275,6 +280,8 @@ data class GameState(
         LogEntry(id = 2L, text = "RADAR CONTACT: Cave Rat engaged.", type = "combat")
     ),
     val notifications: List<GameNotification> = emptyList(),
+    val notificationHistory: List<GameNotification> = emptyList(),
+    val notificationBannersEnabled: Boolean = true,
     val pendingOfflineLoot: OfflineLoot? = null,
     val achievements: List<Achievement> = listOf(
         Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 1, target = 1, isUnlocked = true, rewardGold = 50L),

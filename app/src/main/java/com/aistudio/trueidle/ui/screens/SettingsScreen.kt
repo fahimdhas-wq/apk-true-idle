@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -30,6 +31,8 @@ fun SettingsScreen(
     onExportSave: () -> String,
     onImportSave: (String) -> Boolean,
     onResetGame: () -> Unit,
+    onToggleNotifications: () -> Unit,
+    onClearNotificationHistory: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -38,10 +41,20 @@ fun SettingsScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showNotificationHistory by remember { mutableStateOf(false) }
+
     var exportedCode by remember { mutableStateOf("") }
     var importInputText by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
     var importError by remember { mutableStateOf("") }
+
+    if (showNotificationHistory) {
+        NotificationHistoryDialog(
+            history = state.notificationHistory,
+            onClear = onClearNotificationHistory,
+            onDismiss = { showNotificationHistory = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -52,16 +65,16 @@ fun SettingsScreen(
             .testTag("settings_screen"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Save Management & Cloud Archive Card
+        // Notification System & HUD Settings Card
         Card(
-            modifier = Modifier.fillMaxWidth().testTag("save_management_card"),
+            modifier = Modifier.fillMaxWidth().testTag("notifications_settings_card"),
             colors = CardDefaults.cardColors(containerColor = SurfaceDark),
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = "DATA MANAGEMENT & BACKUP",
+                    text = "NOTIFICATION & TELEMETRY PROTOCOLS",
                     style = MaterialTheme.typography.titleMedium,
                     color = PrimaryNeon,
                     fontWeight = FontWeight.Bold,
@@ -69,9 +82,102 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
+                    text = "Configure live floating banners and access complete historical progression logs.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted,
+                    fontSize = 9.sp
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Toggle Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF000000), RectangleShape)
+                        .border(1.dp, BorderDark, RectangleShape)
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "REAL-TIME POPUP BANNERS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextLight,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (state.notificationBannersEnabled) "Floating heads-up notifications active" else "Notifications muted (recorded to archive only)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted,
+                            fontSize = 8.sp
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onToggleNotifications,
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, if (state.notificationBannersEnabled) GreenSuccess else BorderDark),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (state.notificationBannersEnabled) GreenSuccess.copy(alpha = 0.15f) else SurfaceVariantDark,
+                            contentColor = if (state.notificationBannersEnabled) GreenSuccess else TextMuted
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.testTag("notif_toggle_btn")
+                    ) {
+                        Text(
+                            text = if (state.notificationBannersEnabled) "ON" else "OFF",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Show All Notification History Action
+                OutlinedButton(
+                    onClick = { showNotificationHistory = true },
+                    modifier = Modifier.fillMaxWidth().testTag("open_history_btn"),
+                    shape = RectangleShape,
+                    border = BorderStroke(1.dp, PrimaryNeon),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = PrimaryNeon.copy(alpha = 0.12f),
+                        contentColor = PrimaryNeon
+                    ),
+                    contentPadding = PaddingValues(vertical = 10.dp)
+                ) {
+                    Text(
+                        text = "SHOW ALL NOTIFICATIONS (${state.notificationHistory.size} IN ARCHIVE) ➔",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+            }
+        }
+
+        // Save Management & Cloud Archive Card
+        Card(
+            modifier = Modifier.fillMaxWidth().testTag("save_management_card"),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            shape = RectangleShape,
+            border = BorderStroke(1.dp, BorderDark)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "DATA MANAGEMENT & BACKUP",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextLight,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
                     text = "Export and import your game save archive at any time to transfer progress across devices.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextMuted
+                    color = TextMuted,
+                    fontSize = 9.sp
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -142,7 +248,13 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, SecondaryGold.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("ACHIEVEMENTS DATABASE", style = MaterialTheme.typography.titleMedium, color = SecondaryGold, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(
+                    text = "ACHIEVEMENTS DATABASE",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SecondaryGold,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 state.achievements.forEach { ach ->
@@ -153,8 +265,19 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(ach.title.uppercase(), style = MaterialTheme.typography.bodyMedium, color = if (isCompleted) SecondaryGold else TextLight, fontWeight = FontWeight.Bold)
-                            Text(ach.desc, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            Text(
+                                text = ach.title.uppercase(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isCompleted) SecondaryGold else TextLight,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                text = ach.desc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted,
+                                fontSize = 9.sp
+                            )
                         }
                         Box(
                             modifier = Modifier
@@ -166,7 +289,8 @@ fun SettingsScreen(
                                 text = if (isCompleted) "CLAIMED" else "${ach.progress}/${ach.target}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (isCompleted) GreenSuccess else TextMuted,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 8.sp
                             )
                         }
                     }
@@ -182,12 +306,18 @@ fun SettingsScreen(
             border = BorderStroke(1.dp, BorderDark)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("ENGINE & SYSTEM TELEMETRY", style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(
+                    text = "ENGINE & SYSTEM TELEMETRY",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextLight,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("• AUTO-SAVE: ACTIVE (LOCAL PERSISTENCE ENGINE)", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                Text("• OFFLINE ACCUMULATOR: ENABLED (SIMULATES BACKGROUND TICKS)", style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                Text("• CORE CLOCK: 4 TICKS/SEC SYNCHRONIZED", style = MaterialTheme.typography.bodySmall, color = PrimaryNeon)
-                Text("• BUILD REVISION: TRUE IDLE V1.0.0 (CYBERPUNK ENGINE)", style = MaterialTheme.typography.bodySmall, color = TextLight)
+                Text("• AUTO-SAVE: ACTIVE (LOCAL PERSISTENCE ENGINE)", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 9.sp)
+                Text("• OFFLINE ACCUMULATOR: ENABLED (SIMULATES BACKGROUND TICKS)", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 9.sp)
+                Text("• CORE CLOCK: 4 TICKS/SEC SYNCHRONIZED", style = MaterialTheme.typography.bodySmall, color = PrimaryNeon, fontSize = 9.sp)
+                Text("• BUILD REVISION: TRUE IDLE V1.0.0 (CYBERPUNK ENGINE)", style = MaterialTheme.typography.bodySmall, color = TextLight, fontSize = 9.sp)
             }
         }
     }

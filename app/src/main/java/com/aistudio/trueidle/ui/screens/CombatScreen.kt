@@ -14,14 +14,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
-import com.aistudio.trueidle.ui.components.FloorControls
-import com.aistudio.trueidle.ui.components.LogView
-import com.aistudio.trueidle.ui.components.StatBar
-import com.aistudio.trueidle.ui.components.XpProgressBar
+import com.aistudio.trueidle.ui.components.*
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -76,6 +74,9 @@ fun CombatScreen(
             }
         }
 
+        // Real-Time Combat DPS Matrix Telemetry Card
+        CombatTelemetryCard(state = state)
+
         // Combat Arena: Perfectly Symmetrical Player Box vs Enemy Box
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -94,9 +95,11 @@ fun CombatScreen(
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Header Row
+                    // Header Row (Fixed 24.dp height)
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(26.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -105,25 +108,27 @@ fun CombatScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = PrimaryNeon,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.sp,
+                            fontSize = 13.sp,
+                            maxLines = 1
                         )
                         Box(
                             modifier = Modifier
                                 .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                                 .border(1.dp, PrimaryNeon, RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "LVL ${p.lvl}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = PrimaryNeon,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                fontSize = 8.sp
                             )
                         }
                     }
 
-                    // Stat Bars
+                    // Stat Bars (HP, SHIELD, MANA)
                     StatBar(
                         label = "HP",
                         current = p.hp,
@@ -148,7 +153,7 @@ fun CombatScreen(
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Equipment Telemetry (Fixed Height for symmetry)
+                    // Equipment Telemetry (Fixed Height for exact symmetry)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -159,12 +164,27 @@ fun CombatScreen(
                         verticalArrangement = Arrangement.Center
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("⚔ ", fontSize = 9.sp, color = SecondaryGold)
-                            Text(p.weaponSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1, fontSize = 9.sp)
+                            Text("⚔ ", fontSize = 8.sp, color = SecondaryGold)
+                            Text(
+                                text = p.weaponSlot.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextLight,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 8.sp
+                            )
                         }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("🛡 ", fontSize = 9.sp, color = ShieldBlue)
-                            Text(p.armorSlot.uppercase(), style = MaterialTheme.typography.labelSmall, color = TextLight, maxLines = 1, fontSize = 9.sp)
+                            Text("🛡 ", fontSize = 8.sp, color = ShieldBlue)
+                            Text(
+                                text = p.armorSlot.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextLight,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 8.sp
+                            )
                         }
                     }
                 }
@@ -183,9 +203,11 @@ fun CombatScreen(
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Header Row
+                    // Header Row (Fixed 24.dp height)
                     Row(
-                        modifier = Modifier.fillMaxWidth().height(26.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -194,26 +216,30 @@ fun CombatScreen(
                             style = MaterialTheme.typography.titleMedium,
                             color = if (m.isBoss) SecondaryGold else HpRed,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.8.sp,
-                            maxLines = 1
+                            letterSpacing = 0.5.sp,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
                         Box(
                             modifier = Modifier
                                 .background(if (m.isBoss) SecondaryGold.copy(alpha = 0.15f) else HpRed.copy(alpha = 0.15f), RectangleShape)
                                 .border(1.dp, if (m.isBoss) SecondaryGold else HpRed, RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = m.tag.uppercase(),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = if (m.isBoss) SecondaryGold else HpRed,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
+                                fontSize = 8.sp
                             )
                         }
                     }
 
-                    // Stat Bars (Matching 3 rows for uniform height)
+                    // Stat Bars (Matching 3 rows for uniform height: HP, SHIELD, ARMOR RESIST)
                     StatBar(
                         label = "HP",
                         current = m.hp,
@@ -229,7 +255,7 @@ fun CombatScreen(
                         tag = "enemy_shield_bar"
                     )
                     StatBar(
-                        label = "ARMOR RESIST",
+                        label = "ARMOR",
                         current = m.armor,
                         max = (m.armor * 2.0).coerceAtLeast(10.0),
                         fillColor = SecondaryGold,
@@ -238,7 +264,7 @@ fun CombatScreen(
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Hostile Specs (Fixed Height for symmetry)
+                    // Hostile Specs (Fixed Height for exact symmetry)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,18 +274,27 @@ fun CombatScreen(
                             .padding(4.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "ATK: ${m.damage.toInt()} DMG",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = HpRed,
-                            fontSize = 9.sp
-                        )
-                        Text(
-                            text = "DEF: ${m.armor.toInt()} DEF",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted,
-                            fontSize = 9.sp
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("💥 ", fontSize = 8.sp, color = HpRed)
+                            Text(
+                                text = "ATK: ${m.damage.toInt()} DMG",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = HpRed,
+                                fontSize = 8.sp,
+                                maxLines = 1
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🛡 ", fontSize = 8.sp, color = TextMuted)
+                            Text(
+                                text = "DEF: ${m.armor.toInt()} DEF",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextMuted,
+                                fontSize = 8.sp,
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -277,25 +312,40 @@ fun CombatScreen(
                 shape = RectangleShape,
                 border = BorderStroke(1.dp, BorderDark)
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(68.dp)
+                        .padding(6.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
                         text = "🐾 BEASTS [${state.beasts.beasts.size}/8]",
                         style = MaterialTheme.typography.labelSmall,
                         color = GreenSuccess,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.5.sp,
+                        fontSize = 9.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                     if (state.beasts.beasts.isEmpty()) {
-                        Text("No active beasts", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                        Text("No beasts active", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 9.sp)
+                        Text("Defeat hostiles to tame", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 8.sp)
                     } else {
-                        state.beasts.beasts.take(2).forEach { b ->
-                            Text(
-                                text = "› ${b.name.uppercase()} ⭐${b.stars} (${b.dps.toInt()} DPS)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextLight,
-                                maxLines = 1
-                            )
+                        val bList = state.beasts.beasts.take(2)
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            bList.forEach { b ->
+                                Text(
+                                    text = "› ${b.name.uppercase()} ⭐${b.stars} (${b.dps.toInt()} DPS)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextLight,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontSize = 8.sp
+                                )
+                            }
+                            if (bList.size == 1) {
+                                Text("› 1 ACTIVE COMPANION", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 8.sp)
+                            }
                         }
                     }
                 }
@@ -308,25 +358,40 @@ fun CombatScreen(
                 shape = RectangleShape,
                 border = BorderStroke(1.dp, BorderDark)
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(68.dp)
+                        .padding(6.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
                         text = "💀 UNDEAD ARMY",
                         style = MaterialTheme.typography.labelSmall,
                         color = NecroPurple,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.5.sp,
+                        fontSize = 9.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                     if (state.necro.army.isEmpty()) {
-                        Text("No minions active", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                        Text("No minions active", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 9.sp)
+                        Text("Reanimate at Altar", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 8.sp)
                     } else {
-                        state.necro.army.take(2).forEach { minion ->
-                            Text(
-                                text = "› ${minion.type.uppercase()} x${minion.count} (${minion.dps.toInt()} DPS)",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextLight,
-                                maxLines = 1
-                            )
+                        val mList = state.necro.army.take(2)
+                        Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            mList.forEach { minion ->
+                                Text(
+                                    text = "› ${minion.type.uppercase()} x${minion.count} (${(minion.dps * minion.count).toInt()} DPS)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextLight,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontSize = 8.sp
+                                )
+                            }
+                            if (mList.size == 1) {
+                                Text("› SKELETON CORPS ACTIVE", style = MaterialTheme.typography.bodySmall, color = TextMuted, fontSize = 8.sp)
+                            }
                         }
                     }
                 }

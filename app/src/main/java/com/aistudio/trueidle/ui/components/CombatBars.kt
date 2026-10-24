@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.ui.theme.BorderDark
@@ -32,9 +33,18 @@ fun StatBar(
     val progress = if (max > 0) (current / max).toFloat().coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "BarAnim")
 
-    Column(modifier = modifier.fillMaxWidth().testTag(tag)) {
+    val curInt = current.coerceAtLeast(0.0).toInt()
+    val maxInt = max.coerceAtLeast(1.0).toInt()
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(tag)
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 2.dp, vertical = 1.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -43,19 +53,23 @@ fun StatBar(
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                letterSpacing = 0.8.sp,
+                fontSize = 9.sp,
+                maxLines = 1
             )
             Text(
-                text = "${current.toInt()} / ${max.toInt()}",
+                text = "$curInt / $maxInt",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 10.sp
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
+                .height(7.dp)
                 .clip(RectangleShape)
                 .background(Color(0xFF000000))
                 .border(1.dp, BorderDark, RectangleShape)
