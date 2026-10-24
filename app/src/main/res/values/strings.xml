@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">True IDLE</string>
+    <string name="tab_combat">Combat</string>
+    <string name="tab_stats">Stats</string>
+    <string name="tab_skills">Skills</string>
+    <string name="tab_beasts">Beasts</string>
+    <string name="tab_necro">Necro</string>
+    <string name="tab_inventory">Inventory</string>
+    <string name="tab_settings">Settings</string>
+</resources>
