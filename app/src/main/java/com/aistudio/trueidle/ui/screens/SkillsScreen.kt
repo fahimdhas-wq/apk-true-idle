@@ -16,25 +16,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.SkillTelemetryStrip
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 import kotlin.math.max
 
 enum class SkillSubSection(val label: String, val icon: String, val color: Color) {
-    OVERVIEW("OVERVIEW", "⬡", PrimaryNeon),
-    GATHERING("GATHERING", "🌿", GreenSuccess),
-    CRAFTING("CRAFTING", "🔨", SecondaryGold),
-    BEASTS("BEASTS", "🐾", GreenSuccess),
-    NECROMANCY("NECRO", "💀", NecroPurple),
-    TRAINING("TRAINING", "🥋", PrimaryNeon),
-    SANCTIFIED("SANCTIFIED", "🕊", ManaTeal),
-    SLAYER("SLAYER", "⚔", HpRed)
+    OVERVIEW("OVERVIEW", "[+]", PrimaryNeon),
+    GATHERING("GATHERING", "[G]", GreenSuccess),
+    CRAFTING("CRAFTING", "[F]", SecondaryGold),
+    BEASTS("BEASTS", "[B]", GreenSuccess),
+    NECROMANCY("NECRO", "[N]", NecroPurple),
+    TRAINING("TRAINING", "[T]", PrimaryNeon),
+    SANCTIFIED("SANCTIFIED", "[S]", ManaTeal),
+    SLAYER("SLAYER", "[X]", HpRed)
 }
 
 @Composable
@@ -53,56 +52,27 @@ fun SkillsScreen(
     modifier: Modifier = Modifier
 ) {
     var currentSection by remember { mutableStateOf(SkillSubSection.OVERVIEW) }
+    BackHandler(enabled = currentSection != SkillSubSection.OVERVIEW) { currentSection = SkillSubSection.OVERVIEW }
 
-    // Intercept back button to return to overview if inside a sub-section
-    BackHandler(enabled = currentSection != SkillSubSection.OVERVIEW) {
-        currentSection = SkillSubSection.OVERVIEW
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BgDark)
-    ) {
-        // Resource Header: GOLD · FAITH · SLAYER POINTS (§7.7)
+    Column(modifier.fillMaxSize().background(BgDark)) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF000000))
-                .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().background(SurfaceDark).border(1.dp, BorderNeon.copy(alpha = 0.32f), RectangleShape).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("🪙", style = TrueIdleType.value)
-                Text(NumberFormatter.short(state.player.gold), style = TrueIdleType.value, color = SecondaryGold)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("🕊", style = TrueIdleType.value)
-                Text(NumberFormatter.short(state.sanctified.faith), style = TrueIdleType.value, color = ManaTeal)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("⚔", style = TrueIdleType.value)
-                Text("${state.slayer.slayerPoints} PTS", style = TrueIdleType.value, color = HpRed)
-            }
+            ResourceReadout("CR", NumberFormatter.short(state.player.gold), SecondaryGold)
+            ResourceReadout("FA", NumberFormatter.short(state.sanctified.faith), ManaTeal)
+            ResourceReadout("SP", "${state.slayer.slayerPoints} PTS", HpRed)
         }
 
-        // True Idle Live internal navigation tab bar
-        val navScroll = rememberScrollState()
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF000000))
-                .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                .horizontalScroll(navScroll)
-                .padding(horizontal = 6.dp, vertical = 6.dp)
-                .testTag("skills_sub_nav_row"),
+            Modifier.fillMaxWidth().background(SurfaceDark).border(1.dp, BorderNeon.copy(alpha = 0.32f), RectangleShape)
+                .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 6.dp).testTag("skills_sub_nav_row"),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             SkillSubSection.values().forEach { section ->
-                val isSelected = (currentSection == section)
-                val levelText = when (section) {
+                val selected = currentSection == section
+                val level = when (section) {
                     SkillSubSection.OVERVIEW -> ""
                     SkillSubSection.GATHERING -> "LV ${max(state.gathering.farmingLvl, state.gathering.miningLvl)}"
                     SkillSubSection.CRAFTING -> "LV ${max(state.crafting.smithingLvl, state.crafting.herbloreLvl)}"
@@ -112,426 +82,146 @@ fun SkillsScreen(
                     SkillSubSection.SANCTIFIED -> "LV ${state.sanctified.lvl}"
                     SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
                 }
-
-                Box(
-                    modifier = Modifier
-                        .clickable { currentSection = section }
-                        .background(
-                            if (isSelected) section.color.copy(alpha = 0.2f) else SurfaceDark,
-                            RectangleShape
-                        )
-                        .border(
-                            BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) section.color else BorderDark
-                            ),
-                            RectangleShape
-                        )
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                Row(
+                    Modifier.clickable { currentSection = section }
+                        .background(if (selected) section.color.copy(alpha = 0.2f) else SurfaceVariantDark, RectangleShape)
+                        .border(1.dp, if (selected) section.color else BorderDark, RectangleShape)
+                        .padding(horizontal = 9.dp, vertical = 8.dp)
                         .testTag("skills_sub_tab_${section.name.lowercase()}"),
-                    contentAlignment = Alignment.Center
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = section.icon,
-                            style = TrueIdleType.label,
-                            color = if (isSelected) section.color else TextMuted
-                        )
-                        Text(
-                            text = section.label,
-                            style = TrueIdleType.tag,
-                            color = if (isSelected) section.color else TextMuted
-                        )
-                        if (levelText.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        if (isSelected) section.color.copy(alpha = 0.25f) else SurfaceVariantDark,
-                                        RectangleShape
-                                    )
-                                    .border(
-                                        0.5.dp,
-                                        if (isSelected) section.color else BorderDark,
-                                        RectangleShape
-                                    )
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    text = levelText,
-                                    style = TrueIdleType.meta,
-                                    color = if (isSelected) section.color else TextMuted
-                                )
-                            }
-                        }
-                    }
+                    Text(section.icon, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
+                    Text(section.label, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
+                    if (level.isNotEmpty()) Text(level, style = TrueIdleType.meta, color = if (selected) section.color else TextMuted)
                 }
             }
         }
 
-        // Section Content
         when (currentSection) {
-            SkillSubSection.OVERVIEW -> SkillsOverviewPage(
-                state = state,
-                onNavigate = { currentSection = it }
-            )
-            SkillSubSection.GATHERING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // GATHERING MATRIX (FARMING & MINING)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                GatheringScreen(
-                    state = state,
-                    onHarvestPlot = onHarvestPlot,
-                    onMineVein = onMineVein
-                )
+            SkillSubSection.OVERVIEW -> SkillsOverviewPage(state) { currentSection = it }
+            SkillSubSection.GATHERING -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // GATHERING MATRIX") { currentSection = SkillSubSection.OVERVIEW }
+                GatheringScreen(state = state, onHarvestPlot = onHarvestPlot, onMineVein = onMineVein)
             }
-            SkillSubSection.CRAFTING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // CRAFTING PROTOCOLS (SMITHING & ALCHEMY)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                CraftingScreen(
-                    state = state,
-                    onCraftEquipment = onCraftEquipment,
-                    onBrewPotion = onBrewPotion
-                )
+            SkillSubSection.CRAFTING -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // FABRICATION BAY") { currentSection = SkillSubSection.OVERVIEW }
+                CraftingScreen(state = state, onCraftEquipment = onCraftEquipment, onBrewPotion = onBrewPotion)
             }
-            SkillSubSection.BEASTS -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // BEAST SANCTUARY (TAMING & SYNTHESIS)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                BeastsScreen(
-                    state = state,
-                    onMergeBeasts = onMergeBeasts
-                )
+            SkillSubSection.BEASTS -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // COMPANION NETWORK") { currentSection = SkillSubSection.OVERVIEW }
+                BeastsScreen(state = state, onMergeBeasts = onMergeBeasts)
             }
-            SkillSubSection.NECROMANCY -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // ALTAR OF BONES (NECROMANCY PROTOCOLS)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                NecromancyScreen(
-                    state = state,
-                    onSummonMinion = onSummonMinion
-                )
+            SkillSubSection.NECROMANCY -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // REANIMATION PROTOCOL") { currentSection = SkillSubSection.OVERVIEW }
+                NecromancyScreen(state = state, onSummonMinion = onSummonMinion)
             }
-            SkillSubSection.TRAINING -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // NEURAL DOJO (CORE TRAINING)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                TrainingScreen(
-                    state = state,
-                    onTrainNode = onTrainNode
-                )
+            SkillSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // ENHANCEMENT BAY") { currentSection = SkillSubSection.OVERVIEW }
+                TrainingScreen(state = state, onTrainNode = onTrainNode)
             }
-            SkillSubSection.SANCTIFIED -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // SANCTIFIED CONCLAVE (FAITH & SMITE)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                SanctifiedScreen(
-                    state = state,
-                    onToggleAegis = onToggleSanctifiedAegis,
-                    onUpgradeSmite = onUpgradeSanctifiedSmite
-                )
+            SkillSubSection.SANCTIFIED -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // SANCTIFIED FIELD") { currentSection = SkillSubSection.OVERVIEW }
+                SanctifiedScreen(state = state, onToggleAegis = onToggleSanctifiedAegis, onUpgradeSmite = onUpgradeSanctifiedSmite)
             }
-            SkillSubSection.SLAYER -> Column(modifier = Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // SLAYER SECTOR (DIRECTIVES & HUNT)") {
-                    currentSection = SkillSubSection.OVERVIEW
-                }
-                SlayerScreen(
-                    state = state,
-                    onRerollTask = onRerollSlayerTask
-                )
+            SkillSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // TARGETING DIRECTIVE") { currentSection = SkillSubSection.OVERVIEW }
+                SlayerScreen(state = state, onRerollTask = onRerollSlayerTask)
             }
         }
     }
 }
 
 @Composable
-fun SubSectionHeader(
-    title: String,
-    onBackToOverview: () -> Unit
-) {
+private fun ResourceReadout(label: String, value: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Text(label, style = TrueIdleType.tag, color = TextMuted)
+        Text(value, style = TrueIdleType.value, color = color)
+    }
+}
+
+@Composable
+fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF000000))
-            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().background(SurfaceDark).border(1.dp, BorderNeon.copy(alpha = 0.32f), RectangleShape).padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            style = TrueIdleType.tag,
-            color = PrimaryNeon,
-            modifier = Modifier.weight(1f)
-        )
+        Text(title, style = TrueIdleType.tag, color = PrimaryNeon, modifier = Modifier.weight(1f))
         OutlinedButton(
-            onClick = onBackToOverview,
-            shape = RectangleShape,
+            onClick = onBackToOverview, shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.6f)),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = PrimaryNeon.copy(alpha = 0.12f),
-                contentColor = PrimaryNeon
-            ),
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = PrimaryNeon.copy(alpha = 0.12f), contentColor = PrimaryNeon),
             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+        ) { Text("◀ OVERVIEW", style = TrueIdleType.tag) }
+    }
+}
+
+@Composable
+fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) {
+    val scrollState = rememberScrollState()
+    val totalLevel = state.player.lvl + state.gathering.farmingLvl + state.gathering.miningLvl +
+        state.crafting.smithingLvl + state.crafting.herbloreLvl + state.beasts.lvl + state.necro.lvl +
+        state.training.lvl + state.sanctified.lvl + state.slayer.lvl
+    val active = (if (state.gathering.plots.isNotEmpty()) 1 else 0) +
+        (if (state.gathering.veins.isNotEmpty()) 1 else 0) + (if (state.beasts.beasts.isNotEmpty()) 1 else 0) +
+        (if (state.necro.army.isNotEmpty()) 1 else 0) + (if (state.sanctified.aegisActive) 1 else 0) + 1
+    val ores = state.inventory.filter { it.category == "Resource" || it.name.contains("Ore", true) }.sumOf { it.count }
+    val potions = state.inventory.filter { it.category == "Potion" }.sumOf { it.count }
+    val beastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
+    val armyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
+    val minions = state.necro.army.sumOf { it.count }
+    val ranks = state.training.nodes.sumOf { it.rank }
+
+    Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MetricTile("SYSTEMS", "$active ONLINE", PrimaryNeon, Modifier.weight(1f))
+            MetricTile("TOTAL LEVEL", totalLevel.toString(), SecondaryGold, Modifier.weight(1f))
+        }
+        Card(
+            Modifier.fillMaxWidth().testTag("skills_master_card"),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark), shape = RectangleShape,
+            border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.65f))
         ) {
-            Text("◀ OVERVIEW", style = TrueIdleType.tag)
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("SKILL NETWORK // STATUS", style = TrueIdleType.title, color = PrimaryNeon)
+                Text("ALL DISCIPLINES REPORTING · AUTONOMOUS OPERATIONS", style = TrueIdleType.meta, color = TextMuted)
+            }
+        }
+        SkillCategoryCard("01 // COMBAT", "[C]", PrimaryNeon, "SECTOR ${state.player.currentFloor} · ${state.lifetime.totalKills} ELIMINATIONS", "OPEN", {}, state.player.lvl, state.player.xp, Balance.playerXpReq(state.player.lvl), "TACTICAL") {
+            XpProgressBar("COMBAT LEVEL", state.player.lvl, state.player.xp, Balance.playerXpReq(state.player.lvl), PrimaryNeon)
+        }
+        SkillCategoryCard("02 // GATHERING", "[G]", GreenSuccess, "${state.gathering.plots.count { !it.isReady }} CULTURES · ${state.gathering.veins.count { !it.isReady }} VEINS ACTIVE", "OPEN", { onNavigate(SkillSubSection.GATHERING) }, max(state.gathering.farmingLvl, state.gathering.miningLvl), max(state.gathering.farmingXp, state.gathering.miningXp), Balance.skillXpReq(max(state.gathering.farmingLvl, state.gathering.miningLvl)), "EXTRACTION") {
+            XpProgressBar("BIO-FARMING", state.gathering.farmingLvl, state.gathering.farmingXp, Balance.skillXpReq(state.gathering.farmingLvl), GreenSuccess)
+            XpProgressBar("ORE MINING", state.gathering.miningLvl, state.gathering.miningXp, Balance.skillXpReq(state.gathering.miningLvl), SecondaryGold)
+        }
+        SkillCategoryCard("03 // FABRICATION", "[F]", SecondaryGold, "$ores RAW MATERIALS · $potions CHEMICALS", "OPEN", { onNavigate(SkillSubSection.CRAFTING) }, max(state.crafting.smithingLvl, state.crafting.herbloreLvl), max(state.crafting.smithingXp, state.crafting.herbloreXp), Balance.skillXpReq(max(state.crafting.smithingLvl, state.crafting.herbloreLvl)), "ASSEMBLY") {
+            XpProgressBar("SMITHING", state.crafting.smithingLvl, state.crafting.smithingXp, Balance.skillXpReq(state.crafting.smithingLvl), SecondaryGold)
+            XpProgressBar("HERBLORE", state.crafting.herbloreLvl, state.crafting.herbloreXp, Balance.skillXpReq(state.crafting.herbloreLvl), GreenSuccess)
+        }
+        SkillCategoryCard("04 // COMPANIONS", "[B]", GreenSuccess, "${state.beasts.beasts.size}/8 UNITS · ${beastDps.toInt()} DPS", "OPEN", { onNavigate(SkillSubSection.BEASTS) }, state.beasts.lvl, state.beasts.xp, Balance.skillXpReq(state.beasts.lvl), "BIO-LINK") {
+            XpProgressBar("COMPANION BOND", state.beasts.lvl, state.beasts.xp, Balance.skillXpReq(state.beasts.lvl), GreenSuccess)
+        }
+        SkillCategoryCard("05 // NECROMANCY", "[N]", NecroPurple, "${state.necro.boneEssence} ESSENCE · $minions UNITS · ${armyDps.toInt()} DPS", "OPEN", { onNavigate(SkillSubSection.NECROMANCY) }, state.necro.lvl, state.necro.xp, Balance.skillXpReq(state.necro.lvl), "REANIMATION") {
+            XpProgressBar("NECROMANCY", state.necro.lvl, state.necro.xp, Balance.skillXpReq(state.necro.lvl), NecroPurple)
+        }
+        SkillCategoryCard("06 // ENHANCEMENT", "[T]", PrimaryNeon, "$ranks RANKS INSTALLED · PERMANENT BUFFS", "OPEN", { onNavigate(SkillSubSection.TRAINING) }, state.training.lvl, state.training.xp, Balance.skillXpReq(state.training.lvl), "NEURAL LINK") {
+            XpProgressBar("CORE TRAINING", state.training.lvl, state.training.xp, Balance.skillXpReq(state.training.lvl), PrimaryNeon)
+        }
+        SkillCategoryCard("07 // SANCTIFIED", "[S]", ManaTeal, "${state.sanctified.faith} CHARGE · SMITE ${state.sanctified.smiteLevel} · ${if (state.sanctified.aegisActive) "FIELD ON" else "FIELD OFF"}", "OPEN", { onNavigate(SkillSubSection.SANCTIFIED) }, state.sanctified.lvl, state.sanctified.xp, Balance.skillXpReq(state.sanctified.lvl), "ENERGY FIELD") {
+            XpProgressBar("SANCTIFIED", state.sanctified.lvl, state.sanctified.xp, Balance.skillXpReq(state.sanctified.lvl), ManaTeal)
+        }
+        SkillCategoryCard("08 // SLAYER", "[X]", HpRed, "TARGET ${state.slayer.currentTask.targetName.uppercase()} · ${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills} · ${state.slayer.slayerPoints} PTS", "OPEN", { onNavigate(SkillSubSection.SLAYER) }, state.slayer.lvl, state.slayer.xp, Balance.slayerXpReq(state.slayer.lvl), "TARGETING") {
+            XpProgressBar("SLAYER", state.slayer.lvl, state.slayer.xp, Balance.slayerXpReq(state.slayer.lvl), HpRed)
         }
     }
 }
 
 @Composable
-fun SkillsOverviewPage(
-    state: GameState,
-    onNavigate: (SkillSubSection) -> Unit
-) {
-    val scrollState = rememberScrollState()
-
-    val totalSkillLevel = state.player.lvl + state.gathering.farmingLvl + state.gathering.miningLvl +
-            state.crafting.smithingLvl + state.crafting.herbloreLvl +
-            state.beasts.lvl + state.necro.lvl + state.training.lvl +
-            state.sanctified.lvl + state.slayer.lvl
-
-    val growingPlots = state.gathering.plots.count { !it.isReady }
-    val readyPlots = state.gathering.plots.count { it.isReady }
-    val activeVeins = state.gathering.veins.count { !it.isReady }
-    val readyVeins = state.gathering.veins.count { it.isReady }
-    val oresInSupply = state.inventory.filter { it.category == "Resource" || it.name.contains("Ore", ignoreCase = true) }.sumOf { it.count }
-    val potionsReady = state.inventory.filter { it.category == "Potion" }.sumOf { it.count }
-    val runningCount = (if (growingPlots > 0 || readyPlots > 0) 1 else 0) +
-            (if (activeVeins > 0 || readyVeins > 0) 1 else 0) +
-            (if (state.beasts.beasts.isNotEmpty()) 1 else 0) +
-            (if (state.necro.army.isNotEmpty()) 1 else 0) +
-            (if (state.sanctified.aegisActive) 1 else 0) + 1
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Master Matrix Header (featuring HTML Active Skills '4 RUNNING' badge & Total Level)
-        Card(
-            modifier = Modifier.fillMaxWidth().testTag("skills_master_card"),
-            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-            shape = RectangleShape,
-            border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
-        ) {
-            Column(modifier = Modifier.padding(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "ACTIVE DISCIPLINES",
-                            style = TrueIdleType.title,
-                            color = PrimaryNeon
-                        )
-                        Text(
-                            text = "10 Interlocking automated systems",
-                            style = TrueIdleType.meta,
-                            color = TextMuted
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Box(
-                            modifier = Modifier
-                                .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
-                                .border(1.dp, PrimaryNeon, RectangleShape)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "$runningCount RUNNING",
-                                style = TrueIdleType.tag,
-                                color = PrimaryNeon
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
-                                .border(1.dp, SecondaryGold, RectangleShape)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "TOTAL: $totalSkillLevel",
-                                style = TrueIdleType.tag,
-                                color = SecondaryGold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 1. COMBAT DISCIPLINE
-        SkillCategoryCard(
-            title = "01. COMBAT DISCIPLINE",
-            icon = "⚔",
-            accentColor = PrimaryNeon,
-            quickSummary = "FLOOR ${state.player.currentFloor} · ${state.lifetime.totalKills} TOTAL KILLS",
-            actionLabel = "COMBAT",
-            onAction = { /* Handled via primary nav */ }
-        ) {
-            XpProgressBar(
-                skillName = "COMBAT LEVEL",
-                level = state.player.lvl,
-                currentXp = state.player.xp,
-                requiredXp = Balance.playerXpReq(state.player.lvl),
-                barColor = PrimaryNeon
-            )
-        }
-
-        // 2. GATHERING SECTION CARD
-        SkillCategoryCard(
-            title = "02. GATHERING DISCIPLINE",
-            icon = "🌿",
-            accentColor = GreenSuccess,
-            quickSummary = "$activeVeins VEINS ACTIVE · $growingPlots PLOTS GROWING · ($readyPlots PLOTS, $readyVeins VEINS READY)",
-            actionLabel = "GATHERING",
-            onAction = { onNavigate(SkillSubSection.GATHERING) }
-        ) {
-            XpProgressBar(
-                skillName = "BIO-FARMING",
-                level = state.gathering.farmingLvl,
-                currentXp = state.gathering.farmingXp,
-                requiredXp = Balance.skillXpReq(state.gathering.farmingLvl),
-                barColor = GreenSuccess
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            XpProgressBar(
-                skillName = "ORE MINING",
-                level = state.gathering.miningLvl,
-                currentXp = state.gathering.miningXp,
-                requiredXp = Balance.skillXpReq(state.gathering.miningLvl),
-                barColor = SecondaryGold
-            )
-        }
-
-        // 3. CRAFTING SECTION CARD
-        SkillCategoryCard(
-            title = "03. CRAFTING PROTOCOLS",
-            icon = "🔨",
-            accentColor = SecondaryGold,
-            quickSummary = "$oresInSupply ORES IN SUPPLY · $potionsReady POTIONS READY",
-            actionLabel = "CRAFTING",
-            onAction = { onNavigate(SkillSubSection.CRAFTING) }
-        ) {
-            XpProgressBar(
-                skillName = "CYBER SMITHING",
-                level = state.crafting.smithingLvl,
-                currentXp = state.crafting.smithingXp,
-                requiredXp = Balance.skillXpReq(state.crafting.smithingLvl),
-                barColor = SecondaryGold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            XpProgressBar(
-                skillName = "HERBLORE LAB",
-                level = state.crafting.herbloreLvl,
-                currentXp = state.crafting.herbloreXp,
-                requiredXp = Balance.skillXpReq(state.crafting.herbloreLvl),
-                barColor = GreenSuccess
-            )
-        }
-
-        // 4. BEAST TAMING SECTION CARD
-        val totalBeastDps = state.beasts.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
-        SkillCategoryCard(
-            title = "04. BEAST TAMING",
-            icon = "🐾",
-            accentColor = GreenSuccess,
-            quickSummary = "${state.beasts.beasts.size}/8 BEASTS | ${totalBeastDps.toInt()} TOTAL DPS",
-            actionLabel = "BEASTS",
-            onAction = { onNavigate(SkillSubSection.BEASTS) }
-        ) {
-            XpProgressBar(
-                skillName = "BEAST TAMING",
-                level = state.beasts.lvl,
-                currentXp = state.beasts.xp,
-                requiredXp = Balance.skillXpReq(state.beasts.lvl),
-                barColor = GreenSuccess
-            )
-        }
-
-        // 5. NECROMANCY SECTION CARD
-        val totalArmyDps = state.necro.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
-        val totalMinions = state.necro.army.sumOf { it.count }
-        SkillCategoryCard(
-            title = "05. NECROMANCY DISCIPLINE",
-            icon = "💀",
-            accentColor = NecroPurple,
-            quickSummary = "${state.necro.boneEssence} 💀 ESSENCE | $totalMinions UNITS (${totalArmyDps.toInt()} DPS)",
-            actionLabel = "NECRO",
-            onAction = { onNavigate(SkillSubSection.NECROMANCY) }
-        ) {
-            XpProgressBar(
-                skillName = "NECROMANCY",
-                level = state.necro.lvl,
-                currentXp = state.necro.xp,
-                requiredXp = Balance.skillXpReq(state.necro.lvl),
-                barColor = NecroPurple
-            )
-        }
-
-        // 6. TRAINING SECTION CARD
-        val totalRanks = state.training.nodes.sumOf { it.rank }
-        SkillCategoryCard(
-            title = "06. NEURAL DOJO TRAINING",
-            icon = "🥋",
-            accentColor = PrimaryNeon,
-            quickSummary = "$totalRanks RANKS ACQUIRED | PERMANENT STAT BUFFS",
-            actionLabel = "TRAINING",
-            onAction = { onNavigate(SkillSubSection.TRAINING) }
-        ) {
-            XpProgressBar(
-                skillName = "CORE TRAINING",
-                level = state.training.lvl,
-                currentXp = state.training.xp,
-                requiredXp = Balance.skillXpReq(state.training.lvl),
-                barColor = PrimaryNeon
-            )
-        }
-
-        // 7. SANCTIFIED SECTION CARD
-        SkillCategoryCard(
-            title = "07. SANCTIFIED DISCIPLINE",
-            icon = "🕊",
-            accentColor = ManaTeal,
-            quickSummary = "${state.sanctified.faith} FAITH | SMITE LVL ${state.sanctified.smiteLevel} (${if (state.sanctified.aegisActive) "AEGIS ON" else "AEGIS OFF"})",
-            actionLabel = "SANCTIFIED",
-            onAction = { onNavigate(SkillSubSection.SANCTIFIED) }
-        ) {
-            XpProgressBar(
-                skillName = "SANCTIFIED",
-                level = state.sanctified.lvl,
-                currentXp = state.sanctified.xp,
-                requiredXp = Balance.skillXpReq(state.sanctified.lvl),
-                barColor = ManaTeal
-            )
-        }
-
-        // 8. SLAYER SECTION CARD
-        SkillCategoryCard(
-            title = "08. SLAYER DIRECTIVES",
-            icon = "⚔",
-            accentColor = HpRed,
-            quickSummary = "TARGET: ${state.slayer.currentTask.targetName.uppercase()} (${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills}) | ${state.slayer.slayerPoints} PTS",
-            actionLabel = "SLAYER",
-            onAction = { onNavigate(SkillSubSection.SLAYER) }
-        ) {
-            XpProgressBar(
-                skillName = "SLAYER",
-                level = state.slayer.lvl,
-                currentXp = state.slayer.xp,
-                requiredXp = Balance.slayerXpReq(state.slayer.lvl),
-                barColor = HpRed
-            )
-        }
+private fun MetricTile(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier.background(SurfaceDark).border(1.dp, color.copy(alpha = 0.4f), RectangleShape).padding(horizontal = 10.dp, vertical = 7.dp)) {
+        Text(label, style = TrueIdleType.meta, color = TextMuted)
+        Text(value, style = TrueIdleType.tag, color = color)
     }
 }
 
@@ -543,57 +233,32 @@ fun SkillCategoryCard(
     quickSummary: String,
     actionLabel: String,
     onAction: () -> Unit,
+    level: Int,
+    xp: Long,
+    requiredXp: Long,
+    status: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-        shape = RectangleShape,
-        border = BorderStroke(1.dp, BorderDark)
+        Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RectangleShape, border = BorderStroke(1.dp, accentColor.copy(alpha = 0.38f))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(icon, style = TrueIdleType.title)
-                    Text(
-                        text = title,
-                        style = TrueIdleType.title,
-                        color = accentColor
-                    )
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(icon, style = TrueIdleType.tag, color = accentColor)
+                    Column(Modifier.weight(1f)) {
+                        Text(title, style = TrueIdleType.title, color = TextLight, maxLines = 1)
+                        Text(quickSummary, style = TrueIdleType.meta, color = TextMuted, maxLines = 1)
+                    }
                 }
-
                 OutlinedButton(
-                    onClick = onAction,
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, accentColor),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = accentColor.copy(alpha = 0.15f),
-                        contentColor = accentColor
-                    ),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "$actionLabel ➔",
-                        style = TrueIdleType.tag
-                    )
-                }
+                    onClick = onAction, shape = RectangleShape, border = BorderStroke(1.dp, accentColor),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = accentColor.copy(alpha = 0.12f), contentColor = accentColor),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) { Text(actionLabel, style = TrueIdleType.tag) }
             }
-
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = quickSummary,
-                style = TrueIdleType.meta,
-                color = TextMuted
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-
+            SkillTelemetryStrip(status, level, xp, requiredXp, accentColor)
             content()
         }
     }
