@@ -73,16 +73,16 @@ fun TrueIdleApp(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize().background(BgDark),
-        containerColor = BgDark,
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             // High-End Cyberpunk Top Status Bar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF000000))
+                    .background(MaterialTheme.colorScheme.surface)
                     .statusBarsPadding()
-                    .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RectangleShape)
             ) {
                 Row(
                     modifier = Modifier
@@ -96,12 +96,12 @@ fun TrueIdleApp(
                         Text(
                             text = "TRUE IDLE",
                             style = TrueIdleType.title,
-                            color = TextLight
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFF000000), RectangleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
@@ -119,7 +119,7 @@ fun TrueIdleApp(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFF000000), RectangleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, SecondaryGold.copy(alpha = 0.5f), RectangleShape)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
@@ -131,7 +131,7 @@ fun TrueIdleApp(
                         }
                         Box(
                             modifier = Modifier
-                                .background(Color(0xFF000000), RectangleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, NecroPurple.copy(alpha = 0.5f), RectangleShape)
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
@@ -141,22 +141,11 @@ fun TrueIdleApp(
                                 color = NecroPurple
                             )
                         }
-                        // HTML Top bar shortcuts: ★ Promotions & ⚙ Settings / Arcana
+                        // Top bar shortcut: ⚙ Settings / Interface
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
-                                .background(Color(0xFF000000), RectangleShape)
-                                .border(1.dp, SecondaryGold.copy(alpha = 0.7f), RectangleShape)
-                                .clickable { currentTab = TrueIdleTab.SETTINGS }
-                                .testTag("topbar_promo_shortcut"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("★", style = TrueIdleType.tag, color = SecondaryGold)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(Color(0xFF000000), RectangleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.7f), RectangleShape)
                                 .clickable { currentTab = TrueIdleTab.SETTINGS }
                                 .testTag("topbar_settings_shortcut"),
@@ -181,8 +170,8 @@ fun TrueIdleApp(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF000000))
-                    .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RectangleShape)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(vertical = 2.dp, horizontal = 2.dp)
                     .testTag("main_navigation_bar"),
@@ -232,7 +221,7 @@ fun TrueIdleApp(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(BgDark)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             when (currentTab) {
                 TrueIdleTab.COMBAT -> CombatScreen(
@@ -253,9 +242,12 @@ fun TrueIdleApp(
                     onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) },
                     onSummonMinion = { type -> viewModel.summonMinion(type) },
                     onTrainNode = { id -> viewModel.trainNode(id) },
-                    onToggleSanctifiedAegis = { viewModel.toggleSanctifiedAegis() },
-                    onUpgradeSanctifiedSmite = { viewModel.upgradeSanctifiedSmite() },
-                    onRerollSlayerTask = { viewModel.rerollSlayerTask() }
+                    onToggleSanctifiedAegis = { viewModel.toggleEssenceAegis() },
+                    onUpgradeSanctifiedSmite = { viewModel.upgradeEssenceSmite() },
+                    onRerollSlayerTask = { viewModel.rerollSlayerTask() },
+                    onUpgradeDiscipline = { cat, id -> viewModel.upgradeDiscipline(cat, id) },
+                    onActivateTalent = { id -> viewModel.activateTalent(id) },
+                    onUpgradeTalent = { id -> viewModel.upgradeTalent(id) }
                 )
                 TrueIdleTab.STATS -> StatsScreen(
                     state = state
@@ -278,7 +270,9 @@ fun TrueIdleApp(
                     onToggleAutoEquip = { viewModel.toggleAutoEquipBestGear() },
                     onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
-                    onFightPromotionBoss = { viewModel.fightPromotionBoss() }
+                    onFightPromotionBoss = { viewModel.fightPromotionBoss() },
+                    onSetThemeMode = { isDark -> viewModel.setThemeMode(isDark) },
+                    onExportTelemetryLog = { viewModel.buildTelemetryReport() }
                 )
             }
         }

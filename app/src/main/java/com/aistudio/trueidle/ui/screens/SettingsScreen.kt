@@ -3,9 +3,12 @@ package com.aistudio.trueidle.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +44,8 @@ fun SettingsScreen(
     onToggleAutoMerge: () -> Unit = {},
     onSetCraftUsage: (Int) -> Unit = {},
     onFightPromotionBoss: () -> Unit = {},
+    onSetThemeMode: (Boolean) -> Unit = {},
+    onExportTelemetryLog: () -> String = { "" },
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -58,6 +63,7 @@ fun SettingsScreen(
     var importInputText by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
     var importError by remember { mutableStateOf("") }
+    var telemetryCopyFeedback by remember { mutableStateOf("") }
 
     val floorMet = state.player.currentFloor >= promo.requiredFloor
     val gearMet = d.gearScore >= promo.requiredGearScore
@@ -74,13 +80,299 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(BgDark)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(10.dp)
             .testTag("settings_screen"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. PROMOTION SYSTEM CARD (Direct from HTML Journey view)
+        // 1. VISUAL THEME PROTOCOL (White / Dark mode selection)
+        SciFiPanel(
+            title = "INTERFACE PROTOCOL",
+            accent = PrimaryNeon,
+            tag = if (state.isDarkMode) "OBSIDIAN DARK" else "SOLAR LIGHT"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000), RectangleShape)
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "VISUAL ENVIRONMENT SELECTION",
+                    style = TrueIdleType.label,
+                    color = TextLight
+                )
+                Text(
+                    text = "Select high-contrast cyberpunk Obsidian dark mode or Solar laboratory light mode.",
+                    style = TrueIdleType.meta,
+                    color = TextMuted
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Dark Mode Button
+                    OutlinedButton(
+                        onClick = { onSetThemeMode(true) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("theme_dark_button"),
+                        shape = RectangleShape,
+                        border = BorderStroke(
+                            1.5.dp,
+                            if (state.isDarkMode) PrimaryNeon else BorderDark
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (state.isDarkMode) PrimaryNeon.copy(alpha = 0.2f) else SurfaceVariantDark,
+                            contentColor = if (state.isDarkMode) PrimaryNeon else TextMuted
+                        ),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("☾ OBSIDIAN DARK", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            if (state.isDarkMode) {
+                                Text("[✓ ACTIVE]", style = TrueIdleType.monoTimestamp, color = PrimaryNeon)
+                            }
+                        }
+                    }
+
+                    // Light Mode Button
+                    OutlinedButton(
+                        onClick = { onSetThemeMode(false) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("theme_light_button"),
+                        shape = RectangleShape,
+                        border = BorderStroke(
+                            1.5.dp,
+                            if (!state.isDarkMode) SecondaryGold else BorderDark
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (!state.isDarkMode) SecondaryGold.copy(alpha = 0.2f) else SurfaceVariantDark,
+                            contentColor = if (!state.isDarkMode) SecondaryGold else TextMuted
+                        ),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("☀ SOLAR LIGHT", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            if (!state.isDarkMode) {
+                                Text("[✓ ACTIVE]", style = TrueIdleType.monoTimestamp, color = SecondaryGold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. MISSION DOSSIER & PLAY TELEMETRY
+        SciFiPanel(
+            title = "MISSION DOSSIER",
+            accent = SecondaryGold,
+            tag = "PLAY RECORD"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 2x3 Statistics Matrix
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DossierTile("PLAY TIME", NumberFormatter.duration(state.lifetime.playTimeSeconds), SecondaryGold, Modifier.weight(1f))
+                    DossierTile("TOTAL ELIMINATIONS", state.lifetime.totalKills.toString(), HpRed, Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DossierTile("CURRENT SECTOR", "SECTOR ${state.player.currentFloor}", PrimaryNeon, Modifier.weight(1f))
+                    DossierTile("GEAR SCORE", "${d.gearScore} GS", SecondaryGold, Modifier.weight(1f))
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DossierTile("ORES MINED", state.lifetime.oresMined.toString(), SecondaryGold, Modifier.weight(1f))
+                    DossierTile("HERBS HARVESTED", state.lifetime.herbsHarvested.toString(), GreenSuccess, Modifier.weight(1f))
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Telemetry Export Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val report = onExportTelemetryLog()
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("TelemetryReport", report))
+                            telemetryCopyFeedback = "COPIED TO CLIPBOARD!"
+                            Toast.makeText(context, "Full Mission Telemetry Copied", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("export_telemetry_btn"),
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, PrimaryNeon),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = PrimaryNeon.copy(alpha = 0.15f),
+                            contentColor = PrimaryNeon
+                        ),
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = if (telemetryCopyFeedback.isNotEmpty()) telemetryCopyFeedback else "📋 EXPORT LOG",
+                            style = TrueIdleType.tag
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val report = onExportTelemetryLog()
+                            try {
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, report)
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, "Export Tactical Telemetry Log"))
+                            } catch (_: Exception) {}
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("share_telemetry_btn"),
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, SecondaryGold),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = SecondaryGold.copy(alpha = 0.15f),
+                            contentColor = SecondaryGold
+                        ),
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Text("↗ SHARE LOG", style = TrueIdleType.tag)
+                    }
+                }
+            }
+        }
+
+        // 3. OFFLINE SYSTEM & SIMULATION
+        SciFiPanel(
+            title = "OFFLINE PROGRESSION",
+            accent = GreenSuccess,
+            tag = "8H RECON CAP"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("AUTONOMOUS STASIS RECON", style = TrueIdleType.label, color = TextLight)
+                        Text("Accumulates up to 8 hours of rewards while offline (65% efficiency rate)", style = TrueIdleType.meta, color = TextMuted)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, GreenSuccess, RectangleShape)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("8H ACTIVE", style = TrueIdleType.numberSmall, color = GreenSuccess)
+                    }
+                }
+            }
+        }
+
+        // 4. NOTIFICATION PROTOCOLS (Verified master toggle)
+        SciFiPanel(
+            title = "NOTIFICATION PROTOCOLS",
+            accent = PrimaryNeon,
+            tag = if (state.notificationBannersEnabled) "BANNERS ON" else "BANNERS MUTED"
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(1.dp, BorderDark)
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("FLOATING TELEMETRY BANNERS", style = TrueIdleType.label, color = TextLight)
+                        Text(
+                            text = if (state.notificationBannersEnabled) {
+                                "Milestone popups active (Level ups, Floor clears, Retracts)"
+                            } else {
+                                "Popups silenced completely (all events logged to Archive & Mission Log)"
+                            },
+                            style = TrueIdleType.meta,
+                            color = if (state.notificationBannersEnabled) GreenSuccess else TextMuted
+                        )
+                    }
+
+                    Switch(
+                        checked = state.notificationBannersEnabled,
+                        onCheckedChange = { onToggleNotifications() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = PrimaryNeon,
+                            checkedTrackColor = PrimaryNeon.copy(alpha = 0.35f),
+                            uncheckedThumbColor = TextMuted,
+                            uncheckedTrackColor = SurfaceVariantDark
+                        ),
+                        modifier = Modifier.testTag("notification_toggle_switch")
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showNotificationHistory = true },
+                        modifier = Modifier.weight(1f).testTag("view_history_btn"),
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, PrimaryNeon),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = PrimaryNeon.copy(alpha = 0.12f),
+                            contentColor = PrimaryNeon
+                        ),
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Text("ARCHIVE (${state.notificationHistory.size})", style = TrueIdleType.tag)
+                    }
+
+                    OutlinedButton(
+                        onClick = { onClearNotificationHistory() },
+                        modifier = Modifier.weight(1f).testTag("clear_history_btn"),
+                        shape = RectangleShape,
+                        border = BorderStroke(1.dp, BorderDark),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = SurfaceDark,
+                            contentColor = TextMuted
+                        ),
+                        contentPadding = PaddingValues(vertical = 10.dp)
+                    ) {
+                        Text("CLEAR ARCHIVE", style = TrueIdleType.tag)
+                    }
+                }
+            }
+        }
+
+        // 5. PROMOTION SYSTEM CARD
         SciFiPanel(
             title = "PROMOTION",
             accent = SecondaryGold,
@@ -96,10 +388,8 @@ fun SettingsScreen(
             ) {
                 Text(
                     text = promo.tierName.uppercase(),
-                    style = TrueIdleType.title,
-                    color = SecondaryGold,
-                    fontSize = 18.sp,
-                    letterSpacing = 1.2.sp
+                    style = TrueIdleType.titleLarge,
+                    color = SecondaryGold
                 )
                 Text(
                     text = "CURRENT PROMOTION TIER (+${promo.bonusPercent}% ALL STATS BONUS)",
@@ -113,7 +403,6 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Floor Requirement
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -122,7 +411,7 @@ fun SettingsScreen(
                             Text("FLOOR", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = "${state.player.currentFloor} / ${promo.requiredFloor}",
-                                style = TrueIdleType.tag,
+                                style = TrueIdleType.numberSmall,
                                 color = if (floorMet) GreenSuccess else PrimaryNeon
                             )
                         }
@@ -143,7 +432,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Gear Score Requirement
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -152,7 +440,7 @@ fun SettingsScreen(
                             Text("GEAR SCORE", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = "${d.gearScore} / ${promo.requiredGearScore}",
-                                style = TrueIdleType.tag,
+                                style = TrueIdleType.numberSmall,
                                 color = if (gearMet) GreenSuccess else SecondaryGold
                             )
                         }
@@ -200,13 +488,12 @@ fun SettingsScreen(
             }
         }
 
-        // 2. AUTOMATION PROTOCOLS (Direct from HTML Arcana view)
+        // 6. AUTOMATION PROTOCOLS
         SciFiPanel(
-            title = "AUTOMATION",
+            title = "AUTOMATION PROTOCOLS",
             accent = PrimaryNeon,
-            tag = "ARCANA PROTOCOLS"
+            tag = "ARCANA"
         ) {
-            // Auto-Equip Best Gear Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -235,7 +522,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Auto-Merge Beasts Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -264,7 +550,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Craft Material Usage Slider
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -299,7 +584,7 @@ fun SettingsScreen(
             }
         }
 
-        // 3. ACHIEVEMENTS ARCHIVE
+        // 7. ACHIEVEMENTS ARCHIVE
         val claimedCount = state.achievements.count { it.isClaimed }
         SciFiPanel(
             title = "ACHIEVEMENTS",
@@ -371,79 +656,7 @@ fun SettingsScreen(
             }
         }
 
-        // 4. NOTIFICATION & SYSTEM LOGS
-        SciFiPanel(
-            title = "NOTIFICATION PROTOCOLS",
-            accent = PrimaryNeon,
-            tag = if (state.notificationBannersEnabled) "BANNERS ON" else "BANNERS MUTED"
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF000000))
-                    .border(1.dp, BorderDark)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("FLOATING TELEMETRY BANNERS", style = TrueIdleType.label, color = TextLight)
-                    Text(
-                        text = if (state.notificationBannersEnabled) "Real-time popups active" else "Popups silenced (recorded in archive)",
-                        style = TrueIdleType.meta,
-                        color = if (state.notificationBannersEnabled) GreenSuccess else TextMuted
-                    )
-                }
-
-                Switch(
-                    checked = state.notificationBannersEnabled,
-                    onCheckedChange = { onToggleNotifications() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = PrimaryNeon,
-                        checkedTrackColor = PrimaryNeon.copy(alpha = 0.3f),
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = SurfaceVariantDark
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { showNotificationHistory = true },
-                    modifier = Modifier.weight(1f).testTag("view_history_btn"),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, PrimaryNeon),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = PrimaryNeon.copy(alpha = 0.12f),
-                        contentColor = PrimaryNeon
-                    ),
-                    contentPadding = PaddingValues(vertical = 10.dp)
-                ) {
-                    Text("ARCHIVE (${state.notificationHistory.size})", style = TrueIdleType.tag)
-                }
-
-                OutlinedButton(
-                    onClick = { onClearNotificationHistory() },
-                    modifier = Modifier.weight(1f).testTag("clear_history_btn"),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, BorderDark),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = SurfaceDark,
-                        contentColor = TextMuted
-                    ),
-                    contentPadding = PaddingValues(vertical = 10.dp)
-                ) {
-                    Text("CLEAR ARCHIVE", style = TrueIdleType.tag)
-                }
-            }
-        }
-
-        // 5. DATA PERSISTENCE & DANGER ZONE
+        // 8. DATA PERSISTENCE & STORAGE
         SciFiPanel(
             title = "DATA PERSISTENCE",
             accent = SecondaryGold,
@@ -517,9 +730,7 @@ fun SettingsScreen(
                 shape = RectangleShape,
                 border = BorderStroke(1.5.dp, PrimaryNeon)
             ) {
-                Column(
-                    modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)
-                ) {
+                Column(modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)) {
                     Text("EXPORT SAVE CODE", style = TrueIdleType.title, color = PrimaryNeon)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text("Copy the raw JSON archive below and save it to your clipboard:", style = TrueIdleType.body, color = TextMuted)
@@ -591,9 +802,7 @@ fun SettingsScreen(
                 shape = RectangleShape,
                 border = BorderStroke(1.5.dp, SecondaryGold)
             ) {
-                Column(
-                    modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)
-                ) {
+                Column(modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)) {
                     Text("IMPORT SAVE ARCHIVE", style = TrueIdleType.title, color = SecondaryGold)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text("Paste a valid exported JSON save archive below:", style = TrueIdleType.body, color = TextMuted)
@@ -715,6 +924,21 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DossierTile(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(SurfaceDark)
+            .border(1.dp, BorderDark)
+            .padding(8.dp)
+    ) {
+        Column {
+            Text(label, style = TrueIdleType.meta, color = TextMuted)
+            Text(value, style = TrueIdleType.numberStat, color = color)
         }
     }
 }

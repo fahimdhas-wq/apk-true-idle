@@ -44,9 +44,11 @@ object OfflineEngine {
 
     fun compute(s: GameState, d: Derived, awayMs: Long, efficiency: Double, rnd: Random): OfflineLoot {
         val capMs = 8 * 3600_000L
+        val effectiveAwayMs = minOf(awayMs, capMs)
         val capApplied = awayMs >= capMs
-        var remaining = awayMs / 1000.0 * efficiency
+        var remaining = effectiveAwayMs / 1000.0 * efficiency
         val dps = CombatMath.totalDps(s, d)
+        val startFloor = s.player.currentFloor
         var floor = s.player.currentFloor
         val ceiling = s.player.maxUnlockedFloor // offline never unlocks new floors
         repeat(10) { if (floor > 1 && !stats(floor, dps, d, s).survivable) floor-- }
@@ -91,17 +93,33 @@ object OfflineEngine {
         val herb = lootRolls - ore
         val tamed = minOf(binomial(rnd, kills.toInt(), d.tameChance), (8 - s.beasts.beasts.size).coerceAtLeast(0))
 
+        val effectiveHours = (effectiveAwayMs / 3600_000.0).coerceAtLeast(0.01)
+        val kPerHour = (kills / effectiveHours).toLong()
+        val gPerHour = (gold / effectiveHours).toLong()
+        val xPerHour = (xp / effectiveHours).toLong()
+
+        val timeline = listOf(
+            "T+00h-02h // SECTOR $startFloor INFILTRATION: Autonomous combat unit engaged. Cleared ${kills * 28 / 100} hostiles with ${(efficiency * 100).toInt()}% efficiency.",
+            "T+02h-04h // RESOURCE EXTRACTION: Sub-surface drones harvested $herb Felweed and excavated $ore Copper Ore.",
+            "T+04h-06h // TACTICAL TRANSLOCATION: ${if (gained > 0) "Overcame $gained sector perimeters to secure Sector $floor." else "Held Sector $floor perimeter with zero fatal breaches."}",
+            "T+06h-08h // SYSTEM FORTIFICATION: Secured total +$gold Credits and +${kills * 2} Bone Essence. ${if (capApplied) "8-Hour operational limit engaged." else "Recon session completed."}"
+        )
+
         return OfflineLoot(
-            timeAwaySeconds = awayMs / 1000,
+            timeAwaySeconds = effectiveAwayMs / 1000,
             kills = kills,
             goldEarned = gold,
             xpEarned = xp,
             bonesEarned = kills * 2,
             playerLevelsGained = 0,
             floorsGained = gained,
+            startFloor = startFloor,
             finalFloor = floor,
             efficiency = efficiency,
             capApplied = capApplied,
+            killsPerHour = kPerHour,
+            goldPerHour = gPerHour,
+            xpPerHour = xPerHour,
             items = listOfNotNull(
                 LootItem("Copper Ore", ore).takeIf { ore > 0 },
                 LootItem("Felweed", herb).takeIf { herb > 0 }
@@ -112,7 +130,8 @@ object OfflineEngine {
             dropsSummary = listOfNotNull(
                 "$ore Copper Ore".takeIf { ore > 0 },
                 "$herb Felweed".takeIf { herb > 0 }
-            )
+            ),
+            timelineLog = timeline
         )
     }
 

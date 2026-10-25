@@ -189,6 +189,23 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         saveNow()
     }
 
+    fun upgradeDiscipline(category: String, upgradeId: String) {
+        _gameState.value = engine.upgradeDiscipline(category, upgradeId)
+        saveNow()
+    }
+
+    fun activateTalent(talentId: String) {
+        _gameState.value = engine.activateTalent(talentId)
+    }
+
+    fun upgradeTalent(talentId: String) {
+        _gameState.value = engine.upgradeTalent(talentId)
+        saveNow()
+    }
+
+    fun toggleEssenceAegis() = toggleSanctifiedAegis()
+    fun upgradeEssenceSmite() = upgradeSanctifiedSmite()
+
     fun claimAchievement(achId: String) {
         _gameState.value = engine.claimAchievement(achId)
         saveNow()
@@ -228,10 +245,26 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleNotificationBanners() {
         _gameState.value = engine.toggleNotificationBanners()
+        saveNow()
+    }
+
+    fun setThemeMode(isDark: Boolean) {
+        _gameState.value = engine.setThemeMode(isDark)
+        saveNow()
+    }
+
+    fun toggleThemeMode() {
+        _gameState.value = engine.toggleThemeMode()
+        saveNow()
+    }
+
+    fun simulateOfflineRecon(hours: Int = 8) {
+        _gameState.value = engine.simulateOfflineRecon(hours)
     }
 
     fun clearNotificationHistory() {
         _gameState.value = engine.clearNotificationHistory()
+        saveNow()
     }
 
     fun claimOfflineLoot() {
@@ -241,6 +274,43 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun exportSave(): String {
         return engine.exportSaveJson()
+    }
+
+    fun buildTelemetryReport(): String {
+        val s = _gameState.value
+        val d = com.aistudio.trueidle.core.DerivedStats.of(s)
+        val playTimeStr = com.aistudio.trueidle.core.NumberFormatter.duration(s.lifetime.playTimeSeconds)
+        val sb = StringBuilder()
+        sb.append("================================================================\n")
+        sb.append("TRUE IDLE // TACTICAL MISSION TELEMETRY EXPORT\n")
+        sb.append("================================================================\n")
+        sb.append("MISSION DOSSIER:\n")
+        sb.append("- Active Play Time   : $playTimeStr\n")
+        sb.append("- Current Sector     : Sector ${s.player.currentFloor} (Max Cleared: ${s.player.maxUnlockedFloor})\n")
+        sb.append("- Combat Level       : Level ${s.player.lvl} (${s.player.xp} XP)\n")
+        sb.append("- Gear Score         : ${d.gearScore} GS\n")
+        sb.append("- Total Eliminations : ${s.lifetime.totalKills} hostiles\n")
+        sb.append("- Total Credits      : ${s.player.gold} Credits\n")
+        sb.append("- Bone Essence       : ${s.necro.boneEssence} 💀\n")
+        sb.append("- Holy Faith         : ${s.sanctified.faith} ⚡\n")
+        sb.append("- Slayer Points      : ${s.slayer.slayerPoints} PTS\n")
+        sb.append("- Companions Tamed   : ${s.beasts.beasts.size}/8 active beasts\n")
+        sb.append("- Undead Army        : ${s.necro.army.sumOf { it.count }} minions\n")
+        sb.append("- Promotion Tier     : Tier ${s.promotion.tier} (${s.promotion.tierName})\n")
+        sb.append("================================================================\n")
+        sb.append("EVENT STREAM ARCHIVE (RECENT ${s.logs.size} EVENTS):\n")
+        sb.append("================================================================\n")
+        s.logs.takeLast(100).forEach { log ->
+            val timeStr = if (log.timestampMs > 0L) {
+                val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+                sdf.format(java.util.Date(log.timestampMs))
+            } else "--:--:--"
+            sb.append("[$timeStr] [${log.type.uppercase()}] ${log.text}\n")
+        }
+        sb.append("================================================================\n")
+        sb.append("END OF TELEMETRY EXPORT\n")
+        sb.append("================================================================\n")
+        return sb.toString()
     }
 
     fun importSave(json: String): Boolean {

@@ -4,15 +4,17 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.core.NumberFormatter
@@ -27,22 +29,24 @@ fun OfflineLootDialog(
     val haptic = LocalHapticFeedback.current
     val timeFormatted = NumberFormatter.duration(loot.timeAwaySeconds)
     val efficiencyPercent = NumberFormatter.percent(loot.efficiency)
+    val scrollState = rememberScrollState()
 
     Dialog(onDismissRequest = onClaim) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(6.dp)
                 .testTag("offline_loot_dialog"),
-            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RectangleShape,
             border = BorderStroke(1.5.dp, PrimaryNeon)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF000000))
-                    .padding(16.dp)
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(14.dp)
+                    .verticalScroll(scrollState)
             ) {
                 // Header
                 Row(
@@ -52,12 +56,12 @@ fun OfflineLootDialog(
                 ) {
                     Column {
                         Text(
-                            text = "OFFLINE REPORT",
-                            style = TrueIdleType.title,
+                            text = "OFFLINE RECON REPORT",
+                            style = TrueIdleType.titleLarge,
                             color = PrimaryNeon
                         )
                         Text(
-                            text = "EFFICIENCY: $efficiencyPercent",
+                            text = "AUTONOMOUS STASIS SYSTEM · $efficiencyPercent SYNC",
                             style = TrueIdleType.meta,
                             color = TextMuted
                         )
@@ -65,52 +69,65 @@ fun OfflineLootDialog(
 
                     Box(
                         modifier = Modifier
-                            .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
-                            .border(1.dp, PrimaryNeon, RectangleShape)
+                            .background(if (loot.capApplied) Warn.copy(alpha = 0.15f) else PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                            .border(1.dp, if (loot.capApplied) Warn else PrimaryNeon, RectangleShape)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = if (loot.capApplied) "CAP 8h APPLIED ($timeFormatted)" else timeFormatted,
-                            style = TrueIdleType.tag,
+                            text = if (loot.capApplied) "8H RECON CAP ($timeFormatted)" else timeFormatted,
+                            style = TrueIdleType.numberSmall,
                             color = if (loot.capApplied) Warn else PrimaryNeon
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Sector progression
-                if (loot.floorsGained > 0) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = GreenSuccess.copy(alpha = 0.12f)),
-                        shape = RectangleShape,
-                        border = BorderStroke(1.dp, GreenSuccess)
+                // Sector progression banner
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = if (loot.floorsGained > 0) GreenSuccess.copy(alpha = 0.12f) else SurfaceVariantDark),
+                    shape = RectangleShape,
+                    border = BorderStroke(1.dp, if (loot.floorsGained > 0) GreenSuccess else BorderDark)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Text(
+                            text = "SECTOR TRAVERSAL: SECTOR ${loot.startFloor} ➔ ${loot.finalFloor}",
+                            style = TrueIdleType.tag,
+                            color = if (loot.floorsGained > 0) GreenSuccess else TextLight
+                        )
+                        if (loot.floorsGained > 0) {
                             Text(
-                                text = "SECTORS ADVANCED: +${loot.floorsGained} (NOW SECTOR ${loot.finalFloor})",
-                                style = TrueIdleType.tag,
+                                text = "+${loot.floorsGained} ADVANCED",
+                                style = TrueIdleType.numberSmall,
                                 color = GreenSuccess
+                            )
+                        } else {
+                            Text(
+                                text = "DEFENDED",
+                                style = TrueIdleType.tag,
+                                color = PrimaryNeon
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // 2x2 Telemetry Grid
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 2x2 Telemetry Grid with Hourly Rates in Orbitron
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Kills
                         Box(
@@ -121,8 +138,11 @@ fun OfflineLootDialog(
                                 .padding(8.dp)
                         ) {
                             Column {
-                                Text("HOSTILES CLEARED", style = TrueIdleType.meta, color = TextMuted)
-                                Text("${loot.kills} KILLS", style = TrueIdleType.value, color = HpRed)
+                                Text("HOSTILES ELIMINATED", style = TrueIdleType.meta, color = TextMuted)
+                                Text("${loot.kills} KILLS", style = TrueIdleType.numberStat, color = HpRed)
+                                if (loot.killsPerHour > 0) {
+                                    Text("${loot.killsPerHour}/hr rate", style = TrueIdleType.monoTimestamp, color = TextMuted)
+                                }
                             }
                         }
 
@@ -135,15 +155,18 @@ fun OfflineLootDialog(
                                 .padding(8.dp)
                         ) {
                             Column {
-                                Text("CREDITS SECURED", style = TrueIdleType.meta, color = TextMuted)
-                                Text("+${NumberFormatter.short(loot.goldEarned)} 🪙", style = TrueIdleType.value, color = SecondaryGold)
+                                Text("CREDITS RECOVERED", style = TrueIdleType.meta, color = TextMuted)
+                                Text("+${NumberFormatter.short(loot.goldEarned)} 🪙", style = TrueIdleType.numberStat, color = SecondaryGold)
+                                if (loot.goldPerHour > 0) {
+                                    Text("${NumberFormatter.short(loot.goldPerHour)}/hr rate", style = TrueIdleType.monoTimestamp, color = TextMuted)
+                                }
                             }
                         }
                     }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // XP
                         Box(
@@ -154,8 +177,11 @@ fun OfflineLootDialog(
                                 .padding(8.dp)
                         ) {
                             Column {
-                                Text("EXPERIENCE", style = TrueIdleType.meta, color = TextMuted)
-                                Text("+${NumberFormatter.short(loot.xpEarned)} XP", style = TrueIdleType.value, color = PrimaryNeon)
+                                Text("COMBAT EXPERIENCE", style = TrueIdleType.meta, color = TextMuted)
+                                Text("+${NumberFormatter.short(loot.xpEarned)} XP", style = TrueIdleType.numberStat, color = PrimaryNeon)
+                                if (loot.xpPerHour > 0) {
+                                    Text("${NumberFormatter.short(loot.xpPerHour)}/hr rate", style = TrueIdleType.monoTimestamp, color = TextMuted)
+                                }
                             }
                         }
 
@@ -169,7 +195,8 @@ fun OfflineLootDialog(
                         ) {
                             Column {
                                 Text("BONE ESSENCE", style = TrueIdleType.meta, color = TextMuted)
-                                Text("+${loot.bonesEarned} 💀", style = TrueIdleType.value, color = NecroPurple)
+                                Text("+${loot.bonesEarned} 💀", style = TrueIdleType.numberStat, color = NecroPurple)
+                                Text("Reanimation salvage", style = TrueIdleType.monoTimestamp, color = TextMuted)
                             }
                         }
                     }
@@ -177,14 +204,41 @@ fun OfflineLootDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Items list
+                // Chronological 8-Hour Activity Timeline Log
+                if (loot.timelineLog.isNotEmpty()) {
+                    Text(
+                        text = "CHRONOLOGICAL 8-HOUR ACTIVITY LOG",
+                        style = TrueIdleType.tag,
+                        color = PrimaryNeon
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(SurfaceDark)
+                            .border(1.dp, BorderDark)
+                            .padding(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        loot.timelineLog.forEach { entry ->
+                            Text(
+                                text = "› $entry",
+                                style = TrueIdleType.meta,
+                                color = TextLight
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                // Acquired Items List
                 if (loot.items.isNotEmpty() || loot.beastsTamed > 0) {
                     Text(
-                        text = "ACQUIRED ASSETS",
+                        text = "SALVAGED RESOURCE INVENTORY",
                         style = TrueIdleType.tag,
-                        color = TextMuted
+                        color = SecondaryGold
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -198,8 +252,8 @@ fun OfflineLootDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(item.name, style = TrueIdleType.body, color = TextLight)
-                                Text("+${item.count}", style = TrueIdleType.value, color = GreenSuccess)
+                                Text("◈ ${item.name}", style = TrueIdleType.tag, color = TextLight)
+                                Text("+${item.count}", style = TrueIdleType.numberSmall, color = GreenSuccess)
                             }
                         }
                         if (loot.beastsTamed > 0) {
@@ -207,14 +261,13 @@ fun OfflineLootDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Beasts Tamed", style = TrueIdleType.body, color = TextLight)
-                                Text("+${loot.beastsTamed} 🐾", style = TrueIdleType.value, color = GreenSuccess)
+                                Text("◈ COMPANION BEASTS TAMED", style = TrueIdleType.tag, color = TextLight)
+                                Text("+${loot.beastsTamed} 🐾", style = TrueIdleType.numberSmall, color = GreenSuccess)
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
 
                 // Claim Button
                 OutlinedButton(
@@ -235,7 +288,7 @@ fun OfflineLootDialog(
                     contentPadding = PaddingValues(vertical = 12.dp)
                 ) {
                     Text(
-                        text = "CLAIM SALVAGE",
+                        text = "CLAIM SALVAGE & RESUME MISSION",
                         style = TrueIdleType.title,
                         color = PrimaryNeon
                     )

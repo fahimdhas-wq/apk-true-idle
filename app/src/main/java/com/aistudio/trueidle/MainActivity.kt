@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.ui.TrueIdleApp
 import com.aistudio.trueidle.ui.theme.TrueIdleTheme
 import com.aistudio.trueidle.viewmodel.GameViewModel
@@ -27,7 +29,8 @@ class MainActivity : ComponentActivity() {
             }
         })
         setContent {
-            TrueIdleTheme {
+            val state by viewModel.gameState.collectAsStateWithLifecycle()
+            TrueIdleTheme(isDarkMode = state.isDarkMode) {
                 TrueIdleApp(viewModel = viewModel)
             }
         }

@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
@@ -43,7 +44,7 @@ fun CombatScreen(
     val totalDps = CombatMath.totalDps(state, derived)
     val mitigation = CombatMath.mitigation(m.armor)
     val effDps = totalDps * mitigation
-    val incomingRate = CombatMath.incomingPerSec(m, derived, state.sanctified.aegisActive)
+    val incomingRate = CombatMath.incomingPerSec(m, derived, state.essence.aegisActive)
     val reqXp = Balance.playerXpReq(p.lvl)
 
     // Support module data mappings
@@ -80,7 +81,7 @@ fun CombatScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(BgDark)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(10.dp)
             .testTag("combat_screen"),
@@ -202,33 +203,73 @@ fun CombatScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF000000), RectangleShape)
-                    .border(1.dp, BorderDark, RectangleShape)
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "⚔ ${p.weaponSlot} (+${derived.weaponDmg.toInt()} ATK)",
-                    style = TrueIdleType.label,
-                    color = SecondaryGold
-                )
-                Text(
-                    text = "🛡 ${p.armorSlot} (+${derived.armorDef.toInt()} DEF)",
-                    style = TrueIdleType.label,
-                    color = ShieldBlue
-                )
+                // Weapon Card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("⚔ WEAPON", style = TrueIdleType.tag, color = SecondaryGold)
+                            Text("+${derived.weaponDmg.toInt()} ATK", style = TrueIdleType.numberSmall, color = SecondaryGold)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = p.weaponSlot,
+                            style = TrueIdleType.label,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Armor Card
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🛡 ARMOR", style = TrueIdleType.tag, color = ShieldBlue)
+                            Text("+${derived.armorDef.toInt()} DEF", style = TrueIdleType.numberSmall, color = ShieldBlue)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = p.armorSlot,
+                            style = TrueIdleType.label,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
 
         // 5. HERO EXPERIENCE PROGRESSION
         Card(
             modifier = Modifier.fillMaxWidth().testTag("combat_player_xp_card"),
-            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RectangleShape,
-            border = BorderStroke(1.dp, BorderDark)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
             Box(modifier = Modifier.padding(10.dp)) {
                 XpProgressBar(
@@ -296,7 +337,8 @@ fun CombatScreen(
             logs = state.logs,
             currentFilter = logFilter,
             onFilterSelect = onSelectLogFilter,
-            onClear = onClearLogs
+            onClear = onClearLogs,
+            state = state
         )
     }
 }
