@@ -132,4 +132,60 @@ class GameEngineTest {
         assertEquals(6, newState.promotion.tier)
         assertEquals(16, newState.promotion.bonusPercent)
     }
+
+    @Test
+    fun testNotificationBannersStrictlySilencedWhenDisabled() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(1234))
+
+        // By default enabled
+        assertTrue(engine.state.notificationBannersEnabled)
+
+        // Disable notifications
+        engine.toggleNotificationBanners()
+        assertFalse(engine.state.notificationBannersEnabled)
+        assertTrue(engine.state.notifications.isEmpty())
+
+        // Push various types of notifications including combat / alert
+        engine.pushNotification(title = "PLAYER LEVEL UP", message = "Advanced to Level 2", type = "level")
+        engine.pushNotification(title = "TACTICAL RETREAT", message = "Emergency retreat", type = "combat", status = "ALERT")
+
+        // Active floating notifications must be strictly empty
+        assertTrue("Notifications must be strictly empty when disabled", engine.state.notifications.isEmpty())
+        // But history archive must record them
+        assertEquals(2, engine.state.notificationHistory.size)
+    }
+
+    @Test
+    fun testThemeModeAndOfflineSimulation() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(1234))
+
+        assertTrue(engine.state.isDarkMode)
+        engine.setThemeMode(false)
+        assertFalse(engine.state.isDarkMode)
+        engine.toggleThemeMode()
+        assertTrue(engine.state.isDarkMode)
+
+        // 8-hour offline simulation
+        engine.simulateOfflineRecon(8)
+        val loot = engine.state.pendingOfflineLoot
+        assertTrue("Expected pending offline loot", loot != null)
+        assertTrue("Expected 8h duration (28800s)", loot!!.timeAwaySeconds >= 28800L)
+        assertTrue("Expected cap applied", loot.capApplied)
+        assertTrue("Expected timeline log", loot.timelineLog.isNotEmpty())
+    }
+
+    @Test
+    fun testPlayTimeAccumulationInLiveTick() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(1234))
+
+        val initialTime = engine.state.lifetime.playTimeSeconds
+        // Tick 4 times with 0.25s = 1.0s
+        repeat(4) {
+            engine.tick(0.25f)
+        }
+        assertEquals(initialTime + 1L, engine.state.lifetime.playTimeSeconds)
+    }
 }

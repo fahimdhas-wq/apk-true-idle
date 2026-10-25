@@ -83,21 +83,21 @@ class GameEngine(
                 nextId = ids.current()
             )
 
-            // Also check auto-collect for gathering while away
-            val updatedGathering = if (state.gathering.autoCollectUnlocked && state.gathering.autoCollectEnabled) {
-                val plots = state.gathering.plots.map { it.copy(growthProgress = 0f, isReady = false) }
-                val veins = state.gathering.veins.map { it.copy(miningProgress = 0f, isReady = false) }
-                state.gathering.copy(plots = plots, veins = veins)
+            // Also check auto-collect for harvest while away
+            val updatedHarvest = if (state.harvest.autoCollectUnlocked && state.harvest.autoCollectEnabled) {
+                val plots = state.harvest.plots.map { it.copy(growthProgress = 0f, isReady = false) }
+                val veins = state.harvest.veins.map { it.copy(miningProgress = 0f, isReady = false) }
+                state.harvest.copy(plots = plots, veins = veins)
             } else {
-                state.gathering
+                state.harvest
             }
 
-            // Sanctified faith drain if aegisActive
-            var sanctified = state.sanctified
-            if (sanctified.aegisActive) {
+            // Essence faith drain if aegisActive
+            var essence = state.essence
+            if (essence.aegisActive) {
                 val drain = (awayMs / 1000.0 * 0.5).toLong()
-                val newFaith = (sanctified.faith - drain).coerceAtLeast(0L)
-                sanctified = sanctified.copy(
+                val newFaith = (essence.faith - drain).coerceAtLeast(0L)
+                essence = essence.copy(
                     faith = newFaith,
                     aegisActive = newFaith > 0L
                 )
@@ -106,8 +106,8 @@ class GameEngine(
             state = state.copy(
                 meta = updatedMeta,
                 pendingOfflineLoot = loot,
-                gathering = updatedGathering,
-                sanctified = sanctified
+                harvest = updatedHarvest,
+                essence = essence
             )
         }
     }
@@ -236,18 +236,40 @@ class GameEngine(
         )
     }
 
+    private var playTimeSubSec: Double = 0.0
+
     fun toggleNotificationBanners(): GameState {
         val next = !state.notificationBannersEnabled
         state = state.copy(
             notificationBannersEnabled = next,
-            notifications = if (next) state.notifications else emptyList()
+            notifications = emptyList()
         )
-        pushNotification(
-            title = "SYSTEM SETTINGS",
-            message = if (next) "Notification Banners ENABLED" else "Notification Banners MUTED",
-            type = "system",
-            status = "INFO"
+        state = state.copy(
+            logs = (state.logs + LogEntry(
+                id = ids.next(),
+                text = if (next) "NOTIFICATION PROTOCOL: Floating banners ENABLED." else "NOTIFICATION PROTOCOL: Floating banners MUTED (routed to archive).",
+                type = "system",
+                timestampMs = nowWallMs()
+            )).takeLast(200)
         )
+        return state
+    }
+
+    fun setThemeMode(isDark: Boolean): GameState {
+        state = state.copy(isDarkMode = isDark)
+        return state
+    }
+
+    fun toggleThemeMode(): GameState {
+        state = state.copy(isDarkMode = !state.isDarkMode)
+        return state
+    }
+
+    fun simulateOfflineRecon(hours: Int = 8): GameState {
+        val awayMs = hours * 3600_000L
+        val d = DerivedStats.of(state)
+        val loot = OfflineEngine.compute(state, d, awayMs, 0.65, random)
+        state = state.copy(pendingOfflineLoot = loot)
         return state
     }
 
@@ -269,14 +291,23 @@ class GameEngine(
         var m = state.monster
         var necro = state.necro
         var beasts = state.beasts
-        var gathering = state.gathering
-        var crafting = state.crafting
+        var harvest = state.harvest
+        var armory = state.armory
         var training = state.training
-        var sanctified = state.sanctified
+        var essence = state.essence
         var slayer = state.slayer
+        var talent = state.talent
         var lifetime = state.lifetime
         var inventory = state.inventory.toMutableList()
         val newLogs = mutableListOf<LogEntry>()
+
+        // Accumulate active gameplay time
+        playTimeSubSec += dt
+        if (playTimeSubSec >= 1.0) {
+            val secs = playTimeSubSec.toLong()
+            playTimeSubSec -= secs
+            lifetime = lifetime.copy(playTimeSeconds = lifetime.playTimeSeconds + secs)
+        }
 
         // 1. Recovery state check (§4.5)
         if (p.recoverLeft > 0.0) {
@@ -321,8 +352,22 @@ class GameEngine(
         }
 
         // 4. Monster damage to hero: incomingPerSec * dt; shield absorbs first; remainder to HP
-        val incomingRate = CombatMath.incomingPerSec(m, derived, sanctified.aegisActive)
+        val incomingRate = CombatMath.incomingPerSec(m, derived, essence.aegisActive)
         val monsterDmg = incomingRate * dt
+
+        // Struggle Passive adaptation: every point of damage endured makes the hero stronger!
+        if (monsterDmg > 0.0) {
+            talent = talent.copy(struggleDamageTaken = talent.struggleDamageTaken + monsterDmg.toLong().coerceAtLeast(1L))
+        }
+
+        // Tick active talent timers (cooldowns & active buff durations)
+        val updatedActiveTalents = talent.activeTalents.map { t ->
+            val cd = (t.cooldownRemaining - dt).coerceAtLeast(0.0)
+            val dur = (t.durationRemaining - dt).coerceAtLeast(0.0)
+            val active = if (dur <= 0.0) false else t.isActive
+            t.copy(cooldownRemaining = cd, durationRemaining = dur, isActive = active)
+        }
+        talent = talent.copy(activeTalents = updatedActiveTalents)
 
         var pShield = p.shield
         var pHp = p.hp
@@ -335,19 +380,21 @@ class GameEngine(
             pHp -= monsterDmg
         }
 
-        // 5. Mana regen (+2/s, capped by derived maxMana) & Sanctified aegis drain
+        // 5. Mana regen (+2/s, capped by derived maxMana) & Essence aegis drain
         var pMana = (p.mana + (2.0 * dt)).coerceAtMost(derived.maxMana)
-        if (sanctified.aegisActive) {
-            val drain = 0.5 * dt
-            if (sanctified.faith > 0) {
-                val newFaith = (sanctified.faith - drain.toLong().coerceAtLeast(1L)).coerceAtLeast(0L)
-                sanctified = sanctified.copy(faith = newFaith)
+        if (essence.aegisActive) {
+            val faithPreserveRank = essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
+            val drainMult = (1.0 - (0.15 * faithPreserveRank)).coerceAtLeast(0.2)
+            val drain = 0.5 * dt * drainMult
+            if (essence.faith > 0) {
+                val newFaith = (essence.faith - drain.toLong().coerceAtLeast(1L)).coerceAtLeast(0L)
+                essence = essence.copy(faith = newFaith)
                 if (newFaith <= 0L) {
-                    sanctified = sanctified.copy(aegisActive = false)
-                    pushNotification("AEGIS DEPLETED", "Sanctified Aegis extinguished due to zero faith", "combat", "ALERT")
+                    essence = essence.copy(aegisActive = false)
+                    pushNotification("AEGIS DEPLETED", "Essence Aegis barrier extinguished due to zero faith", "combat", "ALERT")
                 }
             } else {
-                sanctified = sanctified.copy(aegisActive = false)
+                essence = essence.copy(aegisActive = false)
             }
         }
 
@@ -384,15 +431,23 @@ class GameEngine(
                 pHp = postLvlDerived.maxHp
                 pShield = postLvlDerived.maxShield
                 pMana = postLvlDerived.maxMana
+                talent = talent.copy(talentPoints = talent.talentPoints + (curLvl - p.lvl))
             }
 
-            // Bone essence to Necromancy (1 to 3)
-            val bonesGained = random.nextLong(1, 4)
+            if (m.isBoss) {
+                // Bosses grant +2 talent points
+                talent = talent.copy(talentPoints = talent.talentPoints + 2)
+            }
+
+            // Bone essence to Necromancy with Soul Siphon upgrade
+            val harvestRank = necro.upgrades.firstOrNull { it.id == "necro_harvest" }?.rank ?: 0
+            val boneMult = 1.0 + (0.25 * harvestRank)
+            val bonesGained = (random.nextLong(1, 4) * boneMult).toLong().coerceAtLeast(1L)
             necro = necro.copy(boneEssence = necro.boneEssence + bonesGained)
 
             // Faith on kill (+1, +5 for boss)
             val faithGained = if (m.isBoss) 5L else 1L
-            sanctified = sanctified.copy(faith = sanctified.faith + faithGained)
+            essence = essence.copy(faith = essence.faith + faithGained)
 
             // Slayer task progress
             if (slayer.currentTask.targetName.equals(m.name, ignoreCase = true) && !slayer.currentTask.isCompleted) {
@@ -540,26 +595,29 @@ class GameEngine(
             p = p.copy(hp = pHp, shield = pShield, mana = pMana)
         }
 
-        // 8. Gathering Progress Tick (Plots & Veins)
-        // Farming/Mining duration scaled by: duration * 0.97^(lvl-1), floored at 40% of base
-        val farmSpeedMult = (0.97.pow((gathering.farmingLvl - 1).toDouble())).coerceAtLeast(0.40).toFloat()
-        val mineSpeedMult = (0.97.pow((gathering.miningLvl - 1).toDouble())).coerceAtLeast(0.40).toFloat()
+        // 8. Harvest Progress Tick (Bio-Plots & Plasma Veins)
+        val harvestSpeedRank = harvest.upgrades.firstOrNull { it.id == "harvest_speed" }?.rank ?: 0
+        val miningSpeedRank = harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
+        val extraYield = harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+
+        val farmSpeedMult = (0.97.pow((harvest.farmingLvl - 1).toDouble()) * 0.92.pow(harvestSpeedRank)).coerceAtLeast(0.20).toFloat()
+        val mineSpeedMult = (0.97.pow((harvest.miningLvl - 1).toDouble()) * 0.92.pow(miningSpeedRank)).coerceAtLeast(0.20).toFloat()
 
         var autoCollectedHerbs = 0
         var autoCollectedOres = 0
 
-        val updatedPlots = gathering.plots.map { plot ->
+        val updatedPlots = harvest.plots.map { plot ->
             val effectiveDuration = plot.durationSeconds * farmSpeedMult
             if (plot.isReady) {
-                if (gathering.autoCollectUnlocked && gathering.autoCollectEnabled) {
-                    autoCollectedHerbs += 2
+                if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
+                    autoCollectedHerbs += (2 + extraYield)
                     plot.copy(growthProgress = 0f, isReady = false)
                 } else plot
             } else {
                 val newProg = plot.growthProgress + (deltaSeconds / effectiveDuration)
                 if (newProg >= 1f) {
-                    if (gathering.autoCollectUnlocked && gathering.autoCollectEnabled) {
-                        autoCollectedHerbs += 2
+                    if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
+                        autoCollectedHerbs += (2 + extraYield)
                         plot.copy(growthProgress = 0f, isReady = false)
                     } else {
                         plot.copy(growthProgress = 1f, isReady = true)
@@ -570,18 +628,18 @@ class GameEngine(
             }
         }
 
-        val updatedVeins = gathering.veins.map { vein ->
+        val updatedVeins = harvest.veins.map { vein ->
             val effectiveDuration = vein.durationSeconds * mineSpeedMult
             if (vein.isReady) {
-                if (gathering.autoCollectUnlocked && gathering.autoCollectEnabled) {
-                    autoCollectedOres += 3
+                if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
+                    autoCollectedOres += (3 + extraYield)
                     vein.copy(miningProgress = 0f, isReady = false)
                 } else vein
             } else {
                 val newProg = vein.miningProgress + (deltaSeconds / effectiveDuration)
                 if (newProg >= 1f) {
-                    if (gathering.autoCollectUnlocked && gathering.autoCollectEnabled) {
-                        autoCollectedOres += 3
+                    if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
+                        autoCollectedOres += (3 + extraYield)
                         vein.copy(miningProgress = 0f, isReady = false)
                     } else {
                         vein.copy(miningProgress = 1f, isReady = true)
@@ -613,8 +671,8 @@ class GameEngine(
         }
 
         // Auto-collect unlock thresholds (level 10 and 25)
-        val canAutoCollect = gathering.farmingLvl >= 10 || gathering.miningLvl >= 10
-        gathering = gathering.copy(
+        val canAutoCollect = harvest.farmingLvl >= 10 || harvest.miningLvl >= 10
+        harvest = harvest.copy(
             plots = updatedPlots,
             veins = updatedVeins,
             autoCollectUnlocked = canAutoCollect
@@ -625,11 +683,12 @@ class GameEngine(
             monster = m,
             necro = necro,
             beasts = beasts,
-            gathering = gathering,
-            crafting = crafting,
+            harvest = harvest,
+            armory = armory,
             training = training,
-            sanctified = sanctified,
+            essence = essence,
             slayer = slayer,
+            talent = talent,
             inventory = inventory,
             lifetime = lifetime,
             logs = (state.logs + newLogs).takeLast(40)
@@ -719,10 +778,10 @@ class GameEngine(
     }
 
     fun toggleAutoCollect(): GameState {
-        if (!state.gathering.autoCollectUnlocked) return state
-        val next = !state.gathering.autoCollectEnabled
-        state = state.copy(gathering = state.gathering.copy(autoCollectEnabled = next))
-        pushNotification("AUTO-COLLECT", if (next) "Gathering auto-collect ENABLED" else "Gathering auto-collect DISABLED", "system")
+        if (!state.harvest.autoCollectUnlocked) return state
+        val next = !state.harvest.autoCollectEnabled
+        state = state.copy(harvest = state.harvest.copy(autoCollectEnabled = next))
+        pushNotification("AUTO-COLLECT", if (next) "Harvest auto-collect ENABLED" else "Harvest auto-collect DISABLED", "system")
         return state
     }
 
@@ -822,24 +881,26 @@ class GameEngine(
     }
 
     fun harvestPlot(plotId: Int): GameState {
-        val plots = state.gathering.plots.toMutableList()
+        val plots = state.harvest.plots.toMutableList()
         val idx = plots.indexOfFirst { it.id == plotId }
         if (idx >= 0 && plots[idx].isReady) {
             val herbName = plots[idx].herbName
+            val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+            val yieldQty = 2 + extraYield
             val inv = state.inventory.toMutableList()
             val existing = inv.indexOfFirst { it.name == herbName }
             if (existing >= 0) {
-                inv[existing] = inv[existing].copy(count = inv[existing].count + 2)
+                inv[existing] = inv[existing].copy(count = inv[existing].count + yieldQty)
             } else {
-                inv.add(InventoryItem("herb_${ids.next()}", herbName, "Resource", 2, 1, "", "Harvested herb", 8L))
+                inv.add(InventoryItem("herb_${ids.next()}", herbName, "Resource", yieldQty, 1, "", "Harvested herb", 8L))
             }
             plots[idx] = plots[idx].copy(growthProgress = 0f, isReady = false)
 
-            var fXp = state.gathering.farmingXp + 25L
-            var fLvl = state.gathering.farmingLvl
+            var fXp = state.harvest.farmingXp + 25L
+            var fLvl = state.harvest.farmingLvl
             val reqXp = Balance.skillXpReq(fLvl)
             val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "BIO-HARVEST: Collected 2x $herbName (+25 Farming XP)", "loot"))
+            newLogs.add(LogEntry(ids.next(), "BIO-HARVEST: Collected ${yieldQty}x $herbName (+25 Farming XP)", "loot"))
 
             if (fXp >= reqXp) {
                 fXp -= reqXp
@@ -847,13 +908,13 @@ class GameEngine(
                 newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Farming reached Level $fLvl!", "milestone"))
                 pushNotification("SKILL LEVEL UP", "Farming reached Level $fLvl!", "level")
             } else {
-                pushNotification("HARVEST COMPLETE", "Harvested 2x $herbName", "craft")
+                pushNotification("HARVEST COMPLETE", "Harvested ${yieldQty}x $herbName", "craft")
             }
 
             state = state.copy(
-                gathering = state.gathering.copy(plots = plots, farmingXp = fXp, farmingLvl = fLvl),
+                harvest = state.harvest.copy(plots = plots, farmingXp = fXp, farmingLvl = fLvl),
                 inventory = inv,
-                lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + 2),
+                lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + yieldQty),
                 logs = newLogs.takeLast(40)
             )
             evaluateAchievements()
@@ -862,24 +923,26 @@ class GameEngine(
     }
 
     fun mineVein(veinId: Int): GameState {
-        val veins = state.gathering.veins.toMutableList()
+        val veins = state.harvest.veins.toMutableList()
         val idx = veins.indexOfFirst { it.id == veinId }
         if (idx >= 0 && veins[idx].isReady) {
             val oreName = veins[idx].oreName
+            val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+            val yieldQty = 3 + extraYield
             val inv = state.inventory.toMutableList()
             val existing = inv.indexOfFirst { it.name == oreName }
             if (existing >= 0) {
-                inv[existing] = inv[existing].copy(count = inv[existing].count + 3)
+                inv[existing] = inv[existing].copy(count = inv[existing].count + yieldQty)
             } else {
-                inv.add(InventoryItem("ore_${ids.next()}", oreName, "Resource", 3, 1, "", "Mined metal ore", 10L))
+                inv.add(InventoryItem("ore_${ids.next()}", oreName, "Resource", yieldQty, 1, "", "Mined metal ore", 10L))
             }
             veins[idx] = veins[idx].copy(miningProgress = 0f, isReady = false)
 
-            var mXp = state.gathering.miningXp + 30L
-            var mLvl = state.gathering.miningLvl
+            var mXp = state.harvest.miningXp + 30L
+            var mLvl = state.harvest.miningLvl
             val reqXp = Balance.skillXpReq(mLvl)
             val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "ORE EXTRACTED: Excavated 3x $oreName (+30 Mining XP)", "loot"))
+            newLogs.add(LogEntry(ids.next(), "ORE EXTRACTED: Excavated ${yieldQty}x $oreName (+30 Mining XP)", "loot"))
 
             if (mXp >= reqXp) {
                 mXp -= reqXp
@@ -887,13 +950,13 @@ class GameEngine(
                 newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Mining reached Level $mLvl!", "milestone"))
                 pushNotification("SKILL LEVEL UP", "Mining reached Level $mLvl!", "level")
             } else {
-                pushNotification("EXTRACTION COMPLETE", "Extracted 3x $oreName", "craft")
+                pushNotification("EXTRACTION COMPLETE", "Extracted ${yieldQty}x $oreName", "craft")
             }
 
             state = state.copy(
-                gathering = state.gathering.copy(veins = veins, miningXp = mXp, miningLvl = mLvl),
+                harvest = state.harvest.copy(veins = veins, miningXp = mXp, miningLvl = mLvl),
                 inventory = inv,
-                lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + 3),
+                lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + yieldQty),
                 logs = newLogs.takeLast(40)
             )
             evaluateAchievements()
@@ -1138,17 +1201,25 @@ class GameEngine(
         val inv = state.inventory.toMutableList()
         val oreIdx = inv.indexOfFirst { it.name == reqOre && it.count >= reqQty }
         if (oreIdx >= 0) {
-            val ore = inv[oreIdx]
-            if (ore.count > reqQty) {
-                inv[oreIdx] = ore.copy(count = ore.count - reqQty)
-            } else {
-                inv.removeAt(oreIdx)
+            // Check alloy recycling upgrade (12% chance to conserve materials)
+            val recycleRank = state.armory.upgrades.firstOrNull { it.id == "resource_saving" }?.rank ?: 0
+            val didRecycle = recycleRank > 0 && random.nextDouble() < (0.12 * recycleRank).coerceAtMost(0.60)
+            if (!didRecycle) {
+                val ore = inv[oreIdx]
+                if (ore.count > reqQty) {
+                    inv[oreIdx] = ore.copy(count = ore.count - reqQty)
+                } else {
+                    inv.removeAt(oreIdx)
+                }
             }
+
+            val forgeQualityRank = state.armory.upgrades.firstOrNull { it.id == "forge_quality" }?.rank ?: 0
+            val qualityMult = 1.0 + (0.12 * forgeQualityRank)
             val (atk, def, statDesc) = if (slot == "Weapon") {
-                val atkVal = tier * 12.0
+                val atkVal = (tier * 12.0) * qualityMult
                 Triple(atkVal, 0.0, "+${atkVal.toInt()} Damage")
             } else {
-                val defVal = tier * 8.0
+                val defVal = (tier * 8.0) * qualityMult
                 Triple(0.0, defVal, "+${defVal.toInt()} Defense")
             }
             val newItem = InventoryItem(
@@ -1166,8 +1237,8 @@ class GameEngine(
             )
             inv.add(newItem)
 
-            var sXp = state.crafting.smithingXp + 50L
-            var sLvl = state.crafting.smithingLvl
+            var sXp = state.armory.smithingXp + 50L
+            var sLvl = state.armory.smithingLvl
             val req = Balance.skillXpReq(sLvl)
             val newLogs = state.logs.toMutableList()
             newLogs.add(LogEntry(ids.next(), "CYBER FORGE SUCCESS: Forged $name (Tier $tier)!", "milestone"))
@@ -1175,15 +1246,15 @@ class GameEngine(
             if (sXp >= req) {
                 sXp -= req
                 sLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Smithing reached Level $sLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Smithing reached Level $sLvl!", "level")
+                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Armory Smithing reached Level $sLvl!", "milestone"))
+                pushNotification("SKILL LEVEL UP", "Armory Smithing reached Level $sLvl!", "level")
             } else {
                 pushNotification("FORGE SUCCESS", "Forged $name ($statDesc)", "craft")
             }
 
             state = state.copy(
                 inventory = inv,
-                crafting = state.crafting.copy(smithingXp = sXp, smithingLvl = sLvl),
+                armory = state.armory.copy(smithingXp = sXp, smithingLvl = sLvl),
                 lifetime = state.lifetime.copy(forged = state.lifetime.forged + 1),
                 logs = newLogs.takeLast(40)
             )
@@ -1212,8 +1283,8 @@ class GameEngine(
             }
             inv.add(InventoryItem("potion_${ids.next()}", name, "Potion", 1, 1, "", healDesc, 15L))
 
-            var hXp = state.crafting.herbloreXp + 40L
-            var hLvl = state.crafting.herbloreLvl
+            var hXp = state.armory.herbloreXp + 40L
+            var hLvl = state.armory.herbloreLvl
             val req = Balance.skillXpReq(hLvl)
             val newLogs = state.logs.toMutableList()
             newLogs.add(LogEntry(ids.next(), "ALCHEMY SYNTHESIS: Brewed $name!", "milestone"))
@@ -1229,7 +1300,7 @@ class GameEngine(
 
             state = state.copy(
                 inventory = inv,
-                crafting = state.crafting.copy(herbloreXp = hXp, herbloreLvl = hLvl),
+                armory = state.armory.copy(herbloreXp = hXp, herbloreLvl = hLvl),
                 lifetime = state.lifetime.copy(brewed = state.lifetime.brewed + 1),
                 logs = newLogs.takeLast(40)
             )
@@ -1240,30 +1311,224 @@ class GameEngine(
         return state
     }
 
-    fun toggleSanctifiedAegis(): GameState {
-        val next = !state.sanctified.aegisActive
-        if (next && state.sanctified.faith <= 0) {
-            pushNotification("SANCTIFIED AEGIS", "Insufficient faith to activate Aegis (0 Faith)", "combat", "ALERT")
+    fun toggleEssenceAegis(): GameState {
+        val next = !state.essence.aegisActive
+        if (next && state.essence.faith <= 0) {
+            pushNotification("ESSENCE AEGIS", "Insufficient faith to activate Aegis (0 Faith)", "combat", "ALERT")
             return state
         }
-        state = state.copy(sanctified = state.sanctified.copy(aegisActive = next))
-        pushNotification("SANCTIFIED AEGIS", if (next) "Aegis activated (-20% damage, -0.5 faith/s)" else "Aegis deactivated", "system")
+        state = state.copy(essence = state.essence.copy(aegisActive = next))
+        pushNotification("ESSENCE AEGIS", if (next) "Aegis barrier activated (-20% incoming damage)" else "Aegis barrier deactivated", "system")
         return state
     }
 
-    fun upgradeSanctifiedSmite(): GameState {
-        val cost = (25.0 * 1.5.pow(state.sanctified.smiteLevel.toDouble())).toLong()
-        if (state.sanctified.faith >= cost) {
-            val nextLvl = state.sanctified.smiteLevel + 1
+    fun toggleSanctifiedAegis(): GameState = toggleEssenceAegis()
+
+    fun upgradeEssenceSmite(): GameState {
+        val cost = (25.0 * 1.5.pow(state.essence.smiteLevel.toDouble())).toLong()
+        if (state.essence.faith >= cost) {
+            val nextLvl = state.essence.smiteLevel + 1
             state = state.copy(
-                sanctified = state.sanctified.copy(
-                    faith = state.sanctified.faith - cost,
+                essence = state.essence.copy(
+                    faith = state.essence.faith - cost,
                     smiteLevel = nextLvl
                 )
             )
             pushNotification("SMITE UPGRADE", "Holy Smite upgraded to Level $nextLvl (+${nextLvl * 3} DPS)", "milestone")
         } else {
-            pushNotification("UPGRADE FAILED", "Requires $cost Faith (Have ${state.sanctified.faith})", "combat", "ALERT")
+            pushNotification("UPGRADE FAILED", "Requires $cost Faith (Have ${state.essence.faith})", "combat", "ALERT")
+        }
+        return state
+    }
+
+    fun upgradeSanctifiedSmite(): GameState = upgradeEssenceSmite()
+
+    fun upgradeDiscipline(category: String, upgradeId: String): GameState {
+        when (category.uppercase()) {
+            "HARVEST" -> {
+                val upg = state.harvest.upgrades.firstOrNull { it.id == upgradeId } ?: return state
+                if (upg.rank >= upg.maxRank) return state
+                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                if (state.player.gold < cost) {
+                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
+                    return state
+                }
+                val updatedUpgs = state.harvest.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+                state = state.copy(
+                    player = state.player.copy(gold = state.player.gold - cost),
+                    harvest = state.harvest.copy(upgrades = updatedUpgs)
+                )
+                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
+            }
+            "ARMORY" -> {
+                val upg = state.armory.upgrades.firstOrNull { it.id == upgradeId } ?: return state
+                if (upg.rank >= upg.maxRank) return state
+                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                if (state.player.gold < cost) {
+                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
+                    return state
+                }
+                val updatedUpgs = state.armory.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+                state = state.copy(
+                    player = state.player.copy(gold = state.player.gold - cost),
+                    armory = state.armory.copy(upgrades = updatedUpgs)
+                )
+                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
+            }
+            "GENESIS_BEAST" -> {
+                val upg = state.beasts.upgrades.firstOrNull { it.id == upgradeId } ?: return state
+                if (upg.rank >= upg.maxRank) return state
+                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                if (state.player.gold < cost) {
+                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
+                    return state
+                }
+                val updatedUpgs = state.beasts.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+                state = state.copy(
+                    player = state.player.copy(gold = state.player.gold - cost),
+                    beasts = state.beasts.copy(upgrades = updatedUpgs)
+                )
+                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
+            }
+            "GENESIS_NECRO" -> {
+                val upg = state.necro.upgrades.firstOrNull { it.id == upgradeId } ?: return state
+                if (upg.rank >= upg.maxRank) return state
+                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                if (state.necro.boneEssence < cost) {
+                    pushNotification("UPGRADE FAILED", "Requires $cost Bone Essence (Have ${state.necro.boneEssence})", "combat", "ALERT")
+                    return state
+                }
+                val updatedUpgs = state.necro.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+                state = state.copy(
+                    necro = state.necro.copy(
+                        boneEssence = state.necro.boneEssence - cost,
+                        upgrades = updatedUpgs
+                    )
+                )
+                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
+            }
+            "ESSENCE" -> {
+                val upg = state.essence.upgrades.firstOrNull { it.id == upgradeId } ?: return state
+                if (upg.rank >= upg.maxRank) return state
+                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                if (state.essence.faith < cost) {
+                    pushNotification("UPGRADE FAILED", "Requires $cost Faith (Have ${state.essence.faith})", "combat", "ALERT")
+                    return state
+                }
+                val updatedUpgs = state.essence.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+                state = state.copy(
+                    essence = state.essence.copy(
+                        faith = state.essence.faith - cost,
+                        upgrades = updatedUpgs
+                    )
+                )
+                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
+            }
+        }
+        return state
+    }
+
+    fun activateTalent(talentId: String): GameState {
+        val t = state.talent.activeTalents.firstOrNull { it.id == talentId } ?: return state
+        if (t.cooldownRemaining > 0.0) {
+            pushNotification("ON COOLDOWN", "${t.name} on cooldown (${t.cooldownRemaining.toInt()}s remaining)", "combat", "ALERT")
+            return state
+        }
+        val derived = DerivedStats.of(state)
+        var p = state.player
+        var m = state.monster
+
+        when (talentId) {
+            "nanite_heal" -> {
+                val healHp = derived.maxHp * 0.40
+                val healShield = derived.maxShield * 0.25
+                p = p.copy(
+                    hp = (p.hp + healHp).coerceAtMost(derived.maxHp),
+                    shield = (p.shield + healShield).coerceAtMost(derived.maxShield)
+                )
+                pushNotification("NANITE REPAIR", "Restored +${healHp.toInt()} HP & +${healShield.toInt()} Shield!", "milestone")
+            }
+            "mana_rampage" -> {
+                if (p.mana < 25.0) {
+                    pushNotification("INSUFFICIENT MANA", "Mana Tempest requires 25 Mana", "combat", "ALERT")
+                    return state
+                }
+                p = p.copy(mana = p.mana - 25.0)
+                val burstDamage = derived.physicalDamage * 2.5
+                var mShield = m.shield
+                var mHp = m.hp
+                if (mShield > 0.0) {
+                    val absorb = burstDamage.coerceAtMost(mShield)
+                    mShield -= absorb
+                    mHp -= (burstDamage - absorb)
+                } else {
+                    mHp -= burstDamage
+                }
+                m = m.copy(shield = mShield.coerceAtLeast(0.0), hp = mHp)
+                pushNotification("MANA TEMPEST", "Unleashed devastating cosmic storm for ${burstDamage.toInt()} Damage!", "milestone")
+            }
+            "aegis_bastion" -> {
+                val barrier = derived.maxShield * 0.60
+                p = p.copy(shield = (p.shield + barrier).coerceAtMost(derived.maxShield * 1.5))
+                pushNotification("AEGIS BASTION", "Deployed reinforced barrier (+${barrier.toInt()} Shield)!", "milestone")
+            }
+            "berserk" -> {
+                pushNotification("BERSERK OVERDRIVE", "Overclocking physical output: +50% ATK Speed, +35% DMG!", "milestone")
+            }
+            "support_overclock" -> {
+                pushNotification("LEGION OVERCLOCK", "Minions and Companion Beasts deal 300% DPS!", "milestone")
+            }
+            "arcane_enchant" -> {
+                pushNotification("ENCHANTMENT MATRIX", "Crit Chance +25% and Crit Damage +50%!", "milestone")
+            }
+        }
+
+        val updatedTalents = state.talent.activeTalents.map {
+            if (it.id == talentId) {
+                it.copy(
+                    isActive = t.durationSeconds > 0.0,
+                    durationRemaining = t.durationSeconds,
+                    cooldownRemaining = t.cooldownSeconds
+                )
+            } else it
+        }
+
+        state = state.copy(
+            player = p,
+            monster = m,
+            talent = state.talent.copy(activeTalents = updatedTalents)
+        )
+        return state
+    }
+
+    fun upgradeTalent(talentId: String): GameState {
+        if (state.talent.talentPoints <= 0) {
+            pushNotification("TALENT SYSTEM", "No Talent Points available. Level up or defeat bosses to earn points!", "combat", "ALERT")
+            return state
+        }
+        val active = state.talent.activeTalents.firstOrNull { it.id == talentId }
+        val struggle = state.talent.struggleTalents.firstOrNull { it.id == talentId }
+
+        if (active != null) {
+            if (active.rank >= active.maxRank) return state
+            val updated = state.talent.activeTalents.map { if (it.id == talentId) it.copy(rank = it.rank + 1) else it }
+            state = state.copy(
+                talent = state.talent.copy(
+                    talentPoints = state.talent.talentPoints - 1,
+                    activeTalents = updated
+                )
+            )
+            pushNotification("TALENT UPGRADED", "${active.name} enhanced to Rank ${active.rank + 1}!", "milestone")
+        } else if (struggle != null) {
+            if (struggle.rank >= struggle.maxRank) return state
+            val updated = state.talent.struggleTalents.map { if (it.id == talentId) it.copy(rank = it.rank + 1) else it }
+            state = state.copy(
+                talent = state.talent.copy(
+                    talentPoints = state.talent.talentPoints - 1,
+                    struggleTalents = updated
+                )
+            )
+            pushNotification("STRUGGLE ADAPTATION", "${struggle.name} enhanced to Rank ${struggle.rank + 1}!", "milestone")
         }
         return state
     }

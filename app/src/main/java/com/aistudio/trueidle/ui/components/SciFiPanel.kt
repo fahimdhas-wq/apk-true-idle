@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,14 +19,18 @@ fun SciFiPanel(
     modifier: Modifier = Modifier,
     accent: Color = PrimaryNeon,
     tag: String? = null,
-    borderColor: Color = BorderDark,
+    containerColor: Color = Color.Unspecified,
+    borderColor: Color = Color.Unspecified,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val resolvedContainer = if (containerColor != Color.Unspecified) containerColor else MaterialTheme.colorScheme.surface
+    val resolvedBorder = if (borderColor != Color.Unspecified) borderColor else MaterialTheme.colorScheme.outline
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(SurfaceDark)
-            .border(BorderStroke(1.dp, borderColor))
+            .background(resolvedContainer)
+            .border(BorderStroke(1.dp, resolvedBorder))
             .padding(12.dp)
     ) {
         Row(
@@ -45,7 +50,7 @@ fun SciFiPanel(
                 Text(
                     text = title,
                     style = TrueIdleType.title,
-                    color = TextLight
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             if (tag != null) {

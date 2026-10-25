@@ -99,32 +99,48 @@ fun TrainingScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(node.name.uppercase(), style = MaterialTheme.typography.titleMedium, color = TextLight, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("[ RANK ${node.rank}/${node.maxRank} ]", style = MaterialTheme.typography.labelSmall, color = PrimaryNeon)
-                            }
+                            Text(node.name.uppercase(), style = TrueIdleType.title, color = TextLight)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(node.stat, style = MaterialTheme.typography.bodySmall, color = GreenSuccess)
+                            Text(node.stat, style = TrueIdleType.meta, color = GreenSuccess)
                         }
 
-                        OutlinedButton(
-                            onClick = { onTrainNode(node.id) },
-                            enabled = canAfford,
-                            modifier = Modifier.testTag("train_btn_${node.id}"),
-                            shape = RectangleShape,
-                            border = BorderStroke(1.dp, if (canAfford) PrimaryNeon else BorderDark),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = if (canAfford) PrimaryNeon.copy(alpha = 0.15f) else SurfaceVariantDark,
-                                contentColor = if (canAfford) PrimaryNeon else TextMuted
-                            ),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} 🪙]",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            // Fixed width aligned Rank Box
+                            Box(
+                                modifier = Modifier
+                                    .width(76.dp)
+                                    .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                                    .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
+                                    .padding(vertical = 3.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "R ${node.rank}/${node.maxRank}",
+                                    style = TrueIdleType.numberSmall,
+                                    color = PrimaryNeon
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = { onTrainNode(node.id) },
+                                enabled = canAfford,
+                                modifier = Modifier.testTag("train_btn_${node.id}"),
+                                shape = RectangleShape,
+                                border = BorderStroke(1.dp, if (canAfford) PrimaryNeon else BorderDark),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (canAfford) PrimaryNeon.copy(alpha = 0.15f) else SurfaceVariantDark,
+                                    contentColor = if (canAfford) PrimaryNeon else TextMuted
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} 🪙]",
+                                    style = TrueIdleType.tag
+                                )
+                            }
                         }
                     }
                 }

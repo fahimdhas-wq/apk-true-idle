@@ -20,8 +20,11 @@ object CombatMath {
     fun armyDps(n: NecromancyState): Double =
         n.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
 
-    fun totalDps(s: GameState, d: Derived): Double =
-        heroDps(d) + beastDps(s.beasts) + armyDps(s.necro)
+    fun totalDps(s: GameState, d: Derived): Double {
+        val supportOverclock = s.talent.activeTalents.firstOrNull { it.id == "support_overclock" }?.isActive == true
+        val minionMultiplier = if (supportOverclock) 3.0 else 1.0
+        return heroDps(d) + (beastDps(s.beasts) + armyDps(s.necro)) * minionMultiplier
+    }
 
     /** Damage per second the hero takes after armor, before shield. Floored at 1/s as today. */
     fun incomingPerSec(m: Monster, d: Derived, aegis: Boolean): Double {
