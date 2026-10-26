@@ -27,7 +27,6 @@ import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
-import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.theme.*
 
@@ -37,14 +36,11 @@ fun SettingsScreen(
     onExportSave: () -> String,
     onImportSave: (String) -> Boolean,
     onResetGame: () -> Unit,
-    onToggleNotifications: () -> Unit,
-    onClearNotificationHistory: () -> Unit,
     onClaimAchievement: ((String) -> Unit)? = null,
     onToggleAutoEquip: () -> Unit = {},
     onToggleAutoMerge: () -> Unit = {},
     onSetCraftUsage: (Int) -> Unit = {},
     onFightPromotionBoss: () -> Unit = {},
-    onSetThemeMode: (Boolean) -> Unit = {},
     onExportTelemetryLog: () -> String = { "" },
     modifier: Modifier = Modifier
 ) {
@@ -57,8 +53,6 @@ fun SettingsScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
-    var showNotificationHistory by remember { mutableStateOf(false) }
-
     var exportedCode by remember { mutableStateOf("") }
     var importInputText by remember { mutableStateOf("") }
     var copyStatus by remember { mutableStateOf("") }
@@ -69,14 +63,6 @@ fun SettingsScreen(
     val gearMet = d.gearScore >= promo.requiredGearScore
     val canPromote = floorMet && gearMet
 
-    if (showNotificationHistory) {
-        NotificationHistoryDialog(
-            history = state.notificationHistory,
-            onClear = onClearNotificationHistory,
-            onDismiss = { showNotificationHistory = false }
-        )
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -86,89 +72,7 @@ fun SettingsScreen(
             .testTag("settings_screen"),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. VISUAL THEME PROTOCOL (White / Dark mode selection)
-        SciFiPanel(
-            title = "INTERFACE PROTOCOL",
-            accent = PrimaryNeon,
-            tag = if (state.isDarkMode) "OBSIDIAN DARK" else "SOLAR LIGHT"
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF000000), RectangleShape)
-                    .border(BorderStroke(1.dp, BorderDark))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "VISUAL ENVIRONMENT SELECTION",
-                    style = TrueIdleType.label,
-                    color = TextLight
-                )
-                Text(
-                    text = "Select high-contrast cyberpunk Obsidian dark mode or Solar laboratory light mode.",
-                    style = TrueIdleType.meta,
-                    color = TextMuted
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Dark Mode Button
-                    OutlinedButton(
-                        onClick = { onSetThemeMode(true) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("theme_dark_button"),
-                        shape = RectangleShape,
-                        border = BorderStroke(
-                            1.5.dp,
-                            if (state.isDarkMode) PrimaryNeon else BorderDark
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (state.isDarkMode) PrimaryNeon.copy(alpha = 0.2f) else SurfaceVariantDark,
-                            contentColor = if (state.isDarkMode) PrimaryNeon else TextMuted
-                        ),
-                        contentPadding = PaddingValues(vertical = 12.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("☾ OBSIDIAN DARK", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                            if (state.isDarkMode) {
-                                Text("[✓ ACTIVE]", style = TrueIdleType.monoTimestamp, color = PrimaryNeon)
-                            }
-                        }
-                    }
-
-                    // Light Mode Button
-                    OutlinedButton(
-                        onClick = { onSetThemeMode(false) },
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("theme_light_button"),
-                        shape = RectangleShape,
-                        border = BorderStroke(
-                            1.5.dp,
-                            if (!state.isDarkMode) SecondaryGold else BorderDark
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (!state.isDarkMode) SecondaryGold.copy(alpha = 0.2f) else SurfaceVariantDark,
-                            contentColor = if (!state.isDarkMode) SecondaryGold else TextMuted
-                        ),
-                        contentPadding = PaddingValues(vertical = 12.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("☀ SOLAR LIGHT", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                            if (!state.isDarkMode) {
-                                Text("[✓ ACTIVE]", style = TrueIdleType.monoTimestamp, color = SecondaryGold)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. MISSION DOSSIER & PLAY TELEMETRY
+        // 1. MISSION DOSSIER & PLAY TELEMETRY
         SciFiPanel(
             title = "MISSION DOSSIER",
             accent = SecondaryGold,
@@ -287,86 +191,6 @@ fun SettingsScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text("8H ACTIVE", style = TrueIdleType.numberSmall, color = GreenSuccess)
-                    }
-                }
-            }
-        }
-
-        // 4. NOTIFICATION PROTOCOLS (Verified master toggle)
-        SciFiPanel(
-            title = "NOTIFICATION PROTOCOLS",
-            accent = PrimaryNeon,
-            tag = if (state.notificationBannersEnabled) "BANNERS ON" else "BANNERS MUTED"
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF000000))
-                    .border(1.dp, BorderDark)
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("FLOATING TELEMETRY BANNERS", style = TrueIdleType.label, color = TextLight)
-                        Text(
-                            text = if (state.notificationBannersEnabled) {
-                                "Milestone popups active (Level ups, Floor clears, Retracts)"
-                            } else {
-                                "Popups silenced completely (all events logged to Archive & Mission Log)"
-                            },
-                            style = TrueIdleType.meta,
-                            color = if (state.notificationBannersEnabled) GreenSuccess else TextMuted
-                        )
-                    }
-
-                    Switch(
-                        checked = state.notificationBannersEnabled,
-                        onCheckedChange = { onToggleNotifications() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = PrimaryNeon,
-                            checkedTrackColor = PrimaryNeon.copy(alpha = 0.35f),
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = SurfaceVariantDark
-                        ),
-                        modifier = Modifier.testTag("notification_toggle_switch")
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showNotificationHistory = true },
-                        modifier = Modifier.weight(1f).testTag("view_history_btn"),
-                        shape = RectangleShape,
-                        border = BorderStroke(1.dp, PrimaryNeon),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = PrimaryNeon.copy(alpha = 0.12f),
-                            contentColor = PrimaryNeon
-                        ),
-                        contentPadding = PaddingValues(vertical = 10.dp)
-                    ) {
-                        Text("ARCHIVE (${state.notificationHistory.size})", style = TrueIdleType.tag)
-                    }
-
-                    OutlinedButton(
-                        onClick = { onClearNotificationHistory() },
-                        modifier = Modifier.weight(1f).testTag("clear_history_btn"),
-                        shape = RectangleShape,
-                        border = BorderStroke(1.dp, BorderDark),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = SurfaceDark,
-                            contentColor = TextMuted
-                        ),
-                        contentPadding = PaddingValues(vertical = 10.dp)
-                    ) {
-                        Text("CLEAR ARCHIVE", style = TrueIdleType.tag)
                     }
                 }
             }

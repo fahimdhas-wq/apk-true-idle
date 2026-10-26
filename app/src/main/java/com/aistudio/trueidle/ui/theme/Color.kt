@@ -9,14 +9,6 @@ val SurfaceVariantDark = Color(0xFF101726)
 val BorderDark = Color(0xFF1D283A)
 val BorderNeon = Color(0xFF00E5FF)
 
-// Solar Light Palette (World-class sci-fi laboratory look)
-val BgLight = Color(0xFFF1F5F9)
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceVariantLight = Color(0xFFE2E8F0)
-val BorderLight = Color(0xFFCBD5E1)
-val TextDark = Color(0xFF0F172A)
-val TextMutedLight = Color(0xFF64748B)
-
 // Cyberpunk Neon Accents
 val PrimaryNeon = Color(0xFF00E5FF)
 val SecondaryGold = Color(0xFFFFD700)

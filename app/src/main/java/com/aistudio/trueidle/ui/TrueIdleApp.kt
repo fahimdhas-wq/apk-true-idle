@@ -1,6 +1,5 @@
 package com.aistudio.trueidle.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,8 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.ui.components.NotificationBanner
-import com.aistudio.trueidle.ui.components.NotificationHistoryDialog
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
@@ -48,27 +45,11 @@ fun TrueIdleApp(
     val state by viewModel.gameState.collectAsStateWithLifecycle()
     val logFilter by viewModel.logFilter.collectAsStateWithLifecycle()
     var currentTab by rememberSaveable { mutableStateOf(TrueIdleTab.COMBAT) }
-    var showNotificationHistory by remember { mutableStateOf(false) }
-
-    // Android system back button handler
-    BackHandler(enabled = currentTab != TrueIdleTab.COMBAT) {
-        currentTab = TrueIdleTab.COMBAT
-    }
-
     // Offline Loot Claim Modal
     if (state.pendingOfflineLoot != null) {
         OfflineLootDialog(
             loot = state.pendingOfflineLoot!!,
             onClaim = { viewModel.claimOfflineLoot() }
-        )
-    }
-
-    // Notification History Modal ("Show All")
-    if (showNotificationHistory) {
-        NotificationHistoryDialog(
-            history = state.notificationHistory,
-            onClear = { viewModel.clearNotificationHistory() },
-            onDismiss = { showNotificationHistory = false }
         )
     }
 
@@ -87,7 +68,7 @@ fun TrueIdleApp(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -144,7 +125,7 @@ fun TrueIdleApp(
                         // Top bar shortcut: ⚙ Settings / Interface
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(32.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.7f), RectangleShape)
                                 .clickable { currentTab = TrueIdleTab.SETTINGS }
@@ -156,13 +137,6 @@ fun TrueIdleApp(
                     }
                 }
 
-                // Anti-stacking interactive notification banner with Show All option
-                NotificationBanner(
-                    notifications = state.notifications,
-                    onDismiss = { viewModel.dismissNotification(it) },
-                    onShowAll = { showNotificationHistory = true },
-                    historyCount = state.notificationHistory.size
-                )
             }
         },
         bottomBar = {
@@ -183,7 +157,7 @@ fun TrueIdleApp(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 56.dp)
+                            .heightIn(min = 48.dp)
                             .selectable(
                                 selected = isSelected,
                                 onClick = { currentTab = tab },
@@ -194,7 +168,7 @@ fun TrueIdleApp(
                                     drawRect(PrimaryNeon, size = Size(size.width, 2.dp.toPx()))
                                 }
                             }
-                            .padding(vertical = 6.dp)
+                            .padding(vertical = 4.dp)
                             .testTag("nav_tab_${tab.name.lowercase()}"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -264,14 +238,11 @@ fun TrueIdleApp(
                     onExportSave = { viewModel.exportSave() },
                     onImportSave = { code -> viewModel.importSave(code) },
                     onResetGame = { viewModel.resetGame() },
-                    onToggleNotifications = { viewModel.toggleNotificationBanners() },
-                    onClearNotificationHistory = { viewModel.clearNotificationHistory() },
                     onClaimAchievement = { achId -> viewModel.claimAchievement(achId) },
                     onToggleAutoEquip = { viewModel.toggleAutoEquipBestGear() },
                     onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
                     onFightPromotionBoss = { viewModel.fightPromotionBoss() },
-                    onSetThemeMode = { isDark -> viewModel.setThemeMode(isDark) },
                     onExportTelemetryLog = { viewModel.buildTelemetryReport() }
                 )
             }

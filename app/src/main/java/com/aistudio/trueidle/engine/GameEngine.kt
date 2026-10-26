@@ -20,9 +20,8 @@ class GameEngine(
         private set
 
     val ids = Ids(maxOf(initialState.meta.nextId, (initialState.logs.maxOfOrNull { it.id } ?: 0L) + 1L, 100L))
-    private val notifCenter = NotificationCenter(ids)
-
     private var respawnLeft: Double = 0.0
+    private var eightHourIdleAlertPending = false
 
     private val jsonSerializer = Json {
         ignoreUnknownKeys = true
@@ -39,12 +38,13 @@ class GameEngine(
     }
 
     fun notifyRecovered(slot: String) {
-        pushNotification(
-            title = "SAVE RECOVERED",
-            message = "Restored previous backup save slot ($slot)",
-            type = "system",
-            status = "ALERT"
-        )
+        // Recovery is intentionally silent; gameplay has no floating notification feed.
+    }
+
+    fun consumeEightHourIdleAlert(): Boolean {
+        val pending = eightHourIdleAlertPending
+        eightHourIdleAlertPending = false
+        return pending
     }
 
     fun snapshotForSave(now: ClockSnapshot): GameState {
@@ -60,18 +60,11 @@ class GameEngine(
 
     fun resume(now: ClockSnapshot) {
         val awayMs = OfflineEngine.trustedAwayMs(state.meta, now)
-        if (awayMs < 0L) {
-            pushNotification(
-                title = "TIME ANOMALY",
-                message = "CLOCK ANOMALY DETECTED — OFFLINE GAINS SUSPENDED",
-                type = "combat",
-                status = "ALERT"
-            )
-            return
-        }
+        if (awayMs < 0L) return
 
         if (awayMs >= 30_000L && now.wallMs > state.meta.offlineAppliedUntilWallMs) {
             val d = DerivedStats.of(state)
+            eightHourIdleAlertPending = awayMs >= 8 * 3600_000L
             val loot = OfflineEngine.compute(state, d, awayMs, 0.65, random)
 
             // Commit offline markers before showing dialog
@@ -225,61 +218,16 @@ class GameEngine(
         status: String = "SUCCESS",
         detail: String = ""
     ) {
-        state = notifCenter.push(
-            state = state,
-            title = title,
-            message = message,
-            type = type,
-            status = status,
-            detail = detail,
-            wallMs = nowWallMs()
-        )
+        // In-game notifications were removed. Important offline results use the report dialog.
     }
 
     private var playTimeSubSec: Double = 0.0
-
-    fun toggleNotificationBanners(): GameState {
-        val next = !state.notificationBannersEnabled
-        state = state.copy(
-            notificationBannersEnabled = next,
-            notifications = emptyList()
-        )
-        state = state.copy(
-            logs = (state.logs + LogEntry(
-                id = ids.next(),
-                text = if (next) "NOTIFICATION PROTOCOL: Floating banners ENABLED." else "NOTIFICATION PROTOCOL: Floating banners MUTED (routed to archive).",
-                type = "system",
-                timestampMs = nowWallMs()
-            )).takeLast(200)
-        )
-        return state
-    }
-
-    fun setThemeMode(isDark: Boolean): GameState {
-        state = state.copy(isDarkMode = isDark)
-        return state
-    }
-
-    fun toggleThemeMode(): GameState {
-        state = state.copy(isDarkMode = !state.isDarkMode)
-        return state
-    }
 
     fun simulateOfflineRecon(hours: Int = 8): GameState {
         val awayMs = hours * 3600_000L
         val d = DerivedStats.of(state)
         val loot = OfflineEngine.compute(state, d, awayMs, 0.65, random)
         state = state.copy(pendingOfflineLoot = loot)
-        return state
-    }
-
-    fun clearNotificationHistory(): GameState {
-        state = state.copy(notificationHistory = emptyList())
-        return state
-    }
-
-    fun dismissNotification(id: Long): GameState {
-        state = state.copy(notifications = state.notifications.filterNot { it.id == id })
         return state
     }
 
@@ -1568,7 +1516,7 @@ class GameEngine(
     fun importSaveJson(jsonString: String): Boolean {
         return try {
             val imported = jsonSerializer.decodeFromString<GameState>(jsonString)
-            state = imported.copy(notifications = emptyList(), pendingOfflineLoot = null)
+            state = imported.copy(pendingOfflineLoot = null)
             ids.reset(state.meta.nextId)
             pushNotification("SAVE RESTORED", "Game state successfully imported from archive", "system")
             true

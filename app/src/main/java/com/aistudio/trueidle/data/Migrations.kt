@@ -26,9 +26,6 @@ object Migrations {
 
             var maxId = 100L
             state.logs.forEach { maxId = maxOf(maxId, it.id) }
-            state.notifications.forEach { maxId = maxOf(maxId, it.id) }
-            state.notificationHistory.forEach { maxId = maxOf(maxId, it.id) }
-
             val meta = state.meta.copy(
                 savedWallMs = if (state.meta.savedWallMs > 0) state.meta.savedWallMs else state.lastSaveTimestamp,
                 nextId = maxOf(state.meta.nextId, maxId + 1L)

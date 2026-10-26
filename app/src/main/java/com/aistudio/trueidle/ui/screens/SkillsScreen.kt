@@ -1,6 +1,5 @@
 package com.aistudio.trueidle.ui.screens
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -55,8 +54,6 @@ fun SkillsScreen(
     modifier: Modifier = Modifier
 ) {
     var currentSection by remember { mutableStateOf(SkillSubSection.OVERVIEW) }
-    BackHandler(enabled = currentSection != SkillSubSection.OVERVIEW) { currentSection = SkillSubSection.OVERVIEW }
-
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // High-Tech Cyber Header Strip
         Row(

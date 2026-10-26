@@ -81,18 +81,6 @@ class GameEngineTest {
     }
 
     @Test
-    fun testNotificationCoalescingKeepsDistinctEvents() {
-        val clock = FakeClock()
-        val engine = GameEngine(clock = clock, random = Random(1234))
-
-        engine.pushNotification(title = "SKILL UP", message = "Farming level 2", type = "level")
-        engine.pushNotification(title = "SKILL UP", message = "Mining level 2", type = "level")
-
-        // Two distinct messages should not collapse into one
-        assertEquals(2, engine.state.notifications.size)
-    }
-
-    @Test
     fun testAutomationSettingsTogglesAndCraftSlider() {
         val clock = FakeClock()
         val engine = GameEngine(clock = clock, random = Random(1234))
@@ -134,38 +122,44 @@ class GameEngineTest {
     }
 
     @Test
-    fun testNotificationBannersStrictlySilencedWhenDisabled() {
-        val clock = FakeClock()
-        val engine = GameEngine(clock = clock, random = Random(1234))
+    fun testEightHourIdleAlertOnlyTriggersAtEightHours() {
+        val clock = FakeClock().apply { elapsed = 8 * 3600_000L + 10_000L }
+        val saved = GameState().copy(
+            meta = GameState().meta.copy(
+                savedWallMs = wall - 8 * 3600_000L,
+                savedElapsedMs = 10_000L,
+                bootCount = boots
+            )
+        )
+        val engine = GameEngine(initialState = saved, clock = clock, random = Random(1234))
 
-        // By default enabled
-        assertTrue(engine.state.notificationBannersEnabled)
+        engine.resume(clock.snapshot())
 
-        // Disable notifications
-        engine.toggleNotificationBanners()
-        assertFalse(engine.state.notificationBannersEnabled)
-        assertTrue(engine.state.notifications.isEmpty())
-
-        // Push various types of notifications including combat / alert
-        engine.pushNotification(title = "PLAYER LEVEL UP", message = "Advanced to Level 2", type = "level")
-        engine.pushNotification(title = "TACTICAL RETREAT", message = "Emergency retreat", type = "combat", status = "ALERT")
-
-        // Active floating notifications must be strictly empty
-        assertTrue("Notifications must be strictly empty when disabled", engine.state.notifications.isEmpty())
-        // But history archive must record them
-        assertEquals(2, engine.state.notificationHistory.size)
+        assertTrue(engine.consumeEightHourIdleAlert())
+        assertFalse(engine.consumeEightHourIdleAlert())
     }
 
     @Test
-    fun testThemeModeAndOfflineSimulation() {
+    fun testShortIdleDoesNotCreateEightHourAlert() {
+        val clock = FakeClock().apply { elapsed = 2 * 3600_000L + 10_000L }
+        val saved = GameState().copy(
+            meta = GameState().meta.copy(
+                savedWallMs = wall - 2 * 3600_000L,
+                savedElapsedMs = 10_000L,
+                bootCount = boots
+            )
+        )
+        val engine = GameEngine(initialState = saved, clock = clock, random = Random(1234))
+
+        engine.resume(clock.snapshot())
+
+        assertFalse(engine.consumeEightHourIdleAlert())
+    }
+
+    @Test
+    fun testOfflineSimulation() {
         val clock = FakeClock()
         val engine = GameEngine(clock = clock, random = Random(1234))
-
-        assertTrue(engine.state.isDarkMode)
-        engine.setThemeMode(false)
-        assertFalse(engine.state.isDarkMode)
-        engine.toggleThemeMode()
-        assertTrue(engine.state.isDarkMode)
 
         // 8-hour offline simulation
         engine.simulateOfflineRecon(8)

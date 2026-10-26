@@ -18,23 +18,23 @@ object TrueIdleType {
     val displayLarge = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
         letterSpacing = 1.2.sp,
         fontFeatureSettings = "tnum"
     )
     val titleLarge = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
-        lineHeight = 22.sp,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
         letterSpacing = 1.0.sp
     )
     val title = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
+        fontSize = 13.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.8.sp
     )
     val tag = TextStyle(
@@ -54,24 +54,24 @@ object TrueIdleType {
     val value = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
+        fontSize = 13.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.8.sp,
         fontFeatureSettings = "tnum"
     )
     val numberLarge = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 26.sp,
+        fontSize = 20.sp,
+        lineHeight = 24.sp,
         letterSpacing = 1.0.sp,
         fontFeatureSettings = "tnum"
     )
     val numberStat = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 15.sp,
-        lineHeight = 19.sp,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
         letterSpacing = 0.8.sp,
         fontFeatureSettings = "tnum"
     )
@@ -112,32 +112,32 @@ val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 38.sp,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
         letterSpacing = 1.2.sp,
         fontFeatureSettings = "tnum"
     ),
     headlineLarge = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontSize = 21.sp,
+        lineHeight = 27.sp,
         letterSpacing = 1.sp,
         fontFeatureSettings = "tnum"
     ),
     headlineMedium = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
+        fontSize = 16.sp,
+        lineHeight = 21.sp,
         letterSpacing = 0.8.sp,
         fontFeatureSettings = "tnum"
     ),
     headlineSmall = TextStyle(
         fontFamily = OrbitronFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 22.sp,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.6.sp,
         fontFeatureSettings = "tnum"
     ),

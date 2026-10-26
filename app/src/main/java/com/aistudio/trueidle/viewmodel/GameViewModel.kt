@@ -1,6 +1,12 @@
 package com.aistudio.trueidle.viewmodel
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aistudio.trueidle.core.GameClock
@@ -51,6 +57,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
         engine.resume(clock.snapshot())
         _gameState.value = engine.state
+        if (engine.consumeEightHourIdleAlert()) {
+            postEightHourIdleNotification()
+        }
         if (loop?.isActive != true) {
             loop = viewModelScope.launch { runLoop() }
         }
@@ -61,6 +70,42 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
                     saveNow()
                 }
             }
+        }
+    }
+
+    private fun postEightHourIdleNotification() {
+        val context = getApplication<Application>()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    IDLE_CHANNEL,
+                    "Offline Recon",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                )
+            )
+        }
+        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val pendingIntent = intent?.let {
+            PendingIntent.getActivity(
+                context,
+                8,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        val notification = NotificationCompat.Builder(context, IDLE_CHANNEL)
+            .setSmallIcon(com.aistudio.trueidle.R.drawable.ic_launcher_foreground)
+            .setContentTitle("TRUE IDLE // RECON COMPLETE")
+            .setContentText("Your 8-hour offline recon report is ready.")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Your 8-hour offline recon report is ready. Open True IDLE to claim the recovered rewards."))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .apply { if (pendingIntent != null) setContentIntent(pendingIntent) }
+            .build()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            NotificationManagerCompat.from(context).notify(IDLE_NOTIFICATION_ID, notification)
         }
     }
 
@@ -239,32 +284,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         _logFilter.value = filter
     }
 
-    fun dismissNotification(id: Long) {
-        _gameState.value = engine.dismissNotification(id)
-    }
-
-    fun toggleNotificationBanners() {
-        _gameState.value = engine.toggleNotificationBanners()
-        saveNow()
-    }
-
-    fun setThemeMode(isDark: Boolean) {
-        _gameState.value = engine.setThemeMode(isDark)
-        saveNow()
-    }
-
-    fun toggleThemeMode() {
-        _gameState.value = engine.toggleThemeMode()
-        saveNow()
-    }
-
     fun simulateOfflineRecon(hours: Int = 8) {
         _gameState.value = engine.simulateOfflineRecon(hours)
-    }
-
-    fun clearNotificationHistory() {
-        _gameState.value = engine.clearNotificationHistory()
-        saveNow()
     }
 
     fun claimOfflineLoot() {
@@ -330,5 +351,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val STEP_MS = 250L
         const val MAX_STEPS = 8L
+        const val IDLE_CHANNEL = "offline_recon"
+        const val IDLE_NOTIFICATION_ID = 8001
     }
 }

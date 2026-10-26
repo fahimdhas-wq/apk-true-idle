@@ -306,18 +306,6 @@ data class LogEntry(
 )
 
 @Serializable
-data class GameNotification(
-    val id: Long,
-    val title: String,
-    val message: String,
-    val type: String = "info", // "gear", "craft", "level", "tame", "save", "milestone"
-    val count: Int = 1,
-    val timestamp: Long = 0L,
-    val status: String = "SUCCESS", // "SUCCESS", "FAILED", "INFO", "ALERT"
-    val detail: String = ""
-)
-
-@Serializable
 data class LootItem(
     val name: String,
     val count: Int
@@ -414,7 +402,6 @@ data class GameState(
     val talent: TalentState = TalentState(),
     val automation: AutomationSettings = AutomationSettings(),
     val promotion: PromotionState = PromotionState(),
-    val isDarkMode: Boolean = true,
     val inventory: List<InventoryItem> = listOf(
         InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false, atk = 18.0),
         InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false, def = 12.0),
@@ -431,9 +418,6 @@ data class GameState(
         LogEntry(id = 1L, text = "SYSTEM INITIALIZED: Welcome to True IDLE Sector 01.", type = "system"),
         LogEntry(id = 2L, text = "RADAR CONTACT: Cave Rat engaged.", type = "combat")
     ),
-    val notifications: List<GameNotification> = emptyList(),
-    val notificationHistory: List<GameNotification> = emptyList(),
-    val notificationBannersEnabled: Boolean = true,
     val pendingOfflineLoot: OfflineLoot? = null,
     val achievements: List<Achievement> = listOf(
         Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 0, target = 1, isUnlocked = false, rewardGold = 50L),
