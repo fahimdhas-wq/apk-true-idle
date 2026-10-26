@@ -51,9 +51,9 @@ fun StatsScreen(
             .fillMaxSize()
             .background(BgDark)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("stats_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Hero Header Card with XP Bar
         Card(
@@ -62,7 +62,7 @@ fun StatsScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -77,7 +77,7 @@ fun StatsScreen(
                         modifier = Modifier
                             .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, SecondaryGold, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "LEVEL ${p.lvl}",
@@ -87,7 +87,7 @@ fun StatsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 XpProgressBar(
                     skillName = "HERO EXPERIENCE",
                     level = p.lvl,
@@ -104,11 +104,11 @@ fun StatsScreen(
             accent = PrimaryNeon,
             tag = "GS ${d.gearScore}"
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Top Row: Weapon & Armor
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Weapon Cell
                     Box(
@@ -116,11 +116,11 @@ fun StatsScreen(
                             .weight(1f)
                             .background(SurfaceVariantDark, RectangleShape)
                             .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(8.dp)
+                            .padding(6.dp)
                     ) {
                         Column {
                             Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(PrimaryNeon))
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text("WEAPON", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = (weapon?.name ?: p.weaponSlot).uppercase(),
@@ -142,11 +142,11 @@ fun StatsScreen(
                             .weight(1f)
                             .background(SurfaceVariantDark, RectangleShape)
                             .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(8.dp)
+                            .padding(6.dp)
                     ) {
                         Column {
                             Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(ShieldBlue))
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text("ARMOR", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = (armor?.name ?: p.armorSlot).uppercase(),
@@ -166,7 +166,7 @@ fun StatsScreen(
                 // Bottom Row: Ring & Amulet
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     // Ring Cell
                     Box(
@@ -174,11 +174,11 @@ fun StatsScreen(
                             .weight(1f)
                             .background(SurfaceVariantDark, RectangleShape)
                             .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(8.dp)
+                            .padding(6.dp)
                     ) {
                         Column {
                             Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(SecondaryGold))
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text("RING", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = (ring?.name ?: "EMBER BAND").uppercase(),
@@ -200,11 +200,11 @@ fun StatsScreen(
                             .weight(1f)
                             .background(SurfaceVariantDark, RectangleShape)
                             .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(8.dp)
+                            .padding(6.dp)
                     ) {
                         Column {
                             Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(NecroPurple))
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Text("AMULET", style = TrueIdleType.meta, color = TextMuted)
                             Text(
                                 text = (amulet?.name ?: "WARDEN SIGIL").uppercase(),
@@ -229,7 +229,7 @@ fun StatsScreen(
             accent = SecondaryGold,
             tag = "LVL ${p.lvl}"
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Strength
                 StatDotRow(label = "STRENGTH", value = "${d.str.toInt()}", dotColor = PrimaryNeon, valueColor = PrimaryNeon)
                 // Intelligence
@@ -264,7 +264,7 @@ fun StatsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -292,7 +292,7 @@ fun StatsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -316,15 +316,15 @@ fun StatDotRow(
             .fillMaxWidth()
             .border(BorderStroke(1.dp, BorderDark))
             .background(Color(0xFF000000))
-            .padding(horizontal = 10.dp, vertical = 7.dp),
+            .padding(horizontal = 8.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (dotColor != null) {
                 Box(
                     modifier = Modifier
-                        .size(6.dp)
+                        .size(4.dp)
                         .background(dotColor)
                 )
             }

@@ -83,9 +83,9 @@ fun CombatScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("combat_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. Floor Navigation & Auto-Advance Header (§7.6)
         FloorControls(
@@ -114,7 +114,7 @@ fun CombatScreen(
             )
 
             if (m.maxShield > 0.0) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 SciFiGauge(
                     label = "ENERGY SHIELD",
                     valueText = "${m.shield.toInt()} / ${m.maxShield.toInt()}",
@@ -123,13 +123,13 @@ fun CombatScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000), RectangleShape)
                     .border(1.dp, BorderDark, RectangleShape)
-                    .padding(8.dp),
+                    .padding(6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -162,7 +162,7 @@ fun CombatScreen(
                 .fillMaxWidth()
                 .background(Color(0xFF000000), RectangleShape)
                 .border(1.dp, clashColor, RectangleShape)
-                .padding(vertical = 8.dp, horizontal = 12.dp)
+                .padding(vertical = 6.dp, horizontal = 10.dp)
                 .testTag("clash_status_banner"),
             contentAlignment = Alignment.Center
         ) {
@@ -186,14 +186,14 @@ fun CombatScreen(
                 ratio = (p.hp / derived.maxHp).toFloat(),
                 color = GreenSuccess
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             SciFiGauge(
                 label = "SHIELD",
                 valueText = "${p.shield.toInt()} / ${derived.maxShield.toInt()}",
                 ratio = (p.shield / derived.maxShield).toFloat(),
                 color = ShieldBlue
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             SciFiGauge(
                 label = "MANA RESERVES",
                 valueText = "${p.mana.toInt()} / ${derived.maxMana.toInt()}",
@@ -201,10 +201,10 @@ fun CombatScreen(
                 color = ManaTeal
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Weapon Card
                 Box(
@@ -212,7 +212,7 @@ fun CombatScreen(
                         .weight(1f)
                         .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
                     Column {
                         Row(
@@ -240,7 +240,7 @@ fun CombatScreen(
                         .weight(1f)
                         .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
                     Column {
                         Row(
@@ -271,7 +271,7 @@ fun CombatScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Box(modifier = Modifier.padding(10.dp)) {
+            Box(modifier = Modifier.padding(8.dp)) {
                 XpProgressBar(
                     skillName = "HERO EXPERIENCE",
                     level = p.lvl,
@@ -318,7 +318,7 @@ fun CombatScreen(
                     modifier = Modifier
                         .background(HpRed.copy(alpha = 0.2f), RectangleShape)
                         .border(1.dp, HpRed, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "${task.currentKills}/${task.requiredKills}",

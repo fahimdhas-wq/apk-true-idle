@@ -71,14 +71,14 @@ fun LogView(
         shape = RectangleShape,
         border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.45f))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             // Header: Mission Play Time Dossier & Telemetry Indicators
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("◈", color = PrimaryNeon, style = TrueIdleType.tag)
                     Text("MISSION TELEMETRY TERMINAL", style = TrueIdleType.title, color = PrimaryNeon)
                 }
@@ -89,7 +89,7 @@ fun LogView(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "PLAY: ${NumberFormatter.duration(playTimeSeconds)}",
@@ -99,7 +99,7 @@ fun LogView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Filter Tabs & Action Buttons
             Row(
@@ -107,7 +107,7 @@ fun LogView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     listOf(
                         "all" to "ALL",
                         "combat" to "COMBAT",
@@ -129,7 +129,7 @@ fun LogView(
                                 .clickable { onFilterSelect(key) }
                                 .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color(0xFF000000), RectangleShape)
                                 .border(1.dp, if (isSelected) accentColor else BorderDark, RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 4.dp)
+                                .padding(horizontal = 4.dp, vertical = 3.dp)
                                 .testTag("log_filter_$key")
                         ) {
                             Text(
@@ -141,7 +141,7 @@ fun LogView(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     // Export Telemetry Log
                     Box(
                         modifier = Modifier
@@ -164,7 +164,7 @@ fun LogView(
                             }
                             .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, PrimaryNeon, RectangleShape)
-                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                             .testTag("export_logs_button"),
                         contentAlignment = Alignment.Center
                     ) {
@@ -176,7 +176,7 @@ fun LogView(
                         modifier = Modifier
                             .clickable { onClear() }
                             .border(1.dp, BorderDark, RectangleShape)
-                            .padding(horizontal = 7.dp, vertical = 4.dp)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                             .testTag("clear_logs_button"),
                         contentAlignment = Alignment.Center
                     ) {
@@ -185,7 +185,7 @@ fun LogView(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Terminal Display Feed
             Box(
@@ -194,7 +194,7 @@ fun LogView(
                     .height(145.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                     .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                    .padding(6.dp)
+                    .padding(4.dp)
             ) {
                 if (filteredLogs.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

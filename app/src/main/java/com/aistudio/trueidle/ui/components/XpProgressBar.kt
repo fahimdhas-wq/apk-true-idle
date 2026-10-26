@@ -53,7 +53,7 @@ fun XpProgressBar(
                 )
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Center-Right: Strictly aligned fixed-width Level Box
             Box(
@@ -71,7 +71,7 @@ fun XpProgressBar(
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
             // Right: XP Telemetry with fixed minimum width and right alignment
             Text(
@@ -89,7 +89,7 @@ fun XpProgressBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(6.dp)
+                .height(4.dp)
                 .background(Color(0xFF000000), RectangleShape)
                 .border(1.dp, BorderDark, RectangleShape)
         ) {

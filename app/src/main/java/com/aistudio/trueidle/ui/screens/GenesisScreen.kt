@@ -56,9 +56,9 @@ fun GenesisScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("genesis_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. GENESIS COMMAND CARD
         Card(
@@ -67,7 +67,7 @@ fun GenesisScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -78,12 +78,12 @@ fun GenesisScreen(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                             .border(1.dp, PrimaryNeon)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text("TOTAL DPS: ${totalBeastDps + totalArmyDps}", style = TrueIdleType.tag, color = PrimaryNeon)
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
                     skillName = "BEAST TAMING",
                     level = beasts.lvl,
@@ -91,7 +91,7 @@ fun GenesisScreen(
                     requiredXp = Balance.skillXpReq(beasts.lvl),
                     barColor = GreenSuccess
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 XpProgressBar(
                     skillName = "NECROMANCY REANIMATION",
                     level = necro.lvl,
@@ -108,8 +108,8 @@ fun GenesisScreen(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface, RectangleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             GenesisTab.values().forEach { tab ->
                 val isSelected = activeSubTab == tab
@@ -122,7 +122,7 @@ fun GenesisScreen(
                         contentColor = if (isSelected) tab.color else TextMuted
                     ),
                     border = BorderStroke(1.dp, if (isSelected) tab.color else MaterialTheme.colorScheme.outline),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(vertical = 6.dp)
                 ) {
                     Text("${tab.icon} ${tab.label}", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                 }
@@ -142,7 +142,7 @@ fun GenesisScreen(
                             text = "NO COMPANIONS TAMED YET. ENGAGE HIGHER SECTORS TO TAME MONSTERS.",
                             style = TrueIdleType.meta,
                             color = TextMuted,
-                            modifier = Modifier.padding(vertical = 12.dp)
+                            modifier = Modifier.padding(vertical = 10.dp)
                         )
                     } else {
                         beasts.beasts.forEach { beast ->
@@ -153,7 +153,7 @@ fun GenesisScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 3.dp)
                                     .clickable {
                                         if (selectedBeast1 == beast.id) selectedBeast1 = null
                                         else if (selectedBeast2 == beast.id) selectedBeast2 = null
@@ -167,14 +167,14 @@ fun GenesisScreen(
                                 border = BorderStroke(1.dp, if (isSel1 || isSel2) GreenSuccess else MaterialTheme.colorScheme.outline)
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(beast.name.uppercase(), style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Text("★".repeat(beast.stars), style = TrueIdleType.tag, color = SecondaryGold)
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
@@ -192,7 +192,7 @@ fun GenesisScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         val canMerge = selectedBeast1 != null && selectedBeast2 != null && selectedBeast1 != selectedBeast2
                         Button(
                             onClick = {
@@ -234,13 +234,13 @@ fun GenesisScreen(
                     // Active army summary
                     necro.army.forEach { minion ->
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             shape = RectangleShape,
                             border = BorderStroke(1.dp, NecroPurple.copy(alpha = 0.5f))
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -253,19 +253,19 @@ fun GenesisScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text("REANIMATION RITUALS", style = TrueIdleType.label, color = MaterialTheme.colorScheme.onSurface)
 
                     minionTypes.forEach { (type, cost, desc) ->
                         val canSummon = necro.boneEssence >= cost
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             shape = RectangleShape,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -305,25 +305,25 @@ fun GenesisScreen(
                         val isMax = upg.rank >= upg.maxRank
 
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             shape = RectangleShape,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(upg.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Box(
                                             modifier = Modifier
                                                 .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                                 .border(1.dp, GreenSuccess)
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
                                         ) {
                                             Text("RANK ${upg.rank}/${upg.maxRank}", style = TrueIdleType.numberSmall, color = GreenSuccess)
                                         }
@@ -348,7 +348,7 @@ fun GenesisScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text("NECROMANTIC SOUL UPGRADES", style = TrueIdleType.label, color = NecroPurple)
                     necro.upgrades.forEach { upg ->
                         val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
@@ -356,25 +356,25 @@ fun GenesisScreen(
                         val isMax = upg.rank >= upg.maxRank
 
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             shape = RectangleShape,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(upg.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Box(
                                             modifier = Modifier
                                                 .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                                 .border(1.dp, NecroPurple)
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
                                         ) {
                                             Text("RANK ${upg.rank}/${upg.maxRank}", style = TrueIdleType.numberSmall, color = NecroPurple)
                                         }

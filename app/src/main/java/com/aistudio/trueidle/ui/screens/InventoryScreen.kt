@@ -51,13 +51,13 @@ fun InventoryScreen(
         modifier = modifier
             .fillMaxSize()
             .background(BgDark)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("inventory_screen")
     ) {
         // High-end Cyberpunk Category Filter Switchers
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             categories.forEach { cat ->
                 val isSelected = (selectedCategory == cat)
@@ -73,7 +73,7 @@ fun InventoryScreen(
                             ),
                             RectangleShape
                         )
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 6.dp)
                         .testTag("inv_cat_$cat"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -86,7 +86,7 @@ fun InventoryScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Gear Compare Card (§4.8 / §7.7)
         inspectingItem?.let { item ->
@@ -125,7 +125,7 @@ fun InventoryScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
 
@@ -136,7 +136,7 @@ fun InventoryScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 itemsIndexed(filteredItems, key = { index, item -> "${item.id}_$index" }) { _, item ->
                     Card(
@@ -154,7 +154,7 @@ fun InventoryScreen(
                         )
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(10.dp),
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -165,7 +165,7 @@ fun InventoryScreen(
                                         style = TrueIdleType.title,
                                         color = if (item.isEquipped) PrimaryNeon else TextLight
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     if (item.count > 1) {
                                         Text("[x${item.count}]", style = TrueIdleType.tag, color = SecondaryGold)
                                     }
@@ -173,11 +173,11 @@ fun InventoryScreen(
 
                                 Spacer(modifier = Modifier.height(3.dp))
                                 Text(item.statDesc, style = TrueIdleType.body, color = PrimaryNeon)
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(3.dp))
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     // Equipment Status Indicator Badge
                                     if (item.category == "Equipment") {
@@ -186,7 +186,7 @@ fun InventoryScreen(
                                                 modifier = Modifier
                                                     .background(PrimaryNeon.copy(alpha = 0.2f), RectangleShape)
                                                     .border(1.dp, PrimaryNeon, RectangleShape)
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = "● EQUIPPED: ${item.slot.uppercase()}",
@@ -199,7 +199,7 @@ fun InventoryScreen(
                                                 modifier = Modifier
                                                     .background(SurfaceVariantDark, RectangleShape)
                                                     .border(1.dp, BorderDark, RectangleShape)
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
                                                     text = "UNEQUIPPED (${item.slot.uppercase()})",
@@ -226,7 +226,7 @@ fun InventoryScreen(
 
                             // Action buttons
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 if (item.category == "Equipment") {
@@ -239,7 +239,7 @@ fun InventoryScreen(
                                                 containerColor = HpRed.copy(alpha = 0.15f),
                                                 contentColor = HpRed
                                             ),
-                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                                         ) {
                                             Text("UNEQUIP", style = TrueIdleType.tag)
                                         }
@@ -252,7 +252,7 @@ fun InventoryScreen(
                                                 containerColor = PrimaryNeon.copy(alpha = 0.15f),
                                                 contentColor = PrimaryNeon
                                             ),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                                         ) {
                                             Text("EQUIP", style = TrueIdleType.tag)
                                         }
@@ -265,7 +265,7 @@ fun InventoryScreen(
                                                     containerColor = SecondaryGold.copy(alpha = 0.12f),
                                                     contentColor = SecondaryGold
                                                 ),
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                                             ) {
                                                 Text("SELL", style = TrueIdleType.tag)
                                             }
@@ -282,7 +282,7 @@ fun InventoryScreen(
                                             containerColor = GreenSuccess.copy(alpha = 0.15f),
                                             contentColor = GreenSuccess
                                         ),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                                     ) {
                                         Text("DEPLOY", style = TrueIdleType.tag)
                                     }
@@ -296,7 +296,7 @@ fun InventoryScreen(
                                                 containerColor = SecondaryGold.copy(alpha = 0.12f),
                                                 contentColor = SecondaryGold
                                             ),
-                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                                         ) {
                                             Text("SELL (1)", style = TrueIdleType.tag)
                                         }

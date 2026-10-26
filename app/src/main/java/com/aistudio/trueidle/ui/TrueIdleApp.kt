@@ -68,7 +68,7 @@ fun TrueIdleApp(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -79,12 +79,12 @@ fun TrueIdleApp(
                             style = TrueIdleType.title,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "SECTOR ${state.player.currentFloor.toString().padStart(2, '0')}",
@@ -96,13 +96,13 @@ fun TrueIdleApp(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, SecondaryGold.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "🪙 ${NumberFormatter.short(state.player.gold)}",
@@ -114,7 +114,7 @@ fun TrueIdleApp(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, NecroPurple.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "💀 ${NumberFormatter.short(state.necro.boneEssence)}",
@@ -125,7 +125,7 @@ fun TrueIdleApp(
                         // Top bar shortcut: ⚙ Settings / Interface
                         Box(
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.7f), RectangleShape)
                                 .clickable { currentTab = TrueIdleTab.SETTINGS }
@@ -157,7 +157,7 @@ fun TrueIdleApp(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 48.dp)
+                            .heightIn(min = 40.dp)
                             .selectable(
                                 selected = isSelected,
                                 onClick = { currentTab = tab },
@@ -168,7 +168,7 @@ fun TrueIdleApp(
                                     drawRect(PrimaryNeon, size = Size(size.width, 2.dp.toPx()))
                                 }
                             }
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 3.dp)
                             .testTag("nav_tab_${tab.name.lowercase()}"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -177,7 +177,7 @@ fun TrueIdleApp(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

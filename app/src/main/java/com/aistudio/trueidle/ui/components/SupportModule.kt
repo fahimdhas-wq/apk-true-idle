@@ -51,17 +51,17 @@ fun SupportModule(
             selectedId = kind.name,
             onSelect = { kind = SupportKind.valueOf(it) }
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         group.top3.forEach { RosterRow(it) }
         if (group.top3.isEmpty()) {
             Text(
                 text = group.emptyText,
                 style = TrueIdleType.body,
                 color = TextMuted,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(vertical = 6.dp)
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(3.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -77,12 +77,12 @@ fun SupportModule(
                 color = accent
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(3.dp))
         TextButton(
             onClick = { onManage(kind) },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 48.dp)
+                .heightIn(min = 40.dp)
         ) {
             Text("MANAGE SQUAD", style = TrueIdleType.tag, color = PrimaryNeon)
         }

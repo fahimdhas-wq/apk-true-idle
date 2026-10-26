@@ -42,9 +42,9 @@ fun EssenceScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("essence_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. ESSENCE PROTOCOL OVERVIEW
         Card(
@@ -53,7 +53,7 @@ fun EssenceScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -64,12 +64,12 @@ fun EssenceScreen(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                             .border(1.dp, ManaTeal)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text("FAITH: ${NumberFormatter.short(essence.faith)}", style = TrueIdleType.tag, color = ManaTeal)
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
                     skillName = "ESSENCE CONDUIT",
                     level = essence.lvl,
@@ -94,7 +94,7 @@ fun EssenceScreen(
                 style = TrueIdleType.body,
                 color = if (essence.aegisActive) GreenSuccess else TextMuted
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onToggleAegis,
                 shape = RectangleShape,
@@ -130,7 +130,7 @@ fun EssenceScreen(
                 }
                 Text("+${essence.smiteLevel * 3} DPS", style = TrueIdleType.value, color = SecondaryGold)
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onUpgradeSmite,
                 enabled = canAffordSmite,
@@ -158,25 +158,25 @@ fun EssenceScreen(
                 val isMax = upg.rank >= upg.maxRank
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(upg.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
                                         .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                         .border(1.dp, ManaTeal)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        .padding(horizontal = 3.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${upg.rank}/${upg.maxRank}", style = TrueIdleType.numberSmall, color = ManaTeal)
                                 }

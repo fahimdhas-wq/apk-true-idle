@@ -39,7 +39,7 @@ fun CombatTelemetryCard(
         shape = RectangleShape,
         border = BorderStroke(1.dp, BorderDark)
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        Column(modifier = Modifier.padding(8.dp)) {
             // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -55,7 +55,7 @@ fun CombatTelemetryCard(
                     modifier = Modifier
                         .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                         .border(1.dp, PrimaryNeon, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "TOTAL: ${NumberFormatter.short(totalDps)} DPS",
@@ -65,12 +65,12 @@ fun CombatTelemetryCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // 4-Column Breakdown: Hero | Beasts | Legion | Speed
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Hero DPS
                 Box(
@@ -78,7 +78,7 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp, horizontal = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -97,7 +97,7 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp, horizontal = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -116,7 +116,7 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp, horizontal = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -135,7 +135,7 @@ fun CombatTelemetryCard(
                         .weight(1f)
                         .background(Color(0xFF000000), RectangleShape)
                         .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp, horizontal = 3.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {

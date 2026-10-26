@@ -30,7 +30,7 @@ fun SegmentedTabs(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = 40.dp)
             .background(SurfaceDark),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -41,7 +41,7 @@ fun SegmentedTabs(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 48.dp)
+                    .heightIn(min = 40.dp)
                     .background(bg)
                     .selectable(
                         selected = selected,
@@ -57,7 +57,7 @@ fun SegmentedTabs(
                             )
                         }
                     }
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                    .padding(horizontal = 6.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

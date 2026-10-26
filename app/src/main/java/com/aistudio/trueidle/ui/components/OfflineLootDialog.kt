@@ -35,7 +35,7 @@ fun OfflineLootDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(6.dp)
+                .padding(4.dp)
                 .testTag("offline_loot_dialog"),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RectangleShape,
@@ -45,7 +45,7 @@ fun OfflineLootDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.background)
-                    .padding(14.dp)
+                    .padding(11.dp)
                     .verticalScroll(scrollState)
             ) {
                 // Header
@@ -71,7 +71,7 @@ fun OfflineLootDialog(
                         modifier = Modifier
                             .background(if (loot.capApplied) Warn.copy(alpha = 0.15f) else PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, if (loot.capApplied) Warn else PrimaryNeon, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = if (loot.capApplied) "8H RECON CAP ($timeFormatted)" else timeFormatted,
@@ -81,7 +81,7 @@ fun OfflineLootDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Sector progression banner
                 Card(
@@ -93,7 +93,7 @@ fun OfflineLootDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -118,16 +118,16 @@ fun OfflineLootDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // 2x2 Telemetry Grid with Hourly Rates in Orbitron
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // Kills
                         Box(
@@ -135,7 +135,7 @@ fun OfflineLootDialog(
                                 .weight(1f)
                                 .background(SurfaceDark)
                                 .border(1.dp, BorderDark)
-                                .padding(8.dp)
+                                .padding(6.dp)
                         ) {
                             Column {
                                 Text("HOSTILES ELIMINATED", style = TrueIdleType.meta, color = TextMuted)
@@ -152,7 +152,7 @@ fun OfflineLootDialog(
                                 .weight(1f)
                                 .background(SurfaceDark)
                                 .border(1.dp, BorderDark)
-                                .padding(8.dp)
+                                .padding(6.dp)
                         ) {
                             Column {
                                 Text("CREDITS RECOVERED", style = TrueIdleType.meta, color = TextMuted)
@@ -166,7 +166,7 @@ fun OfflineLootDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         // XP
                         Box(
@@ -174,7 +174,7 @@ fun OfflineLootDialog(
                                 .weight(1f)
                                 .background(SurfaceDark)
                                 .border(1.dp, BorderDark)
-                                .padding(8.dp)
+                                .padding(6.dp)
                         ) {
                             Column {
                                 Text("COMBAT EXPERIENCE", style = TrueIdleType.meta, color = TextMuted)
@@ -191,7 +191,7 @@ fun OfflineLootDialog(
                                 .weight(1f)
                                 .background(SurfaceDark)
                                 .border(1.dp, BorderDark)
-                                .padding(8.dp)
+                                .padding(6.dp)
                         ) {
                             Column {
                                 Text("BONE ESSENCE", style = TrueIdleType.meta, color = TextMuted)
@@ -202,7 +202,7 @@ fun OfflineLootDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Chronological 8-Hour Activity Timeline Log
                 if (loot.timelineLog.isNotEmpty()) {
@@ -211,14 +211,14 @@ fun OfflineLootDialog(
                         style = TrueIdleType.tag,
                         color = PrimaryNeon
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(SurfaceDark)
                             .border(1.dp, BorderDark)
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         loot.timelineLog.forEach { entry ->
                             Text(
@@ -228,7 +228,7 @@ fun OfflineLootDialog(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 // Acquired Items List
@@ -238,14 +238,14 @@ fun OfflineLootDialog(
                         style = TrueIdleType.tag,
                         color = SecondaryGold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(SurfaceDark)
                             .border(1.dp, BorderDark)
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         loot.items.forEach { item ->
                             Row(
@@ -266,7 +266,7 @@ fun OfflineLootDialog(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
                 // Claim Button
@@ -277,7 +277,7 @@ fun OfflineLootDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 48.dp)
+                        .heightIn(min = 40.dp)
                         .testTag("claim_offline_btn"),
                     shape = RectangleShape,
                     border = BorderStroke(1.5.dp, PrimaryNeon),
@@ -285,7 +285,7 @@ fun OfflineLootDialog(
                         containerColor = PrimaryNeon.copy(alpha = 0.2f),
                         contentColor = PrimaryNeon
                     ),
-                    contentPadding = PaddingValues(vertical = 12.dp)
+                    contentPadding = PaddingValues(vertical = 10.dp)
                 ) {
                     Text(
                         text = "CLAIM SALVAGE & RESUME MISSION",

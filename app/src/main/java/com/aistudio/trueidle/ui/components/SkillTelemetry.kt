@@ -30,7 +30,7 @@ fun SkillTelemetryStrip(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -46,11 +46,11 @@ fun SkillTelemetryStrip(
             }
             Text("${(progress * 100).toInt()}% SYNC", style = TrueIdleType.meta, color = TextMuted)
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(3.dp))
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(4.dp)
+                .height(3.dp)
                 .background(Color(0xFF000000), RectangleShape)
                 .border(1.dp, BorderDark, RectangleShape)
         ) {

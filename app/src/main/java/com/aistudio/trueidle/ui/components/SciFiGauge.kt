@@ -58,7 +58,7 @@ fun SciFiGauge(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(6.dp)
+                .height(4.dp)
                 .background(SurfaceRaised)
                 .drawBehind { drawRect(color, size = Size(size.width * r, size.height)) }
         )

@@ -17,7 +17,7 @@ fun RosterRow(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 36.dp)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -29,7 +29,7 @@ fun RosterRow(
                     color = TextLight
                 )
                 if (item.stars > 1) {
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(3.dp))
                     Text(
                         text = "★".repeat(item.stars),
                         style = TrueIdleType.tag,

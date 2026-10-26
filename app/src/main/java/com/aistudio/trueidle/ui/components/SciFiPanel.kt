@@ -31,22 +31,22 @@ fun SciFiPanel(
             .fillMaxWidth()
             .background(resolvedContainer)
             .border(BorderStroke(1.dp, resolvedBorder))
-            .padding(10.dp)
+            .padding(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp),
+                .padding(bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(4.dp, 14.dp)
+                        .size(3.dp, 11.dp)
                         .background(accent)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = title,
                     style = TrueIdleType.title,

@@ -42,8 +42,8 @@ fun SlayerScreen(
             .fillMaxSize()
             .background(BgDark)
             .verticalScroll(rememberScrollState())
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Slayer Header Card with XP Bar
         Card(
@@ -52,7 +52,7 @@ fun SlayerScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, HpRed.copy(alpha = 0.5f))
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -67,7 +67,7 @@ fun SlayerScreen(
                         modifier = Modifier
                             .background(HpRed.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, HpRed, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "LVL ${slayer.lvl}",
@@ -77,7 +77,7 @@ fun SlayerScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 XpProgressBar(
                     skillName = "SLAYER EXPERIENCE",
                     level = slayer.lvl,
@@ -99,13 +99,13 @@ fun SlayerScreen(
                 style = TrueIdleType.body,
                 color = TextMuted
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000), RectangleShape)
                     .border(1.dp, BorderDark, RectangleShape)
-                    .padding(10.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -125,13 +125,13 @@ fun SlayerScreen(
                 style = TrueIdleType.title,
                 color = TextLight
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Locate and neutralize ${task.requiredKills} specimens of this species in the dungeon sectors.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             SciFiGauge(
                 label = "ELIMINATION PROGRESS",
@@ -140,13 +140,13 @@ fun SlayerScreen(
                 color = HpRed
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(SurfaceVariantDark, RectangleShape)
                     .border(1.dp, BorderDark, RectangleShape)
-                    .padding(10.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
@@ -159,7 +159,7 @@ fun SlayerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             val canReroll = slayer.slayerPoints >= 1
             Button(
@@ -167,7 +167,7 @@ fun SlayerScreen(
                 enabled = canReroll,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 48.dp)
+                    .heightIn(min = 40.dp)
                     .testTag("reroll_task_button"),
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(

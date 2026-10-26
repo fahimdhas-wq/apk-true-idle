@@ -68,9 +68,9 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("settings_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. MISSION DOSSIER & PLAY TELEMETRY
         SciFiPanel(
@@ -83,29 +83,29 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // 2x3 Statistics Matrix
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DossierTile("PLAY TIME", NumberFormatter.duration(state.lifetime.playTimeSeconds), SecondaryGold, Modifier.weight(1f))
                     DossierTile("TOTAL ELIMINATIONS", state.lifetime.totalKills.toString(), HpRed, Modifier.weight(1f))
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DossierTile("CURRENT SECTOR", "SECTOR ${state.player.currentFloor}", PrimaryNeon, Modifier.weight(1f))
                     DossierTile("GEAR SCORE", "${d.gearScore} GS", SecondaryGold, Modifier.weight(1f))
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DossierTile("ORES MINED", state.lifetime.oresMined.toString(), SecondaryGold, Modifier.weight(1f))
                     DossierTile("HERBS HARVESTED", state.lifetime.herbsHarvested.toString(), GreenSuccess, Modifier.weight(1f))
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 // Telemetry Export Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     OutlinedButton(
                         onClick = {
@@ -124,7 +124,7 @@ fun SettingsScreen(
                             containerColor = PrimaryNeon.copy(alpha = 0.15f),
                             contentColor = PrimaryNeon
                         ),
-                        contentPadding = PaddingValues(vertical = 10.dp)
+                        contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         Text(
                             text = if (telemetryCopyFeedback.isNotEmpty()) telemetryCopyFeedback else "📋 EXPORT LOG",
@@ -153,7 +153,7 @@ fun SettingsScreen(
                             containerColor = SecondaryGold.copy(alpha = 0.15f),
                             contentColor = SecondaryGold
                         ),
-                        contentPadding = PaddingValues(vertical = 10.dp)
+                        contentPadding = PaddingValues(vertical = 8.dp)
                     ) {
                         Text("↗ SHARE LOG", style = TrueIdleType.tag)
                     }
@@ -172,8 +172,8 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -188,7 +188,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, GreenSuccess, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text("8H ACTIVE", style = TrueIdleType.numberSmall, color = GreenSuccess)
                     }
@@ -207,7 +207,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .background(Color(0xFF000000), RectangleShape)
                     .border(BorderStroke(1.dp, SecondaryGold.copy(alpha = 0.5f)))
-                    .padding(14.dp),
+                    .padding(11.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -220,12 +220,12 @@ fun SettingsScreen(
                     style = TrueIdleType.meta,
                     color = TextMuted
                 )
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(11.dp))
 
                 // Requirements Grid (Floor & Gear Score)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Row(
@@ -239,7 +239,7 @@ fun SettingsScreen(
                                 color = if (floorMet) GreenSuccess else PrimaryNeon
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         val floorProgress = (state.player.currentFloor.toFloat() / promo.requiredFloor.toFloat()).coerceIn(0f, 1f)
                         Box(
                             modifier = Modifier
@@ -268,7 +268,7 @@ fun SettingsScreen(
                                 color = if (gearMet) GreenSuccess else SecondaryGold
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         val gearProgress = (d.gearScore.toFloat() / promo.requiredGearScore.toFloat()).coerceIn(0f, 1f)
                         Box(
                             modifier = Modifier
@@ -286,7 +286,7 @@ fun SettingsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(11.dp))
 
                 Button(
                     onClick = onFightPromotionBoss,
@@ -300,7 +300,7 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 48.dp)
+                        .heightIn(min = 40.dp)
                         .testTag("fight_promotion_boss_btn")
                 ) {
                     Text(
@@ -323,7 +323,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark))
-                    .padding(10.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -344,14 +344,14 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark))
-                    .padding(10.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -372,14 +372,14 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF000000))
                     .border(BorderStroke(1.dp, BorderDark))
-                    .padding(10.dp)
+                    .padding(8.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -392,7 +392,7 @@ fun SettingsScreen(
                     }
                     Text("${auto.craftMaterialUsagePct}%", style = TrueIdleType.value, color = PrimaryNeon)
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Slider(
                     value = auto.craftMaterialUsagePct.toFloat(),
                     onValueChange = { onSetCraftUsage(it.toInt()) },
@@ -420,10 +420,10 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 3.dp)
                         .background(Color(0xFF000000))
                         .border(1.dp, BorderDark)
-                        .padding(8.dp),
+                        .padding(6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -445,7 +445,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .background(GreenSuccess.copy(alpha = 0.15f), RectangleShape)
                                 .border(1.dp, GreenSuccess, RectangleShape)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text("✓ CLAIMED", style = TrueIdleType.tag, color = GreenSuccess)
                         }
@@ -457,7 +457,7 @@ fun SettingsScreen(
                                 containerColor = SecondaryGold,
                                 contentColor = Color(0xFF000000)
                             ),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
                             modifier = Modifier.testTag("claim_ach_${ach.id}")
                         ) {
                             Text("CLAIM (+${ach.rewardGold} 🪙)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
@@ -467,7 +467,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .background(SurfaceVariantDark, RectangleShape)
                                 .border(1.dp, BorderDark, RectangleShape)
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "LOCKED (${ach.progress}/${ach.target})",
@@ -488,7 +488,7 @@ fun SettingsScreen(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 OutlinedButton(
                     onClick = {
@@ -503,7 +503,7 @@ fun SettingsScreen(
                         containerColor = PrimaryNeon.copy(alpha = 0.15f),
                         contentColor = PrimaryNeon
                     ),
-                    contentPadding = PaddingValues(vertical = 10.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     Text("EXPORT SAVE", style = TrueIdleType.tag)
                 }
@@ -521,13 +521,13 @@ fun SettingsScreen(
                         containerColor = SecondaryGold.copy(alpha = 0.15f),
                         contentColor = SecondaryGold
                     ),
-                    contentPadding = PaddingValues(vertical = 10.dp)
+                    contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     Text("IMPORT SAVE", style = TrueIdleType.tag)
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedButton(
                 onClick = { showResetDialog = true },
@@ -538,7 +538,7 @@ fun SettingsScreen(
                     containerColor = HpRed.copy(alpha = 0.12f),
                     contentColor = HpRed
                 ),
-                contentPadding = PaddingValues(vertical = 10.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 Text("RESET PROTOCOL (START FRESH)", style = TrueIdleType.tag)
             }
@@ -549,16 +549,16 @@ fun SettingsScreen(
     if (showExportDialog) {
         Dialog(onDismissRequest = { showExportDialog = false }) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 shape = RectangleShape,
                 border = BorderStroke(1.5.dp, PrimaryNeon)
             ) {
                 Column(modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)) {
                     Text("EXPORT SAVE CODE", style = TrueIdleType.title, color = PrimaryNeon)
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text("Copy the raw JSON archive below and save it to your clipboard:", style = TrueIdleType.body, color = TextMuted)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = exportedCode,
@@ -577,16 +577,16 @@ fun SettingsScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     if (copyStatus.isNotEmpty()) {
                         Text(text = copyStatus, style = TrueIdleType.tag, color = GreenSuccess)
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Button(
                             onClick = {
@@ -621,16 +621,16 @@ fun SettingsScreen(
     if (showImportDialog) {
         Dialog(onDismissRequest = { showImportDialog = false }) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 shape = RectangleShape,
                 border = BorderStroke(1.5.dp, SecondaryGold)
             ) {
                 Column(modifier = Modifier.background(Color(0xFF000000)).padding(16.dp)) {
                     Text("IMPORT SAVE ARCHIVE", style = TrueIdleType.title, color = SecondaryGold)
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text("Paste a valid exported JSON save archive below:", style = TrueIdleType.body, color = TextMuted)
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = importInputText,
@@ -652,16 +652,16 @@ fun SettingsScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     if (importError.isNotEmpty()) {
                         Text(text = importError, color = HpRed, style = TrueIdleType.tag)
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Button(
                             onClick = {
@@ -702,7 +702,7 @@ fun SettingsScreen(
     if (showResetDialog) {
         Dialog(onDismissRequest = { showResetDialog = false }) {
             Card(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                 shape = RectangleShape,
                 border = BorderStroke(2.dp, HpRed)
@@ -712,7 +712,7 @@ fun SettingsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("CRITICAL RESET PROTOCOL", style = TrueIdleType.title, color = HpRed)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "WARNING: This irreversible action will wipe all active floor progression, inventory, trained dojo ranks, tamed companions, and undead legions.",
                         style = TrueIdleType.body,
@@ -722,7 +722,7 @@ fun SettingsScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Button(
                             onClick = {
@@ -758,7 +758,7 @@ private fun DossierTile(label: String, value: String, color: Color, modifier: Mo
         modifier = modifier
             .background(SurfaceDark)
             .border(1.dp, BorderDark)
-            .padding(8.dp)
+            .padding(6.dp)
     ) {
         Column {
             Text(label, style = TrueIdleType.meta, color = TextMuted)

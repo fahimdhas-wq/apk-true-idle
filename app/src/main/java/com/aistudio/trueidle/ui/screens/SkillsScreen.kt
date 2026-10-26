@@ -61,7 +61,7 @@ fun SkillsScreen(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface, RectangleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -78,9 +78,9 @@ fun SkillsScreen(
                 .background(MaterialTheme.colorScheme.surface, RectangleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 6.dp, vertical = 6.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
                 .testTag("skills_sub_nav_row"),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             SkillSubSection.values().forEach { section ->
                 val selected = currentSection == section
@@ -99,10 +99,10 @@ fun SkillsScreen(
                         .clickable { currentSection = section }
                         .background(if (selected) section.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, if (selected) section.color else MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
                         .testTag("skills_sub_tab_${section.name.lowercase()}"),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(section.icon, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
                     Text(section.label, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
@@ -111,7 +111,7 @@ fun SkillsScreen(
                             modifier = Modifier
                                 .background(if (selected) section.color.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface)
                                 .border(1.dp, if (selected) section.color else MaterialTheme.colorScheme.outline)
-                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                                .padding(horizontal = 3.dp, vertical = 1.dp)
                         ) {
                             Text(level, style = TrueIdleType.numberSmall, color = if (selected) section.color else TextMuted)
                         }
@@ -180,12 +180,12 @@ fun SkillsScreen(
 
 @Composable
 private fun ResourceReadout(label: String, value: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
             modifier = Modifier
                 .background(color.copy(alpha = 0.15f), RectangleShape)
                 .border(1.dp, color.copy(alpha = 0.5f), RectangleShape)
-                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .padding(horizontal = 3.dp, vertical = 2.dp)
         ) {
             Text(label, style = TrueIdleType.tag, color = color)
         }
@@ -200,7 +200,7 @@ fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -213,7 +213,7 @@ fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
                 containerColor = PrimaryNeon.copy(alpha = 0.12f),
                 contentColor = PrimaryNeon
             ),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 3.dp)
         ) {
             Text("◀ OVERVIEW", style = TrueIdleType.tag)
         }
@@ -241,11 +241,11 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         // High-level Telemetry Tiles
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MetricTile("DISCIPLINES", "$active OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
             MetricTile("TOTAL LEVEL", totalLevel.toString(), SecondaryGold, Modifier.weight(1f))
         }
@@ -256,7 +256,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
-            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("SKILL NETWORK // AUTONOMOUS MATRIX", style = TrueIdleType.title, color = PrimaryNeon)
                 Text("NEURAL PROGRESSION ACTIVE · ALL TELEMETRY SYNCHRONIZED", style = TrueIdleType.meta, color = TextMuted)
             }
@@ -292,7 +292,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             status = "EXTRACTION PROTOCOL"
         ) {
             XpProgressBar("BIO-FARMING", state.harvest.farmingLvl, state.harvest.farmingXp, Balance.skillXpReq(state.harvest.farmingLvl), GreenSuccess)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
             XpProgressBar("ORE MINING", state.harvest.miningLvl, state.harvest.miningXp, Balance.skillXpReq(state.harvest.miningLvl), SecondaryGold)
         }
 
@@ -310,7 +310,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             status = "FABRICATION BAY"
         ) {
             XpProgressBar("SMITHING", state.armory.smithingLvl, state.armory.smithingXp, Balance.skillXpReq(state.armory.smithingLvl), SecondaryGold)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
             XpProgressBar("HERBLORE", state.armory.herbloreLvl, state.armory.herbloreXp, Balance.skillXpReq(state.armory.herbloreLvl), GreenSuccess)
         }
 
@@ -328,7 +328,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             status = "BIO-REANIMATION"
         ) {
             XpProgressBar("BEAST TAMING", state.beasts.lvl, state.beasts.xp, Balance.skillXpReq(state.beasts.lvl), GreenSuccess)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
             XpProgressBar("REANIMATION CORPS", state.necro.lvl, state.necro.xp, Balance.skillXpReq(state.necro.lvl), NecroPurple)
         }
 
@@ -410,7 +410,7 @@ private fun MetricTile(label: String, value: String, color: Color, modifier: Mod
         shape = RectangleShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Column(Modifier.padding(10.dp)) {
+        Column(Modifier.padding(8.dp)) {
             Text(label, style = TrueIdleType.tag, color = TextMuted)
             Spacer(Modifier.height(2.dp))
             Text(value, style = TrueIdleType.numberSmall, color = color)
@@ -438,7 +438,7 @@ private fun SkillCategoryCard(
         shape = RectangleShape,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
-        Column(Modifier.padding(10.dp)) {
+        Column(Modifier.padding(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -449,30 +449,30 @@ private fun SkillCategoryCard(
                         modifier = Modifier
                             .background(accentColor.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, accentColor, RectangleShape)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text(icon, style = TrueIdleType.tag, color = accentColor)
                     }
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(title, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                 }
                 Box(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, accentColor)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(status, style = TrueIdleType.tag, color = accentColor)
                 }
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(quickSummary, style = TrueIdleType.meta, color = TextMuted)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             content()
 
             if (actionLabel.isNotEmpty() && actionLabel != "TACTICAL") {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Button(
                     onClick = onAction,
                     shape = RectangleShape,
@@ -481,7 +481,7 @@ private fun SkillCategoryCard(
                         contentColor = accentColor
                     ),
                     border = BorderStroke(1.dp, accentColor),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 38.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp)
                 ) {
                     Text("ACCESS $actionLabel PROTOCOL", style = TrueIdleType.tag)
                 }

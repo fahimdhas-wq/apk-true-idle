@@ -40,9 +40,9 @@ fun HarvestScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("harvest_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. DISCIPLINES OVERVIEW
         Card(
@@ -51,7 +51,7 @@ fun HarvestScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -62,7 +62,7 @@ fun HarvestScreen(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                             .border(1.dp, GreenSuccess)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = if (harvest.autoCollectEnabled && harvest.autoCollectUnlocked) "DRONES ACTIVE" else "MANUAL HARVEST",
@@ -71,7 +71,7 @@ fun HarvestScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
                     skillName = "BIO-FARMING",
                     level = harvest.farmingLvl,
@@ -79,7 +79,7 @@ fun HarvestScreen(
                     requiredXp = Balance.skillXpReq(harvest.farmingLvl),
                     barColor = GreenSuccess
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 XpProgressBar(
                     skillName = "PLASMA MINING",
                     level = harvest.miningLvl,
@@ -100,13 +100,13 @@ fun HarvestScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 3.dp)
                         .testTag("plot_card_${plot.id}"),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (plot.isReady) GreenSuccess else MaterialTheme.colorScheme.outline)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -119,14 +119,14 @@ fun HarvestScreen(
                                 color = if (plot.isReady) GreenSuccess else TextMuted
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
                             progress = { plot.growthProgress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            modifier = Modifier.fillMaxWidth().height(6.dp),
                             color = GreenSuccess,
                             trackColor = MaterialTheme.colorScheme.surface
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Button(
                             onClick = { onHarvestPlot(plot.id) },
                             enabled = plot.isReady,
@@ -156,13 +156,13 @@ fun HarvestScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 3.dp)
                         .testTag("vein_card_${vein.id}"),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (vein.isReady) SecondaryGold else MaterialTheme.colorScheme.outline)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -175,14 +175,14 @@ fun HarvestScreen(
                                 color = if (vein.isReady) SecondaryGold else TextMuted
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
                             progress = { vein.miningProgress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth().height(8.dp),
+                            modifier = Modifier.fillMaxWidth().height(6.dp),
                             color = SecondaryGold,
                             trackColor = MaterialTheme.colorScheme.surface
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Button(
                             onClick = { onMineVein(vein.id) },
                             enabled = vein.isReady,
@@ -214,25 +214,25 @@ fun HarvestScreen(
                 val isMax = upg.rank >= upg.maxRank
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(upg.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
                                         .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                         .border(1.dp, PrimaryNeon)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        .padding(horizontal = 3.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${upg.rank}/${upg.maxRank}", style = TrueIdleType.numberSmall, color = PrimaryNeon)
                                 }

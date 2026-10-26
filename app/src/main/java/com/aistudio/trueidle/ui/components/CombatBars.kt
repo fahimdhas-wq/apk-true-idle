@@ -63,7 +63,7 @@ fun StatBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
+                .height(6.dp)
                 .background(Color(0xFF000000))
                 .border(1.dp, BorderDark, RectangleShape)
         ) {

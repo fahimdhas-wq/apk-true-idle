@@ -37,9 +37,9 @@ fun TalentScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("talent_screen"),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. TALENT SYSTEM HEADER
         Card(
@@ -49,7 +49,7 @@ fun TalentScreen(
             border = BorderStroke(1.dp, PrimaryNeon)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                modifier = Modifier.fillMaxWidth().padding(11.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -66,7 +66,7 @@ fun TalentScreen(
                     modifier = Modifier
                         .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                         .border(1.5.dp, PrimaryNeon, RectangleShape)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "${talent.talentPoints} TP AVAILABLE",
@@ -90,7 +90,7 @@ fun TalentScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             talent.struggleTalents.forEach { st ->
                 val (threshold, bonusText, currentBonus) = when (st.id) {
@@ -105,12 +105,12 @@ fun TalentScreen(
                 val canUpgrade = talent.talentPoints > 0 && st.rank < st.maxRank
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (canUpgrade) HpRed.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -118,12 +118,12 @@ fun TalentScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(st.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
                                         .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                         .border(1.dp, HpRed)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        .padding(horizontal = 3.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${st.rank}/${st.maxRank}", style = TrueIdleType.numberSmall, color = HpRed)
                                 }
@@ -131,22 +131,22 @@ fun TalentScreen(
                             Text(currentBonus, style = TrueIdleType.value, color = HpRed)
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "${st.description} · Current rate: $bonusText",
                             style = TrueIdleType.meta,
                             color = TextMuted
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
                             progress = { currentProgress },
-                            modifier = Modifier.fillMaxWidth().height(6.dp),
+                            modifier = Modifier.fillMaxWidth().height(4.dp),
                             color = HpRed,
                             trackColor = MaterialTheme.colorScheme.surface
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Button(
                             onClick = { onUpgradeTalent(st.id) },
                             enabled = canUpgrade,
@@ -181,14 +181,14 @@ fun TalentScreen(
                 val canUpgrade = talent.talentPoints > 0 && act.rank < act.maxRank
 
                 Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isActive) SecondaryGold.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
                     ),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (isActive) SecondaryGold else MaterialTheme.colorScheme.outline)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -196,12 +196,12 @@ fun TalentScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(act.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
                                         .background(MaterialTheme.colorScheme.surface, RectangleShape)
                                         .border(1.dp, SecondaryGold)
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                        .padding(horizontal = 3.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${act.rank}/${act.maxRank}", style = TrueIdleType.numberSmall, color = SecondaryGold)
                                 }
@@ -221,7 +221,7 @@ fun TalentScreen(
                                         else if (isOnCd) HpRed
                                         else PrimaryNeon
                                     )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = if (isActive) "ACTIVE (${act.durationRemaining.toInt()}s)"
@@ -233,15 +233,15 @@ fun TalentScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(act.description, style = TrueIdleType.meta, color = TextMuted)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text("Cooldown: ${act.cooldownSeconds.toInt()}s · Duration: ${act.durationSeconds.toInt()}s", style = TrueIdleType.meta, color = TextMuted)
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             // ACTIVATE BUTTON
                             Button(

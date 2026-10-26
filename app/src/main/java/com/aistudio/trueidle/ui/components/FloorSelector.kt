@@ -33,7 +33,7 @@ fun FloorControls(
         shape = RectangleShape,
         border = BorderStroke(1.dp, BorderDark)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -41,13 +41,13 @@ fun FloorControls(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     OutlinedButton(
                         onClick = { onNavFloor(-1) },
                         enabled = currentFloor > 1,
                         modifier = Modifier
-                            .size(width = 48.dp, height = 48.dp)
+                            .size(width = 40.dp, height = 40.dp)
                             .testTag("floor_prev_button"),
                         contentPadding = PaddingValues(0.dp),
                         shape = RectangleShape,
@@ -65,7 +65,7 @@ fun FloorControls(
                             .height(48.dp)
                             .background(Color(0xFF000000), RectangleShape)
                             .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
-                            .padding(horizontal = 14.dp),
+                            .padding(horizontal = 11.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -79,7 +79,7 @@ fun FloorControls(
                         onClick = { onNavFloor(1) },
                         enabled = currentFloor < maxFloor,
                         modifier = Modifier
-                            .size(width = 48.dp, height = 48.dp)
+                            .size(width = 40.dp, height = 40.dp)
                             .testTag("floor_next_button"),
                         contentPadding = PaddingValues(0.dp),
                         shape = RectangleShape,
@@ -96,7 +96,7 @@ fun FloorControls(
                 OutlinedButton(
                     onClick = { onToggleAuto() },
                     modifier = Modifier
-                        .heightIn(min = 48.dp)
+                        .heightIn(min = 40.dp)
                         .testTag("auto_advance_switch"),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (autoAdvance) GreenSuccess else BorderDark),
@@ -104,7 +104,7 @@ fun FloorControls(
                         containerColor = if (autoAdvance) GreenSuccess.copy(alpha = 0.12f) else SurfaceVariantDark,
                         contentColor = if (autoAdvance) GreenSuccess else TextMuted
                     ),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                 ) {
                     Text(
                         text = if (autoAdvance) "AUTO: ON" else "AUTO: OFF",
@@ -113,7 +113,7 @@ fun FloorControls(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Wave Counter
             Row(
@@ -132,12 +132,12 @@ fun FloorControls(
                     color = SecondaryGold
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             val progress = (killsOnFloor.toFloat() / killsRequired.toFloat()).coerceIn(0f, 1f)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
+                    .height(6.dp)
                     .background(Color(0xFF000000))
                     .border(1.dp, BorderDark, RectangleShape)
             ) {

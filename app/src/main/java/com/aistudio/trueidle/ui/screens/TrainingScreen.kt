@@ -31,7 +31,7 @@ fun TrainingScreen(
         modifier = modifier
             .fillMaxSize()
             .background(BgDark)
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("training_screen")
     ) {
         // Training Header
@@ -41,7 +41,7 @@ fun TrainingScreen(
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -55,7 +55,7 @@ fun TrainingScreen(
                         modifier = Modifier
                             .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, SecondaryGold, RectangleShape)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "🪙 ${state.player.gold}",
@@ -65,7 +65,7 @@ fun TrainingScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
                     skillName = "PHYSICAL TRAINING",
                     level = state.training.lvl,
@@ -76,12 +76,12 @@ fun TrainingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Training Nodes List
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(state.training.nodes, key = { it.id }) { node ->
                 val canAfford = state.player.gold >= node.costGold && node.rank < node.maxRank
@@ -94,7 +94,7 @@ fun TrainingScreen(
                     border = BorderStroke(1.dp, if (canAfford) PrimaryNeon.copy(alpha = 0.35f) else BorderDark)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        modifier = Modifier.fillMaxWidth().padding(8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -106,7 +106,7 @@ fun TrainingScreen(
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             // Fixed width aligned Rank Box
                             Box(
@@ -134,7 +134,7 @@ fun TrainingScreen(
                                     containerColor = if (canAfford) PrimaryNeon.copy(alpha = 0.15f) else SurfaceVariantDark,
                                     contentColor = if (canAfford) PrimaryNeon else TextMuted
                                 ),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} 🪙]",
