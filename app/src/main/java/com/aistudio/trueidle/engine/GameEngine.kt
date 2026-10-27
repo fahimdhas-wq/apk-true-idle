@@ -265,6 +265,10 @@ class GameEngine(
         var inventory: MutableList<InventoryItem> = base.inventory.toMutableList()
         val logs: MutableList<LogEntry> = mutableListOf()
 
+        private var cachedDerived: Derived? = null
+        fun derived(): Derived = cachedDerived ?: DerivedStats.of(view()).also { cachedDerived = it }
+        fun invalidateDerived() { cachedDerived = null }
+
         fun view(): GameState = base.copy(
             player = player,
             monster = monster,
@@ -287,6 +291,7 @@ class GameEngine(
     fun tick(deltaSeconds: Float): GameState {
         val dt = deltaSeconds.toDouble()
         val frame = Frame(state)
+        var derivedCache: Derived? = null
 
         // Subsystems that must keep running while the hero is down or waiting to respawn.
         tickPlayTime(frame, dt)
@@ -325,22 +330,27 @@ class GameEngine(
     }
 
     private fun tickTalentTimers(frame: Frame, dt: Double) {
+        val talents = frame.talent.activeTalents
+        if (talents.none { it.cooldownRemaining > 0.0 || it.durationRemaining > 0.0 || it.isActive }) return
         frame.talent = frame.talent.copy(
-            activeTalents = frame.talent.activeTalents.map { talent ->
-                val cooldown = (talent.cooldownRemaining - dt).coerceAtLeast(0.0)
-                val duration = (talent.durationRemaining - dt).coerceAtLeast(0.0)
-                talent.copy(
-                    cooldownRemaining = cooldown,
-                    durationRemaining = duration,
-                    isActive = duration > 0.0
-                )
+            activeTalents = talents.map { talent ->
+                if (talent.cooldownRemaining <= 0.0 && talent.durationRemaining <= 0.0 && !talent.isActive) {
+                    talent
+                } else {
+                    val duration = (talent.durationRemaining - dt).coerceAtLeast(0.0)
+                    talent.copy(
+                        cooldownRemaining = (talent.cooldownRemaining - dt).coerceAtLeast(0.0),
+                        durationRemaining = duration,
+                        isActive = duration > 0.0
+                    )
+                }
             }
         )
     }
 
     private fun tickRegeneration(frame: Frame, dt: Double) {
         if (frame.player.recoverLeft > 0.0) return // a downed hero does not regenerate
-        val d = DerivedStats.of(frame.view())
+        val d = frame.derived()
         frame.player = frame.player.copy(
             hp = (frame.player.hp + d.healthRegen * dt).coerceAtMost(d.maxHp),
             shield = (frame.player.shield + d.shieldRegen * dt).coerceAtMost(d.maxShield),
@@ -350,6 +360,7 @@ class GameEngine(
 
     private fun tickAegisDrain(frame: Frame, dt: Double) {
         if (!frame.essence.aegisActive) return
+        val wasActive = frame.essence.aegisActive
         val rank = frame.essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
         val mult = (1.0 - 0.15 * rank).coerceAtLeast(0.2)
         // Accumulate the fractional drain so 0.5/s stays 0.5/s instead of rounding up to 4/s.
@@ -364,6 +375,9 @@ class GameEngine(
                 faithRemainder = if (faith == 0L) 0.0 else (accumulated - whole),
                 aegisActive = faith > 0L
             )
+        }
+        if (wasActive != frame.essence.aegisActive) {
+            frame.invalidateDerived()
         }
     }
 
@@ -385,7 +399,7 @@ class GameEngine(
     // ------------------------------------------------------------------ combat
 
     private fun tickCombat(frame: Frame, dt: Double) {
-        val d = DerivedStats.of(frame.view())
+        val d = frame.derived()
         val monster = frame.monster
 
         val totalDps = CombatMath.totalDps(frame.view(), d)
@@ -499,6 +513,7 @@ class GameEngine(
         if (monster.isBoss) grantTrophy(frame)
         advanceFloor(frame, monster)
         if (frame.base.automation.autoMergeBeasts) autoMergeBeasts(frame)
+        frame.invalidateDerived()
     }
 
     private fun resolveDeath(frame: Frame) {
@@ -1695,7 +1710,7 @@ class GameEngine(
                         it.copy(growthProgress = it.growthProgress.coerceIn(0f, 1f))
                     },
                     veins = input.harvest.veins.map {
-                        it.copy(miningProgress = it.miningProgress.coerceIn(0f, 1f), reqLvl = it.reqLvl.coerceAtLeast(1))
+                        it.copy(miningProgress = it.miningProgress.coerceIn(0f, 1f), reqLvl = 1)
                     },
                     upgrades = clampUpgrades(input.harvest.upgrades)
                 ),

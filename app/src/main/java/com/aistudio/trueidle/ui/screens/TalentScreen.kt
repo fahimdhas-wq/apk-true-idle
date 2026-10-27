@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
@@ -30,7 +29,7 @@ fun TalentScreen(
     modifier: Modifier = Modifier
 ) {
     val talent = state.talent
-    val derived = remember(state) { DerivedStats.of(state) }
+    val derived = com.aistudio.trueidle.ui.LocalDerived.current
     val scrollState = rememberScrollState()
 
     Column(

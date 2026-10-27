@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -11,6 +12,7 @@ import com.aistudio.trueidle.ui.theme.*
 
 enum class SupportKind { BEAST, UNDEAD }
 
+@Immutable
 data class SupportItemUi(
     val name: String,
     val stars: Int,
@@ -19,6 +21,7 @@ data class SupportItemUi(
     val wounded: Boolean = false
 )
 
+@Immutable
 data class SupportGroupUi(
     val count: Int,
     val cap: Int,

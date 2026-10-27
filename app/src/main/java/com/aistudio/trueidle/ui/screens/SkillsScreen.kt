@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.CombatMath
-import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.NumberFormatter
@@ -238,7 +237,7 @@ fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
 @Composable
 fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) {
     val scrollState = rememberScrollState()
-    val derived = remember(state) { DerivedStats.of(state) }
+    val derived = com.aistudio.trueidle.ui.LocalDerived.current
     val totalLevel = state.player.lvl + state.harvest.farmingLvl + state.harvest.miningLvl +
         state.armory.smithingLvl + state.armory.herbloreLvl + state.beasts.lvl + state.necro.lvl +
         state.training.lvl + state.essence.lvl + state.slayer.lvl

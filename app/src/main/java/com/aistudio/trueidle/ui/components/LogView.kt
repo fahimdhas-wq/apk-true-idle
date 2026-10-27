@@ -21,10 +21,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.aistudio.trueidle.core.Telemetry
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.LogEntry
 import com.aistudio.trueidle.ui.theme.*
 import java.text.SimpleDateFormat
@@ -37,34 +35,32 @@ fun LogView(
     currentFilter: String,
     onFilterSelect: (String) -> Unit,
     onClear: () -> Unit,
-    state: GameState? = null,
+    playTimeSeconds: Long,
+    onExport: () -> String,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var exportFeedback by remember { mutableStateOf("") }
+    val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.US) }
 
-    val filteredLogs = logs.filter { log ->
-        val matchesCategory = when (currentFilter) {
-            "combat" -> log.type == LogType.COMBAT
-            "loot" -> log.type == LogType.LOOT || log.type == LogType.GAIN
-            // Skill level-ups and tames are emitted as "skill"/"loot"; the old filter matched
-            // types the engine never produced, so it was always empty.
-            "skills" -> log.type == LogType.SKILL
-            "system" -> log.type == LogType.SYSTEM || log.type == LogType.MILESTONE
-            else -> true
+    val filteredLogs = remember(logs, currentFilter, searchQuery) {
+        logs.filter { log ->
+            val matchesCategory = when (currentFilter) {
+                "combat" -> log.type == LogType.COMBAT
+                "loot" -> log.type == LogType.LOOT || log.type == LogType.GAIN
+                "skills" -> log.type == LogType.SKILL
+                "system" -> log.type == LogType.SYSTEM || log.type == LogType.MILESTONE
+                else -> true
+            }
+            matchesCategory && (searchQuery.isBlank() || log.text.contains(searchQuery, ignoreCase = true))
         }
-        val matchesSearch = searchQuery.isBlank() || log.text.contains(searchQuery, ignoreCase = true)
-        matchesCategory && matchesSearch
     }
 
     val listState = rememberLazyListState()
-    // Keyed on the newest id: the list is capped at 40 entries, so its size stops changing and a
-    // size-keyed effect would never fire again.
-    LaunchedEffect(filteredLogs.lastOrNull()?.id) {
-        if (filteredLogs.isNotEmpty()) {
-            listState.animateScrollToItem(filteredLogs.size - 1)
-        }
+    val lastId = filteredLogs.lastOrNull()?.id
+    LaunchedEffect(lastId) {
+        if (filteredLogs.isNotEmpty()) listState.scrollToItem(filteredLogs.size - 1)
     }
 
     Card(
@@ -88,7 +84,6 @@ fun LogView(
                 }
 
                 // Play Duration Counter in Orbitron Font
-                val playTimeSeconds = state?.lifetime?.playTimeSeconds ?: 0L
                 Box(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
@@ -150,7 +145,7 @@ fun LogView(
                     Box(
                         modifier = Modifier
                             .clickable {
-                                val report = Telemetry.report(state, logs)
+                                val report = onExport()
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 clipboard.setPrimaryClip(ClipData.newPlainText("MissionLog", report))
                                 exportFeedback = "COPIED!"
@@ -212,7 +207,7 @@ fun LogView(
                             }
 
                             val timeStr = if (log.timestampMs > 0L) {
-                                SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(log.timestampMs))
+                                timeFormat.format(Date(log.timestampMs))
                             } else "--:--:--"
 
                             Row(

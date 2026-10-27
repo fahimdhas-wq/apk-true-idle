@@ -154,6 +154,7 @@ fun HarvestScreen(
             tag = "${harvest.veins.count { it.isReady }}/${harvest.veins.size} READY"
         ) {
             harvest.veins.forEach { vein ->
+                val isLocked = harvest.miningLvl < vein.reqLvl
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,7 +162,7 @@ fun HarvestScreen(
                         .testTag("vein_card_${vein.id}"),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RectangleShape,
-                    border = BorderStroke(1.dp, if (vein.isReady) SecondaryGold else MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(1.dp, if (vein.isReady && !isLocked) SecondaryGold else MaterialTheme.colorScheme.outline)
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Row(
@@ -171,14 +172,22 @@ fun HarvestScreen(
                         ) {
                             Text(vein.oreName.uppercase(), style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                             Text(
-                                text = if (vein.isReady) "READY" else "${(vein.miningProgress * 100).toInt()}%",
+                                text = when {
+                                    isLocked -> "REQ LVL ${vein.reqLvl}"
+                                    vein.isReady -> "READY"
+                                    else -> "${(vein.miningProgress * 100).toInt()}%"
+                                },
                                 style = TrueIdleType.tag,
-                                color = if (vein.isReady) SecondaryGold else TextMuted
+                                color = when {
+                                    isLocked -> TextMuted
+                                    vein.isReady -> SecondaryGold
+                                    else -> TextMuted
+                                }
                             )
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         LinearProgressIndicator(
-                            progress = { vein.miningProgress.coerceIn(0f, 1f) },
+                            progress = { if (isLocked) 0f else vein.miningProgress.coerceIn(0f, 1f) },
                             modifier = Modifier.fillMaxWidth().height(6.dp),
                             color = SecondaryGold,
                             trackColor = MaterialTheme.colorScheme.surface
@@ -186,7 +195,7 @@ fun HarvestScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         Button(
                             onClick = { onMineVein(vein.id) },
-                            enabled = vein.isReady,
+                            enabled = vein.isReady && !isLocked,
                             shape = RectangleShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = SecondaryGold,
@@ -196,7 +205,14 @@ fun HarvestScreen(
                             ),
                             modifier = Modifier.fillMaxWidth().testTag("mine_vein_btn_${vein.id}")
                         ) {
-                            Text(if (vein.isReady) "EXTRACT ORE" else "DRILLING...", style = TrueIdleType.tag)
+                            Text(
+                                text = when {
+                                    isLocked -> "LOCKED (MINING LVL ${vein.reqLvl})"
+                                    vein.isReady -> "EXTRACT ORE"
+                                    else -> "DRILLING..."
+                                },
+                                style = TrueIdleType.tag
+                            )
                         }
                     }
                 }

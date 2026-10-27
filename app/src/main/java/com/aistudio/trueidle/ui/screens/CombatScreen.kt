@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
-import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
@@ -43,7 +42,7 @@ fun CombatScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val m = state.monster
-    val derived = remember(state) { DerivedStats.of(state) }
+    val derived = com.aistudio.trueidle.ui.LocalDerived.current
     val totalDps = CombatMath.totalDps(state, derived)
     val mitigation = CombatMath.mitigation(m.armor)
     val effDps = totalDps * mitigation
@@ -51,37 +50,43 @@ fun CombatScreen(
     val reqXp = XpCurves.player(p.lvl)
 
     // Support module data mappings
-    val beastsGroup = SupportGroupUi(
-        count = state.beasts.beasts.size,
-        cap = GameCaps.BEAST,
-        totalDps = "${CombatMath.beastDps(state.beasts).toInt()} DPS",
-        emptyText = "NO BEASTS ACTIVE. DEFEAT HOSTILES TO TAME.",
-        // Top three by real DPS, not simply the first three in the roster.
-        top = state.beasts.beasts.sortedByDescending { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }.take(3).map { b ->
-            SupportItemUi(
-                name = b.name.uppercase(),
-                stars = b.stars,
-                dpsText = "${(b.dps * b.rank * (1.0 + (b.stars - 1) * 0.25)).toInt()} DPS",
-                meta = "RANK ${b.rank} · ${b.trait.uppercase()}"
-            )
-        }
-    )
+    val beastsGroup = remember(state.beasts) {
+        SupportGroupUi(
+            count = state.beasts.beasts.size,
+            cap = GameCaps.BEAST,
+            totalDps = "${CombatMath.beastDps(state.beasts).toInt()} DPS",
+            emptyText = "NO BEASTS ACTIVE. DEFEAT HOSTILES TO TAME.",
+            top = state.beasts.beasts
+                .sortedByDescending { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
+                .take(3)
+                .map { b ->
+                    SupportItemUi(
+                        name = b.name.uppercase(),
+                        stars = b.stars,
+                        dpsText = "${(b.dps * b.rank * (1.0 + (b.stars - 1) * 0.25)).toInt()} DPS",
+                        meta = "RANK ${b.rank} · ${b.trait.uppercase()}"
+                    )
+                }
+        )
+    }
 
-    val undeadGroup = SupportGroupUi(
-        count = state.necro.army.sumOf { it.count },
-        cap = GameCaps.MINION,
-        totalDps = "${CombatMath.armyDps(state.necro).toInt()} DPS",
-        emptyText = "NO MINIONS ACTIVE. REANIMATE AT ALTAR OF BONES.",
-        top = state.necro.army.sortedByDescending { it.dps * it.count }.take(3).map { minion ->
-            SupportItemUi(
-                name = minion.type.uppercase(),
-                // Minions have no star rank; showing minion.lvl as stars was misleading.
-                stars = 0,
-                dpsText = "${(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2)).toInt()} DPS",
-                meta = "CORPS x${minion.count} · LVL ${minion.lvl}"
-            )
-        }
-    )
+    val undeadGroup = remember(state.necro) {
+        SupportGroupUi(
+            count = state.necro.army.sumOf { it.count },
+            cap = GameCaps.MINION,
+            totalDps = "${CombatMath.armyDps(state.necro).toInt()} DPS",
+            emptyText = "NO MINIONS ACTIVE. REANIMATE AT ALTAR OF BONES.",
+            top = state.necro.army.sortedByDescending { it.dps * it.count }.take(3).map { minion ->
+                SupportItemUi(
+                    name = minion.type.uppercase(),
+                    stars = 0,
+                    dpsText = "${(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2)).toInt()} DPS",
+                    meta = "CORPS x${minion.count} · LVL ${minion.lvl}"
+                )
+            }
+        )
+    }
+    val onManageStable = remember(onManageSupport) { { kind: SupportKind -> onManageSupport?.invoke(kind); Unit } }
 
     Column(
         modifier = modifier
@@ -291,7 +296,7 @@ fun CombatScreen(
         SupportModule(
             beasts = beastsGroup,
             undead = undeadGroup,
-            onManage = { kind -> onManageSupport?.invoke(kind) },
+            onManage = onManageStable,
             modifier = Modifier.testTag("combat_support_module")
         )
 
@@ -343,7 +348,8 @@ fun CombatScreen(
             currentFilter = logFilter,
             onFilterSelect = onSelectLogFilter,
             onClear = onClearLogs,
-            state = state
+            playTimeSeconds = state.lifetime.playTimeSeconds,
+            onExport = { com.aistudio.trueidle.core.Telemetry.report(state, state.logs) }
         )
     }
 }

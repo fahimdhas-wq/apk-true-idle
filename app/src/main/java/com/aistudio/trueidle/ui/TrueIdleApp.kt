@@ -21,8 +21,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,12 +40,16 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.R
+import com.aistudio.trueidle.core.Derived
+import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.components.SupportKind
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
 import com.aistudio.trueidle.viewmodel.GameViewModel
+
+val LocalDerived = compositionLocalOf<Derived> { error("Derived not provided") }
 
 enum class TrueIdleTab(@StringRes val labelRes: Int, val icon: ImageVector) {
     COMBAT(R.string.tab_combat, Icons.Default.PlayArrow),
@@ -58,6 +65,7 @@ fun TrueIdleApp(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.gameState.collectAsStateWithLifecycle()
+    val derived = remember(state) { DerivedStats.of(state) }
     val logFilter by viewModel.logFilter.collectAsStateWithLifecycle()
     val recoveryReason by viewModel.recoveryReason.collectAsStateWithLifecycle()
     var currentTab by rememberSaveable { mutableStateOf(TrueIdleTab.COMBAT) }
@@ -106,8 +114,9 @@ fun TrueIdleApp(
         )
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+    CompositionLocalProvider(LocalDerived provides derived) {
+        Scaffold(
+            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             // High-End Cyberpunk Top Status Bar
@@ -322,4 +331,5 @@ fun TrueIdleApp(
             }
         }
     }
+}
 }

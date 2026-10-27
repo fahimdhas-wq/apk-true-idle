@@ -142,9 +142,9 @@ data class HarvestState(
         Plot(id = 2, herbName = "Moonflower", growthProgress = 0f, durationSeconds = 15f)
     ),
     val veins: List<MiningVein> = listOf(
-        MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, durationSeconds = 5f),
-        MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 3, durationSeconds = 7f),
-        MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 5, durationSeconds = 10f)
+        MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, miningProgress = 0.3f, durationSeconds = 5f),
+        MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 1, miningProgress = 0.1f, durationSeconds = 7f),
+        MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 1, miningProgress = 0f, durationSeconds = 10f)
     ),
     val autoCollectUnlocked: Boolean = false,
     val autoCollectEnabled: Boolean = true,

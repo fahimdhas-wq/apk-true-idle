@@ -36,7 +36,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SaveRepository(FileSaveStore(File(app.filesDir, "saves")))
     private val engine = GameEngine(clock = clock, random = Random.Default, saves = repo)
 
-    private val _gameState = MutableStateFlow(engine.state)
+    private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
     private val _recoveryReason = MutableStateFlow<String?>(null)
@@ -72,19 +72,21 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onForeground() {
-        if (!booted) {
-            boot()
-            booted = true
-        }
-        // The alert only matters while the app is away, so returning cancels it.
-        IdleAlertScheduler.cancel(getApplication())
-        engine.resume(clock.snapshot())
-        _gameState.value = engine.state
-        if (engine.consumeEightHourIdleAlert()) {
-            AppLog.warn(TAG, "eight-hour idle cap reached; offline report pending")
-        }
-        if (loop?.isActive != true) {
-            loop = viewModelScope.launch { runLoop() }
+        viewModelScope.launch(Dispatchers.Default) {
+            if (!booted) {
+                boot()
+                booted = true
+            }
+            // The alert only matters while the app is away, so returning cancels it.
+            IdleAlertScheduler.cancel(getApplication())
+            engine.resume(clock.snapshot())
+            _gameState.value = engine.state
+            if (engine.consumeEightHourIdleAlert()) {
+                AppLog.warn(TAG, "eight-hour idle cap reached; offline report pending")
+            }
+            if (loop?.isActive != true) {
+                loop = viewModelScope.launch { runLoop() }
+            }
         }
         if (autosave?.isActive != true) {
             autosave = viewModelScope.launch {

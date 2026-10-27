@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.R
-import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
@@ -50,7 +49,7 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val d = remember(state) { DerivedStats.of(state) }
+    val d = com.aistudio.trueidle.ui.LocalDerived.current
     val promo = state.promotion
     val auto = state.automation
 

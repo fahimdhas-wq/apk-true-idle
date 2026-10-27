@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.CombatMath
-import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.theme.*
@@ -26,7 +25,7 @@ fun CombatTelemetryCard(
     state: GameState,
     modifier: Modifier = Modifier
 ) {
-    val d = remember(state) { DerivedStats.of(state) }
+    val d = com.aistudio.trueidle.ui.LocalDerived.current
     val playerDps = CombatMath.heroDps(d)
     val beastDps = CombatMath.beastDps(state.beasts)
     val armyDps = CombatMath.armyDps(state.necro)

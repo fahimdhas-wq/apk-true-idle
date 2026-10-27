@@ -96,4 +96,18 @@ class TalentAndDisciplineTest {
         val importSuccess = engine.importSaveJson(exported)
         assertTrue("Save state should deserialize cleanly", importSuccess)
     }
+
+    @Test
+    fun testMiningVeinsProgressAndExtract() {
+        val engine = GameEngine()
+        for (i in 1..25) {
+            engine.tick(0.25f)
+        }
+        val copper = engine.state.harvest.veins[0]
+        assertTrue("Copper vein should be ready after 25 ticks (6.25s)", copper.isReady)
+        val initialOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0
+        engine.mineVein(0)
+        val afterOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0
+        assertTrue("Should have collected copper ore", afterOres > initialOres)
+    }
 }

@@ -26,6 +26,12 @@ android {
     // with storeFile / storePassword / keyAlias / keyPassword. Without it the release output is
     // left unsigned rather than falling back to the debug key.
     signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         val propsFile = rootProject.file("keystore.properties")
         if (propsFile.exists()) {
             create("release") {
@@ -42,7 +48,7 @@ android {
 
     buildTypes {
         debug {
-            // Android Gradle Plugin's default debug keystore is generated when needed.
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
         release {
             isMinifyEnabled = true
@@ -52,6 +58,12 @@ android {
                 "proguard-rules.pro"
             )
             signingConfigs.findByName("release")?.let { signingConfig = it }
+        }
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debugConfig")
+            matchingFallbacks += listOf("release")
+            isDebuggable = false
         }
     }
     compileOptions {
@@ -70,6 +82,10 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
     }
+}
+
+composeCompiler {
+    stabilityConfigurationFiles.add(layout.projectDirectory.file("compose_compiler_config.conf"))
 }
 
 dependencies {

@@ -1,5 +1,6 @@
 {
   "name": "True IDLE",
   "description": "Persistent idle RPG with 10 interlocking skills, 100 dungeon floors, offline progression, and rich combat.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
