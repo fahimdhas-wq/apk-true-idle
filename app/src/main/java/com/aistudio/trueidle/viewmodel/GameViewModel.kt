@@ -1,29 +1,32 @@
 package com.aistudio.trueidle.viewmodel
 
 import android.app.Application
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.os.Build
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.aistudio.trueidle.core.Telemetry
+import com.aistudio.trueidle.core.AppLog
+import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.core.GameClock
 import com.aistudio.trueidle.core.snapshot
 import com.aistudio.trueidle.data.FileSaveStore
 import com.aistudio.trueidle.data.SaveRepository
+import com.aistudio.trueidle.data.SaveResult
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.runtime.AndroidClock
-import kotlinx.coroutines.CoroutineScope
+import com.aistudio.trueidle.runtime.IdleAlertScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.random.Random
 
@@ -31,20 +34,38 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     private val clock: GameClock = AndroidClock(app)
     private val repo = SaveRepository(FileSaveStore(File(app.filesDir, "saves")))
-    private val engine = GameEngine(clock = clock, random = Random.Default)
+    private val engine = GameEngine(clock = clock, random = Random.Default, saves = repo)
 
     private val _gameState = MutableStateFlow(engine.state)
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
-    private val _recovery = MutableStateFlow<SaveRepository.Loaded.Failed?>(null)
-    val recovery: StateFlow<SaveRepository.Loaded.Failed?> = _recovery.asStateFlow()
+    private val _recoveryReason = MutableStateFlow<String?>(null)
+
+    /**
+     * Non-null while the stored save could not be read. The UI shows recovery options and saving
+     * stays blocked so the unreadable bytes are never overwritten.
+     */
+    val recoveryReason: StateFlow<String?> = _recoveryReason.asStateFlow()
 
     private val _logFilter = MutableStateFlow("all")
     val logFilter: StateFlow<String> = _logFilter.asStateFlow()
 
     private var loop: Job? = null
     private var autosave: Job? = null
+    private var writer: Job? = null
     private var booted = false
+
+    /**
+     * Set when the stored save could not be read. Saving stays blocked so the unreadable bytes are
+     * never overwritten before the player decides what to do with them.
+     */
+    private var savingBlocked = false
+
+    /**
+     * Conflated single-writer channel. Callers only push a signal, so nothing on the main thread
+     * ever encodes JSON, computes a CRC, fsyncs or moves a file.
+     */
+    private val saveRequests = Channel<Unit>(Channel.CONFLATED)
 
     init {
         onForeground()
@@ -55,10 +76,12 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             boot()
             booted = true
         }
+        // The alert only matters while the app is away, so returning cancels it.
+        IdleAlertScheduler.cancel(getApplication())
         engine.resume(clock.snapshot())
         _gameState.value = engine.state
         if (engine.consumeEightHourIdleAlert()) {
-            postEightHourIdleNotification()
+            AppLog.warn(TAG, "eight-hour idle cap reached; offline report pending")
         }
         if (loop?.isActive != true) {
             loop = viewModelScope.launch { runLoop() }
@@ -66,46 +89,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (autosave?.isActive != true) {
             autosave = viewModelScope.launch {
                 while (isActive) {
-                    delay(30_000)
-                    saveNow()
+                    delay(AUTOSAVE_MS)
+                    requestSave()
                 }
             }
         }
-    }
-
-    private fun postEightHourIdleNotification() {
-        val context = getApplication<Application>()
-        val manager = context.getSystemService(NotificationManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    IDLE_CHANNEL,
-                    "Offline Recon",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                )
-            )
-        }
-        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        val pendingIntent = intent?.let {
-            PendingIntent.getActivity(
-                context,
-                8,
-                it,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-        }
-        val notification = NotificationCompat.Builder(context, IDLE_CHANNEL)
-            .setSmallIcon(com.aistudio.trueidle.R.drawable.ic_launcher_foreground)
-            .setContentTitle("TRUE IDLE // RECON COMPLETE")
-            .setContentText("Your 8-hour offline recon report is ready.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("Your 8-hour offline recon report is ready. Open True IDLE to claim the recovered rewards."))
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setAutoCancel(true)
-            .apply { if (pendingIntent != null) setContentIntent(pendingIntent) }
-            .build()
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            NotificationManagerCompat.from(context).areNotificationsEnabled()) {
-            NotificationManagerCompat.from(context).notify(IDLE_NOTIFICATION_ID, notification)
+        if (writer?.isActive != true) {
+            writer = viewModelScope.launch { writeLoop() }
         }
     }
 
@@ -114,244 +104,185 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         loop = null
         autosave?.cancel()
         autosave = null
-        saveNow()
+        // The writer is deliberately left running so this final save lands.
+        requestSave()
+        // Fire the idle alert when the window elapses, not when the player comes back.
+        IdleAlertScheduler.schedule(getApplication(), clock.wallMs() + Balance.OFFLINE_CAP_MS)
     }
 
-    private suspend fun CoroutineScope.runLoop() {
+    private suspend fun runLoop() {
         var last = clock.elapsedMs()
-        var acc = 0L
-        while (isActive) {
-            delay(50)
+        var accumulated = 0L
+        while (currentCoroutineContext().isActive) {
+            delay(TICK_MS)
             val now = clock.elapsedMs()
-            acc += (now - last).coerceIn(0L, STEP_MS * MAX_STEPS)
+            accumulated += (now - last).coerceIn(0L, STEP_MS * MAX_STEPS)
             last = now
-            var n = 0
-            while (acc >= STEP_MS && n < MAX_STEPS) {
-                engine.tick(STEP_MS / 1000f)
-                acc -= STEP_MS
-                n++
+
+            // Ticks are suspended while a report is pending: claiming applies the whole result
+            // atomically, and a live tick would otherwise race the claim's floor change.
+            if (engine.state.pendingOfflineLoot != null) {
+                accumulated = 0L
+                continue
             }
-            if (n >= MAX_STEPS) acc = 0
-            if (n > 0) _gameState.value = engine.state
+
+            var steps = 0
+            while (accumulated >= STEP_MS && steps < MAX_STEPS) {
+                engine.tick(STEP_MS / 1000f)
+                accumulated -= STEP_MS
+                steps++
+            }
+            if (steps >= MAX_STEPS) accumulated = 0L
+            if (steps > 0) _gameState.value = engine.state
         }
     }
 
-    private fun boot() {
-        when (val r = repo.load()) {
-            is SaveRepository.Loaded.Ok -> engine.restore(r.state)
-            is SaveRepository.Loaded.Recovered -> {
-                engine.restore(r.state)
-                engine.notifyRecovered(r.from)
+    private suspend fun writeLoop() {
+        for (unused in saveRequests) {
+            // Coalesce a burst (a purchase, a craft, a slider drag) into one write.
+            delay(SAVE_DEBOUNCE_MS)
+            while (saveRequests.tryReceive().isSuccess) {
+                // drain
             }
-            is SaveRepository.Loaded.Failed -> _recovery.value = r
+            if (savingBlocked) continue
+            val snapshot = engine.snapshotForSave(clock.snapshot())
+            val result = withContext(Dispatchers.IO) { repo.save(snapshot) }
+            if (result is SaveResult.Failed) {
+                AppLog.warn(TAG, "save failed: ${result.reason}")
+            }
+        }
+    }
+
+    /** Requests a save. Cheap and non-blocking: the actual write happens on Dispatchers.IO. */
+    fun saveNow() = requestSave()
+
+    private fun requestSave() {
+        if (savingBlocked) return
+        saveRequests.trySend(Unit)
+    }
+
+    private fun boot() {
+        when (val loaded = repo.load()) {
+            is SaveRepository.Loaded.Ok -> engine.restore(loaded.state)
+            is SaveRepository.Loaded.Recovered -> {
+                engine.restore(loaded.state)
+                engine.notifyRecovered(loaded.from)
+            }
+            is SaveRepository.Loaded.Failed -> {
+                // Block saving, and surface recovery UI instead of silently starting a new game
+                // (which is what used to happen, destroying the raw bytes on the next autosave).
+                savingBlocked = true
+                _recoveryReason.value = loaded.reason
+            }
             SaveRepository.Loaded.Empty -> Unit
         }
     }
 
-    fun saveNow() {
-        repo.save(engine.snapshotForSave(clock.snapshot()))
+    fun retryLoad() {
+        when (val loaded = repo.load()) {
+            is SaveRepository.Loaded.Ok -> acceptRecovered(loaded.state)
+            is SaveRepository.Loaded.Recovered -> acceptRecovered(loaded.state)
+            SaveRepository.Loaded.Empty -> clearRecovery()
+            is SaveRepository.Loaded.Failed -> _recoveryReason.value = loaded.reason
+        }
     }
 
-    fun navFloor(delta: Int) {
-        _gameState.value = engine.navFloor(delta)
+    private fun acceptRecovered(state: GameState) {
+        engine.restore(state)
+        clearRecovery()
+        _gameState.value = engine.state
     }
 
-    fun setFloor(floor: Int) {
-        _gameState.value = engine.setFloor(floor)
+    private fun clearRecovery() {
+        savingBlocked = false
+        _recoveryReason.value = null
     }
 
-    fun toggleAutoAdvance() {
-        _gameState.value = engine.toggleAutoAdvance()
+    /** Keeps the quarantined bytes on disk but starts a clean game. */
+    fun discardCorruptSave() {
+        engine.resetGame()
+        repo.clearPrevious()
+        clearRecovery()
+        _gameState.value = engine.state
+        requestSave()
     }
 
-    fun toggleAutoCollect() {
-        _gameState.value = engine.toggleAutoCollect()
+    // ------------------------------------------------------------------ actions
+
+    private fun mutate(block: () -> GameState) {
+        _gameState.value = block()
+        requestSave()
     }
 
-    fun harvestPlot(plotId: Int) {
-        _gameState.value = engine.harvestPlot(plotId)
-    }
+    fun navFloor(delta: Int) = mutate { engine.navFloor(delta) }
+    fun setFloor(floor: Int) = mutate { engine.setFloor(floor) }
+    fun toggleAutoAdvance() = mutate { engine.toggleAutoAdvance() }
+    fun toggleAutoCollect() = mutate { engine.toggleAutoCollect() }
+    fun harvestPlot(plotId: Int) = mutate { engine.harvestPlot(plotId) }
+    fun mineVein(veinId: Int) = mutate { engine.mineVein(veinId) }
+    fun summonMinion(type: String) = mutate { engine.summonMinion(type) }
+    fun mergeBeasts(id1: String, id2: String) = mutate { engine.mergeBeasts(id1, id2) }
+    fun trainNode(nodeId: String) = mutate { engine.trainNode(nodeId) }
+    fun equipItem(itemId: String) = mutate { engine.equipItem(itemId) }
+    fun unequipItem(itemId: String) = mutate { engine.unequipItem(itemId) }
+    fun usePotion(itemId: String) = mutate { engine.usePotion(itemId) }
+    fun sellItem(itemId: String, count: Int = 1) = mutate { engine.sellItem(itemId, count) }
+    fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int) =
+        mutate { engine.craftEquipment(name, tier, slot, reqOre, reqQty) }
+    fun brewPotion(name: String, reqHerb: String, reqQty: Int) =
+        mutate { engine.brewPotion(name, reqHerb, reqQty) }
+    fun toggleEssenceAegis() = mutate { engine.toggleEssenceAegis() }
+    fun upgradeEssenceSmite() = mutate { engine.upgradeEssenceSmite() }
+    fun rerollSlayerTask() = mutate { engine.rerollSlayerTask() }
+    fun upgradeDiscipline(category: DisciplineCategory, upgradeId: String) =
+        mutate { engine.upgradeDiscipline(category, upgradeId) }
+    fun activateTalent(talentId: String) = mutate { engine.activateTalent(talentId) }
+    fun upgradeTalent(talentId: String) = mutate { engine.upgradeTalent(talentId) }
+    fun claimAchievement(achId: String) = mutate { engine.claimAchievement(achId) }
+    fun toggleAutoEquipBestGear() = mutate { engine.toggleAutoEquipBestGear() }
+    fun toggleAutoMergeBeasts() = mutate { engine.toggleAutoMergeBeasts() }
+    fun setCraftMaterialUsage(pct: Int) = mutate { engine.setCraftMaterialUsage(pct) }
+    fun fightPromotionBoss() = mutate { engine.fightPromotionBoss() }
+    fun clearLogs() = mutate { engine.clearLogs() }
 
-    fun mineVein(veinId: Int) {
-        _gameState.value = engine.mineVein(veinId)
-    }
-
-    fun summonMinion(type: String) {
-        _gameState.value = engine.summonMinion(type)
-        saveNow()
-    }
-
-    fun mergeBeasts(id1: String, id2: String) {
-        _gameState.value = engine.mergeBeasts(id1, id2)
-        saveNow()
-    }
-
-    fun trainNode(nodeId: String) {
-        _gameState.value = engine.trainNode(nodeId)
-        saveNow()
-    }
-
-    fun equipItem(itemId: String) {
-        _gameState.value = engine.equipItem(itemId)
-        saveNow()
-    }
-
-    fun unequipItem(itemId: String) {
-        _gameState.value = engine.unequipItem(itemId)
-        saveNow()
-    }
-
-    fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int) {
-        _gameState.value = engine.craftEquipment(name, tier, slot, reqOre, reqQty)
-        saveNow()
-    }
-
-    fun brewPotion(name: String, reqHerb: String, reqQty: Int) {
-        _gameState.value = engine.brewPotion(name, reqHerb, reqQty)
-        saveNow()
-    }
-
-    fun usePotion(itemId: String) {
-        _gameState.value = engine.usePotion(itemId)
-    }
-
-    fun sellItem(itemId: String, count: Int = 1) {
-        _gameState.value = engine.sellItem(itemId, count)
-        saveNow()
-    }
-
-    fun toggleSanctifiedAegis() {
-        _gameState.value = engine.toggleSanctifiedAegis()
-    }
-
-    fun upgradeSanctifiedSmite() {
-        _gameState.value = engine.upgradeSanctifiedSmite()
-        saveNow()
-    }
-
-    fun rerollSlayerTask() {
-        _gameState.value = engine.rerollSlayerTask()
-        saveNow()
-    }
-
-    fun upgradeDiscipline(category: String, upgradeId: String) {
-        _gameState.value = engine.upgradeDiscipline(category, upgradeId)
-        saveNow()
-    }
-
-    fun activateTalent(talentId: String) {
-        _gameState.value = engine.activateTalent(talentId)
-    }
-
-    fun upgradeTalent(talentId: String) {
-        _gameState.value = engine.upgradeTalent(talentId)
-        saveNow()
-    }
-
-    fun toggleEssenceAegis() = toggleSanctifiedAegis()
-    fun upgradeEssenceSmite() = upgradeSanctifiedSmite()
-
-    fun claimAchievement(achId: String) {
-        _gameState.value = engine.claimAchievement(achId)
-        saveNow()
-    }
-
-    fun toggleAutoEquipBestGear() {
-        _gameState.value = engine.toggleAutoEquipBestGear()
-        saveNow()
-    }
-
-    fun toggleAutoMergeBeasts() {
-        _gameState.value = engine.toggleAutoMergeBeasts()
-        saveNow()
-    }
-
-    fun setCraftMaterialUsage(pct: Int) {
-        _gameState.value = engine.setCraftMaterialUsage(pct)
-        saveNow()
-    }
-
-    fun fightPromotionBoss() {
-        _gameState.value = engine.fightPromotionBoss()
-        saveNow()
-    }
-
-    fun clearLogs() {
-        _gameState.value = engine.clearLogs()
+    fun claimOfflineLoot() {
+        _gameState.value = engine.claimOfflineLoot()
+        // A claim can resume the loop, so re-anchor the away window from now.
+        requestSave()
     }
 
     fun setLogFilter(filter: String) {
         _logFilter.value = filter
     }
 
-    fun simulateOfflineRecon(hours: Int = 8) {
-        _gameState.value = engine.simulateOfflineRecon(hours)
-    }
-
-    fun claimOfflineLoot() {
-        _gameState.value = engine.claimOfflineLoot()
-        saveNow()
-    }
-
-    fun exportSave(): String {
-        return engine.exportSaveJson()
-    }
-
-    fun buildTelemetryReport(): String {
-        val s = _gameState.value
-        val d = com.aistudio.trueidle.core.DerivedStats.of(s)
-        val playTimeStr = com.aistudio.trueidle.core.NumberFormatter.duration(s.lifetime.playTimeSeconds)
-        val sb = StringBuilder()
-        sb.append("================================================================\n")
-        sb.append("TRUE IDLE // TACTICAL MISSION TELEMETRY EXPORT\n")
-        sb.append("================================================================\n")
-        sb.append("MISSION DOSSIER:\n")
-        sb.append("- Active Play Time   : $playTimeStr\n")
-        sb.append("- Current Sector     : Sector ${s.player.currentFloor} (Max Cleared: ${s.player.maxUnlockedFloor})\n")
-        sb.append("- Combat Level       : Level ${s.player.lvl} (${s.player.xp} XP)\n")
-        sb.append("- Gear Score         : ${d.gearScore} GS\n")
-        sb.append("- Total Eliminations : ${s.lifetime.totalKills} hostiles\n")
-        sb.append("- Total Credits      : ${s.player.gold} Credits\n")
-        sb.append("- Bone Essence       : ${s.necro.boneEssence} 💀\n")
-        sb.append("- Holy Faith         : ${s.sanctified.faith} ⚡\n")
-        sb.append("- Slayer Points      : ${s.slayer.slayerPoints} PTS\n")
-        sb.append("- Companions Tamed   : ${s.beasts.beasts.size}/8 active beasts\n")
-        sb.append("- Undead Army        : ${s.necro.army.sumOf { it.count }} minions\n")
-        sb.append("- Promotion Tier     : Tier ${s.promotion.tier} (${s.promotion.tierName})\n")
-        sb.append("================================================================\n")
-        sb.append("EVENT STREAM ARCHIVE (RECENT ${s.logs.size} EVENTS):\n")
-        sb.append("================================================================\n")
-        s.logs.takeLast(100).forEach { log ->
-            val timeStr = if (log.timestampMs > 0L) {
-                val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
-                sdf.format(java.util.Date(log.timestampMs))
-            } else "--:--:--"
-            sb.append("[$timeStr] [${log.type.uppercase()}] ${log.text}\n")
-        }
-        sb.append("================================================================\n")
-        sb.append("END OF TELEMETRY EXPORT\n")
-        sb.append("================================================================\n")
-        return sb.toString()
-    }
+    fun exportSave(): String = engine.exportSaveJson()
 
     fun importSave(json: String): Boolean {
         val success = engine.importSaveJson(json)
         if (success) {
             _gameState.value = engine.state
-            saveNow()
+            requestSave()
         }
         return success
     }
 
     fun resetGame() {
-        _gameState.value = engine.resetGame()
-        saveNow()
+        engine.resetGame()
+        // Drop the pre-reset backup, otherwise a later corruption would resurrect the old game.
+        repo.clearPrevious()
+        _gameState.value = engine.state
+        requestSave()
     }
 
+    /** One shared builder for the Settings export buttons; LogView uses the same one. */
+    fun buildTelemetryReport(): String = Telemetry.report(_gameState.value)
+
     private companion object {
+        const val TAG = "GameViewModel"
         const val STEP_MS = 250L
         const val MAX_STEPS = 8L
-        const val IDLE_CHANNEL = "offline_recon"
-        const val IDLE_NOTIFICATION_ID = 8001
+        const val TICK_MS = 50L
+        const val AUTOSAVE_MS = 30_000L
+        const val SAVE_DEBOUNCE_MS = 750L
     }
 }

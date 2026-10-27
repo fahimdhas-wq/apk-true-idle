@@ -24,14 +24,16 @@ import com.aistudio.trueidle.ui.theme.*
 @Composable
 fun OfflineLootDialog(
     loot: OfflineLoot,
-    onClaim: () -> Unit
+    onClaim: () -> Unit,
+    onDismiss: () -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
     val timeFormatted = NumberFormatter.duration(loot.timeAwaySeconds)
     val efficiencyPercent = NumberFormatter.percent(loot.efficiency)
     val scrollState = rememberScrollState()
 
-    Dialog(onDismissRequest = onClaim) {
+    // Back / outside tap must not silently bank the rewards: only the explicit claim button does.
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,7 +209,7 @@ fun OfflineLootDialog(
                 // Chronological 8-Hour Activity Timeline Log
                 if (loot.timelineLog.isNotEmpty()) {
                     Text(
-                        text = "CHRONOLOGICAL 8-HOUR ACTIVITY LOG",
+                        text = "ACTIVITY LOG",
                         style = TrueIdleType.tag,
                         color = PrimaryNeon
                     )
@@ -263,6 +265,15 @@ fun OfflineLootDialog(
                             ) {
                                 Text("◈ COMPANION BEASTS TAMED", style = TrueIdleType.tag, color = TextLight)
                                 Text("+${loot.beastsTamed} 🐾", style = TrueIdleType.numberSmall, color = GreenSuccess)
+                            }
+                        }
+                        if (loot.talentPointsGained > 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("◈ TALENT POINTS EARNED", style = TrueIdleType.tag, color = TextLight)
+                                Text("+${loot.talentPointsGained} TP", style = TrueIdleType.numberSmall, color = PrimaryNeon)
                             }
                         }
                     }

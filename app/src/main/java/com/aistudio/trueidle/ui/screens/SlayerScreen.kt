@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiGauge
 import com.aistudio.trueidle.ui.components.SciFiPanel
@@ -32,7 +32,7 @@ fun SlayerScreen(
 ) {
     val slayer = state.slayer
     val task = slayer.currentTask
-    val reqXp = Balance.slayerXpReq(slayer.lvl)
+    val reqXp = XpCurves.slayer(slayer.lvl)
     val taskProgressRatio = if (task.requiredKills > 0)
         task.currentKills.toFloat() / task.requiredKills.toFloat()
     else 0f

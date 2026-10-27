@@ -3,7 +3,6 @@ package com.aistudio.trueidle.ui.components
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -22,7 +21,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.Telemetry
+import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.LogEntry
@@ -46,10 +46,12 @@ fun LogView(
 
     val filteredLogs = logs.filter { log ->
         val matchesCategory = when (currentFilter) {
-            "combat" -> log.type == "combat"
-            "loot" -> log.type == "loot" || log.type == "gain"
-            "skills" -> log.type == "level" || log.type == "craft" || log.type == "tame"
-            "system" -> log.type == "system" || log.type == "milestone"
+            "combat" -> log.type == LogType.COMBAT
+            "loot" -> log.type == LogType.LOOT || log.type == LogType.GAIN
+            // Skill level-ups and tames are emitted as "skill"/"loot"; the old filter matched
+            // types the engine never produced, so it was always empty.
+            "skills" -> log.type == LogType.SKILL
+            "system" -> log.type == LogType.SYSTEM || log.type == LogType.MILESTONE
             else -> true
         }
         val matchesSearch = searchQuery.isBlank() || log.text.contains(searchQuery, ignoreCase = true)
@@ -57,7 +59,9 @@ fun LogView(
     }
 
     val listState = rememberLazyListState()
-    LaunchedEffect(filteredLogs.size) {
+    // Keyed on the newest id: the list is capped at 40 entries, so its size stops changing and a
+    // size-keyed effect would never fire again.
+    LaunchedEffect(filteredLogs.lastOrNull()?.id) {
         if (filteredLogs.isNotEmpty()) {
             listState.animateScrollToItem(filteredLogs.size - 1)
         }
@@ -146,21 +150,13 @@ fun LogView(
                     Box(
                         modifier = Modifier
                             .clickable {
-                                val report = buildLogExportText(state, logs)
+                                val report = Telemetry.report(state, logs)
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 clipboard.setPrimaryClip(ClipData.newPlainText("MissionLog", report))
-                                exportFeedback = "EXPORTED!"
+                                exportFeedback = "COPIED!"
                                 Toast.makeText(context, "Log Dossier Copied to Clipboard", Toast.LENGTH_SHORT).show()
 
-                                // Also launch share dialog
-                                try {
-                                    val sendIntent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, report)
-                                        type = "text/plain"
-                                    }
-                                    context.startActivity(Intent.createChooser(sendIntent, "Share Mission Telemetry"))
-                                } catch (_: Exception) {}
+                                
                             }
                             .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                             .border(1.dp, PrimaryNeon, RectangleShape)
@@ -168,7 +164,7 @@ fun LogView(
                             .testTag("export_logs_button"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (exportFeedback.isNotEmpty()) exportFeedback else "EXPORT", style = TrueIdleType.tag, color = PrimaryNeon)
+                        Text(if (exportFeedback.isNotEmpty()) exportFeedback else "COPY", style = TrueIdleType.tag, color = PrimaryNeon)
                     }
 
                     // Clear Logs
@@ -206,12 +202,12 @@ fun LogView(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        itemsIndexed(filteredLogs, key = { index, log -> "${log.id}_$index" }) { _, log ->
+                        itemsIndexed(filteredLogs, key = { _, log -> log.id }) { _, log ->
                             val (badgeLabel, accentColor) = when (log.type) {
-                                "combat" -> "CMB" to HpRed
-                                "loot", "gain" -> "LOT" to SecondaryGold
-                                "level", "craft", "tame" -> "SKL" to GreenSuccess
-                                "system", "milestone" -> "SYS" to PrimaryNeon
+                                LogType.COMBAT -> "CMB" to HpRed
+                                LogType.LOOT, LogType.GAIN -> "LOT" to SecondaryGold
+                                LogType.SKILL -> "SKL" to GreenSuccess
+                                LogType.SYSTEM, LogType.MILESTONE -> "SYS" to PrimaryNeon
                                 else -> "INFO" to MaterialTheme.colorScheme.onSurface
                             }
 
@@ -254,38 +250,4 @@ fun LogView(
             }
         }
     }
-}
-
-private fun buildLogExportText(state: GameState?, logs: List<LogEntry>): String {
-    val sb = StringBuilder()
-    sb.append("================================================================\n")
-    sb.append("TRUE IDLE // TACTICAL MISSION TELEMETRY EXPORT\n")
-    sb.append("================================================================\n")
-    if (state != null) {
-        val d = DerivedStats.of(state)
-        val playDuration = NumberFormatter.duration(state.lifetime.playTimeSeconds)
-        sb.append("PLAYER MISSION DOSSIER:\n")
-        sb.append("- Total Play Duration: $playDuration\n")
-        sb.append("- Current Sector     : Sector ${state.player.currentFloor} (Max: ${state.player.maxUnlockedFloor})\n")
-        sb.append("- Combat Level       : Level ${state.player.lvl} (${state.player.xp} XP)\n")
-        sb.append("- Gear Score         : ${d.gearScore} GS\n")
-        sb.append("- Monsters Defeated  : ${state.lifetime.totalKills}\n")
-        sb.append("- Credits Secured    : ${state.player.gold}\n")
-        sb.append("- Bone Essence       : ${state.necro.boneEssence}\n")
-        sb.append("- Active Beasts      : ${state.beasts.beasts.size}/8\n")
-        sb.append("- Undead Legions     : ${state.necro.army.sumOf { it.count }}\n")
-        sb.append("================================================================\n")
-    }
-    sb.append("RECORDED EVENT STREAM (${logs.size} EVENTS):\n")
-    sb.append("================================================================\n")
-    logs.forEach { log ->
-        val timeStr = if (log.timestampMs > 0L) {
-            SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(log.timestampMs))
-        } else "--:--:--"
-        sb.append("[$timeStr] [${log.type.uppercase()}] ${log.text}\n")
-    }
-    sb.append("================================================================\n")
-    sb.append("END OF TELEMETRY ARCHIVE\n")
-    sb.append("================================================================\n")
-    return sb.toString()
 }

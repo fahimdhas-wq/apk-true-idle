@@ -24,7 +24,7 @@ data class SupportGroupUi(
     val cap: Int,
     val totalDps: String,
     val emptyText: String,
-    val top3: List<SupportItemUi>
+    val top: List<SupportItemUi>
 )
 
 @Composable
@@ -52,8 +52,8 @@ fun SupportModule(
             onSelect = { kind = SupportKind.valueOf(it) }
         )
         Spacer(Modifier.height(6.dp))
-        group.top3.forEach { RosterRow(it) }
-        if (group.top3.isEmpty()) {
+        group.top.forEach { RosterRow(it) }
+        if (group.top.isEmpty()) {
             Text(
                 text = group.emptyText,
                 style = TrueIdleType.body,

@@ -18,8 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
@@ -33,7 +34,7 @@ fun StatsScreen(
 ) {
     val scrollState = rememberScrollState()
     val p = state.player
-    val reqXp = Balance.playerXpReq(p.lvl)
+    val reqXp = XpCurves.player(p.lvl)
 
     val d = DerivedStats.of(state)
     val playerDps = CombatMath.heroDps(d)
@@ -123,7 +124,7 @@ fun StatsScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             Text("WEAPON", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = (weapon?.name ?: p.weaponSlot).uppercase(),
+                                text = Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS").uppercase(),
                                 style = TrueIdleType.label,
                                 color = TextLight,
                                 maxLines = 1
@@ -149,7 +150,7 @@ fun StatsScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             Text("ARMOR", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = (armor?.name ?: p.armorSlot).uppercase(),
+                                text = Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE").uppercase(),
                                 style = TrueIdleType.label,
                                 color = TextLight,
                                 maxLines = 1
@@ -181,13 +182,15 @@ fun StatsScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             Text("RING", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = (ring?.name ?: "EMBER BAND").uppercase(),
+                                text = (ring?.name ?: "EMPTY SLOT").uppercase(),
                                 style = TrueIdleType.label,
                                 color = TextLight,
                                 maxLines = 1
                             )
                             Text(
-                                text = ring?.statDesc ?: "CRIT +2.1%",
+                                // Derived from the equipped item: the old hard-coded "CRIT +2.1%"
+                                // did not describe what the ring actually granted.
+                                text = if (ring != null) "+${d.ringBonus.toInt()} ATK" else "—",
                                 style = TrueIdleType.tag,
                                 color = SecondaryGold
                             )
@@ -207,13 +210,13 @@ fun StatsScreen(
                             Spacer(modifier = Modifier.height(3.dp))
                             Text("AMULET", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = (amulet?.name ?: "WARDEN SIGIL").uppercase(),
+                                text = (amulet?.name ?: "EMPTY SLOT").uppercase(),
                                 style = TrueIdleType.label,
                                 color = TextLight,
                                 maxLines = 1
                             )
                             Text(
-                                text = amulet?.statDesc ?: "VIT +18",
+                                text = if (amulet != null) "+${amulet.def.toInt()} DEF" else "—",
                                 style = TrueIdleType.tag,
                                 color = NecroPurple
                             )
@@ -284,7 +287,7 @@ fun StatsScreen(
                 "TOTAL HOSTILES ELIMINATED" to "${state.lifetime.totalKills}",
                 "DEEPEST SECTOR UNLOCKED" to "SECTOR ${p.maxUnlockedFloor}",
                 "CREDITS IN TREASURY" to "${NumberFormatter.short(p.gold)} 🪙",
-                "FAITH ACCUMULATED" to "${NumberFormatter.short(state.sanctified.faith)} 🕊",
+                "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} 🕊",
                 "SLAYER POINTS" to "${state.slayer.slayerPoints} ⚔",
                 "TAMED COMPANIONS" to "${state.beasts.beasts.size}",
                 "UNDEAD CORPS SIZE" to "${state.necro.army.sumOf { it.count }}"

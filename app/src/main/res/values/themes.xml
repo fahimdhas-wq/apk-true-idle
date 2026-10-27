@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.TrueIdle" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0B0E14</item>
-        <item name="android:navigationBarColor">#0B0E14</item>
-    </style>
+    <!--
+      Bar colours are intentionally not set here: MainActivity calls enableEdgeToEdge(), which
+      overrides android:statusBarColor / android:navigationBarColor, and the Compose theme paints
+      BgDark (0xFF000000) behind the bars.
+    -->
+    <style name="Theme.TrueIdle" parent="android:Theme.Material.NoActionBar" />
 </resources>

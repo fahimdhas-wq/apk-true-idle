@@ -1,8 +1,10 @@
 package com.aistudio.trueidle
 
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.model.PlayerState
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -37,12 +39,13 @@ class TalentAndDisciplineTest {
     @Test
     fun testActivateTalentAppliesBuffAndCooldown() {
         val engine = GameEngine()
-        // Berserk costs 20 mana. Ensure hero has 50 mana.
+        // Berserk costs 20 mana. The starting hero has 50 mana.
         val initial = engine.activateTalent("berserk")
 
         val berserk = initial.talent.activeTalents.first { it.id == "berserk" }
         assertTrue("Talent should be active", berserk.isActive)
         assertTrue("Talent should have cooldown remaining", berserk.cooldownRemaining > 0.0)
+        assertEquals("Berserk should have spent its 20 mana", 30.0, initial.player.mana, 1e-6)
 
         // When Berserk is active, DerivedStats atkSpeed is multiplied by 1.5
         val stats = DerivedStats.of(initial)
@@ -63,20 +66,19 @@ class TalentAndDisciplineTest {
 
     @Test
     fun testDisciplineUpgrades() {
-        val engine = GameEngine()
-        // Give hero 1000 gold
-        engine.state = engine.state.copy(
-            player = engine.state.player.copy(gold = 1000L)
+        // GameEngine.state has a private setter, so seed the gold through the constructor.
+        val engine = GameEngine(
+            initialState = GameState(player = PlayerState(gold = 1000L))
         )
 
-        // Upgrade Harvest "hydroponic_efficiency"
-        val harvestUpgraded = engine.upgradeDiscipline("harvest", "hydroponic_efficiency")
-        val upg = harvestUpgraded.harvest.upgrades.first { it.id == "hydroponic_efficiency" }
+        // Upgrade the Harvest "Accelerated Bio-Growth" discipline.
+        val harvestUpgraded = engine.upgradeDiscipline(DisciplineCategory.HARVEST, "harvest_speed")
+        val upg = harvestUpgraded.harvest.upgrades.first { it.id == "harvest_speed" }
         assertEquals(1, upg.rank)
         assertTrue(harvestUpgraded.player.gold < 1000L)
 
-        // Upgrade Armory "forge_quality"
-        val armoryUpgraded = engine.upgradeDiscipline("armory", "forge_quality")
+        // Upgrade the Armory "Molecular Tempering" discipline.
+        val armoryUpgraded = engine.upgradeDiscipline(DisciplineCategory.ARMORY, "forge_quality")
         val armUpg = armoryUpgraded.armory.upgrades.first { it.id == "forge_quality" }
         assertEquals(1, armUpg.rank)
     }

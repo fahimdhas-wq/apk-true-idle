@@ -16,7 +16,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
@@ -29,7 +30,7 @@ fun EssenceScreen(
     state: GameState,
     onToggleAegis: () -> Unit,
     onUpgradeSmite: () -> Unit,
-    onUpgradeDiscipline: (String, String) -> Unit = { _, _ -> },
+    onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val essence = state.essence
@@ -74,7 +75,7 @@ fun EssenceScreen(
                     skillName = "ESSENCE CONDUIT",
                     level = essence.lvl,
                     currentXp = essence.xp,
-                    requiredXp = Balance.skillXpReq(essence.lvl),
+                    requiredXp = XpCurves.skill(essence.lvl),
                     barColor = ManaTeal
                 )
             }
@@ -186,7 +187,7 @@ fun EssenceScreen(
                         }
 
                         Button(
-                            onClick = { onUpgradeDiscipline("ESSENCE", upg.id) },
+                            onClick = { onUpgradeDiscipline(DisciplineCategory.ESSENCE, upg.id) },
                             enabled = canAfford && !isMax,
                             shape = RectangleShape,
                             colors = ButtonDefaults.buttonColors(

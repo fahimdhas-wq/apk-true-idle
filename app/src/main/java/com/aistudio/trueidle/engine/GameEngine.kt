@@ -2,43 +2,78 @@ package com.aistudio.trueidle.engine
 
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
+import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.GameClock
 import com.aistudio.trueidle.core.Ids
-import com.aistudio.trueidle.model.*
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.aistudio.trueidle.core.ItemCatalog
+import com.aistudio.trueidle.core.LogType
+import com.aistudio.trueidle.data.NoOpSaveStore
+import com.aistudio.trueidle.data.SaveRepository
+import com.aistudio.trueidle.model.Beast
+import com.aistudio.trueidle.model.BeastTamingState
+import com.aistudio.trueidle.model.DisciplineUpgrade
+import com.aistudio.trueidle.model.EssenceState
+import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.model.InventoryItem
+import com.aistudio.trueidle.model.LogEntry
+import com.aistudio.trueidle.model.Monster
+import com.aistudio.trueidle.model.NecromancyState
+import com.aistudio.trueidle.model.PlayerState
+import com.aistudio.trueidle.model.Talent
+import com.aistudio.trueidle.model.TalentState
 import kotlin.math.pow
 import kotlin.random.Random
 
+/**
+ * The game engine. `tick` is ordered so that non-combat subsystems (play time, talent timers,
+ * regeneration, Aegis drain and harvesting) always run, even while the hero is recovering or
+ * waiting to respawn.
+ */
 class GameEngine(
     initialState: GameState = GameState(),
     private val clock: GameClock? = null,
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val saves: SaveRepository = SaveRepository(NoOpSaveStore)
 ) {
-    var state: GameState = initialState
+    var state: GameState = sanitize(initialState)
         private set
 
-    val ids = Ids(maxOf(initialState.meta.nextId, (initialState.logs.maxOfOrNull { it.id } ?: 0L) + 1L, 100L))
-    private var respawnLeft: Double = 0.0
-    private var eightHourIdleAlertPending = false
+    val ids = Ids(nextIdFrom(initialState))
 
-    private val jsonSerializer = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = true
-        encodeDefaults = true
-    }
+    private var respawnLeft = 0.0
+    private var eightHourIdleAlertPending = false
+    private var playTimeSubSec = 0.0
+
+    // ------------------------------------------------------------------ lifecycle
 
     private fun nowWallMs(): Long = clock?.wallMs() ?: System.currentTimeMillis()
 
+    private fun nowSnapshot(): ClockSnapshot = ClockSnapshot(
+        wallMs = clock?.wallMs() ?: System.currentTimeMillis(),
+        elapsedMs = clock?.elapsedMs() ?: System.nanoTime() / 1_000_000L,
+        bootCount = clock?.bootCount() ?: 0
+    )
+
+    private fun log(type: String, text: String): LogEntry =
+        LogEntry(ids.next(), text, type, nowWallMs())
+
+    private fun reseedIds(from: GameState) {
+        ids.reset(nextIdFrom(from))
+    }
+
     fun restore(newState: GameState) {
-        state = newState
-        val maxLogId = newState.logs.maxOfOrNull { it.id } ?: 0L
-        ids.reset(maxOf(newState.meta.nextId, maxLogId + 1L, 100L))
+        state = sanitize(newState)
+        reseedIds(state)
+        respawnLeft = 0.0
+        playTimeSubSec = 0.0
+        eightHourIdleAlertPending = false
     }
 
     fun notifyRecovered(slot: String) {
-        // Recovery is intentionally silent; gameplay has no floating notification feed.
+        // Recovery is silent; the UI surfaces it through the recovery banner when it matters.
     }
 
     fun consumeEightHourIdleAlert(): Boolean {
@@ -48,705 +83,1422 @@ class GameEngine(
     }
 
     fun snapshotForSave(now: ClockSnapshot): GameState {
-        val meta = state.meta.copy(
-            savedWallMs = now.wallMs,
-            savedElapsedMs = now.elapsedMs,
-            bootCount = now.bootCount,
-            nextId = ids.current()
-        )
-        state = state.copy(meta = meta, lastSaveTimestamp = now.wallMs)
-        return state
-    }
-
-    fun resume(now: ClockSnapshot) {
-        val awayMs = OfflineEngine.trustedAwayMs(state.meta, now)
-        if (awayMs < 0L) return
-
-        if (awayMs >= 30_000L && now.wallMs > state.meta.offlineAppliedUntilWallMs) {
-            val d = DerivedStats.of(state)
-            eightHourIdleAlertPending = awayMs >= 8 * 3600_000L
-            val loot = OfflineEngine.compute(state, d, awayMs, 0.65, random)
-
-            // Commit offline markers before showing dialog
-            val updatedMeta = state.meta.copy(
+        state = state.copy(
+            meta = state.meta.copy(
                 savedWallMs = now.wallMs,
                 savedElapsedMs = now.elapsedMs,
                 bootCount = now.bootCount,
-                offlineAppliedUntilWallMs = now.wallMs,
                 nextId = ids.current()
             )
-
-            // Also check auto-collect for harvest while away
-            val updatedHarvest = if (state.harvest.autoCollectUnlocked && state.harvest.autoCollectEnabled) {
-                val plots = state.harvest.plots.map { it.copy(growthProgress = 0f, isReady = false) }
-                val veins = state.harvest.veins.map { it.copy(miningProgress = 0f, isReady = false) }
-                state.harvest.copy(plots = plots, veins = veins)
-            } else {
-                state.harvest
-            }
-
-            // Essence faith drain if aegisActive
-            var essence = state.essence
-            if (essence.aegisActive) {
-                val drain = (awayMs / 1000.0 * 0.5).toLong()
-                val newFaith = (essence.faith - drain).coerceAtLeast(0L)
-                essence = essence.copy(
-                    faith = newFaith,
-                    aegisActive = newFaith > 0L
-                )
-            }
-
-            state = state.copy(
-                meta = updatedMeta,
-                pendingOfflineLoot = loot,
-                harvest = updatedHarvest,
-                essence = essence
-            )
-        }
-    }
-
-    fun claimOfflineLoot(): GameState {
-        val loot = state.pendingOfflineLoot ?: return state
-        val inv = state.inventory.toMutableList()
-
-        // Apply loot items directly from loot.items
-        for (item in loot.items) {
-            val idx = inv.indexOfFirst { it.name == item.name }
-            if (idx >= 0) {
-                inv[idx] = inv[idx].copy(count = inv[idx].count + item.count)
-            } else {
-                val (cat, desc, value) = when (item.name) {
-                    "Copper Ore" -> Triple("Resource", "Crafting metal ore", 2L)
-                    "Felweed" -> Triple("Resource", "Alchemy herb", 3L)
-                    else -> Triple("Resource", "Salvaged resource", 5L)
-                }
-                inv.add(
-                    InventoryItem(
-                        id = "item_${ids.next()}",
-                        name = item.name,
-                        category = cat,
-                        count = item.count,
-                        tier = 1,
-                        statDesc = desc,
-                        sellValue = value
-                    )
-                )
-            }
-        }
-
-        // Tamed beasts
-        var beasts = state.beasts
-        if (loot.beastsTamed > 0) {
-            val currentMonster = state.monster
-            val newBeasts = mutableListOf<Beast>()
-            for (i in 0 until loot.beastsTamed) {
-                if (beasts.beasts.size + newBeasts.size < 8) {
-                    newBeasts.add(
-                        Beast(
-                            id = "beast_${ids.next()}",
-                            name = "${currentMonster.name} Scout",
-                            rank = 1,
-                            stars = 1,
-                            dps = (currentMonster.damage * 0.6).coerceAtLeast(4.0),
-                            hp = currentMonster.maxHp * 0.5,
-                            maxHp = currentMonster.maxHp * 0.5,
-                            trait = "Autonomous Scout"
-                        )
-                    )
-                }
-            }
-            beasts = beasts.copy(beasts = beasts.beasts + newBeasts)
-        }
-
-        // Loop level-ups
-        var curXp = state.player.xp + loot.xpEarned
-        var curLvl = state.player.lvl
-        var lvlsGained = 0
-        while (true) {
-            val reqXp = Balance.playerXpReq(curLvl)
-            if (curXp >= reqXp) {
-                curXp -= reqXp
-                curLvl++
-                lvlsGained++
-            } else {
-                break
-            }
-        }
-
-        val updatedLifetime = state.lifetime.copy(
-            totalKills = state.lifetime.totalKills + loot.kills,
-            beastsTamed = state.lifetime.beastsTamed + loot.beastsTamed
         )
-
-        val newLogs = state.logs + LogEntry(
-            id = ids.next(),
-            text = "OFFLINE REPORT PROCESSED: +${loot.goldEarned} 🪙, +${loot.xpEarned} XP, +${loot.bonesEarned} 💀 (${loot.kills} kills).",
-            type = "milestone"
-        )
-
-        state = state.copy(
-            player = state.player.copy(
-                gold = state.player.gold + loot.goldEarned,
-                xp = curXp,
-                lvl = curLvl,
-                currentFloor = loot.finalFloor,
-                maxUnlockedFloor = maxOf(state.player.maxUnlockedFloor, loot.finalFloor)
-            ),
-            necro = state.necro.copy(boneEssence = state.necro.boneEssence + loot.bonesEarned),
-            beasts = beasts,
-            inventory = inv,
-            pendingOfflineLoot = null,
-            lifetime = updatedLifetime,
-            logs = newLogs.takeLast(40)
-        )
-
-        pushNotification(
-            title = "OFFLINE CLAIMS RECEIVED",
-            message = "Added ${loot.goldEarned} 🪙, ${loot.xpEarned} XP, ${loot.bonesEarned} 💀",
-            type = "gain",
-            status = "SUCCESS"
-        )
-
-        evaluateAchievements()
         return state
     }
 
-    fun pushNotification(
-        title: String,
-        message: String,
-        type: String = "info",
-        status: String = "SUCCESS",
-        detail: String = ""
-    ) {
-        // In-game notifications were removed. Important offline results use the report dialog.
+    /**
+     * Called on every foreground. Never replaces an unclaimed offline report, and re-anchors the
+     * away window when the clock is not trustworthy.
+     */
+    fun resume(now: ClockSnapshot) {
+        fun reanchor() {
+            state = state.copy(
+                meta = state.meta.copy(
+                    savedWallMs = now.wallMs,
+                    savedElapsedMs = now.elapsedMs,
+                    bootCount = now.bootCount,
+                    nextId = ids.current()
+                )
+            )
+        }
+
+        // An unclaimed report stays pending; otherwise the player loses it on the next foreground.
+        if (state.pendingOfflineLoot != null) {
+            reanchor()
+            return
+        }
+
+        val awayMs = OfflineEngine.trustedAwayMs(state.meta, now)
+        if (awayMs < 0L || awayMs < Balance.OFFLINE_MIN_AWAY_MS) {
+            reanchor()
+            return
+        }
+
+        eightHourIdleAlertPending = awayMs >= Balance.OFFLINE_CAP_MS
+        val derived = DerivedStats.of(state)
+        val loot = OfflineEngine.compute(state, derived, awayMs, Balance.OFFLINE_EFFICIENCY, random)
+
+        val harvest = if (state.harvest.autoCollectUnlocked && state.harvest.autoCollectEnabled) {
+            state.harvest.copy(
+                plots = state.harvest.plots.map { it.copy(growthProgress = 0f, isReady = false) },
+                veins = state.harvest.veins.map { it.copy(miningProgress = 0f, isReady = false) }
+            )
+        } else {
+            state.harvest
+        }
+
+        state = state.copy(
+            meta = state.meta.copy(
+                savedWallMs = now.wallMs,
+                savedElapsedMs = now.elapsedMs,
+                bootCount = now.bootCount,
+                nextId = ids.current()
+            ),
+            pendingOfflineLoot = loot,
+            harvest = harvest,
+            essence = drainFaith(state.essence, awayMs)
+        )
     }
 
-    private var playTimeSubSec: Double = 0.0
+    private fun drainFaith(essence: EssenceState, awayMs: Long): EssenceState {
+        if (!essence.aegisActive) return essence
+        val rank = essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
+        val mult = (1.0 - 0.15 * rank).coerceAtLeast(0.2)
+        val drain = (awayMs / 1000.0 * Balance.AEGIS_DRAIN_PER_SEC * mult).toLong()
+        val faith = (essence.faith - drain).coerceAtLeast(0L)
+        return essence.copy(faith = faith, faithRemainder = 0.0, aegisActive = faith > 0L)
+    }
+
+    /**
+     * Applies a pending report atomically: floor, monster, kills-on-floor, level ups, talent points
+     * and lifetime stats all move together.
+     */
+    fun claimOfflineLoot(): GameState {
+        val loot = state.pendingOfflineLoot ?: return state
+        val finalFloor = loot.finalFloor.coerceIn(1, Balance.MAX_FLOOR)
+        // The monster on screen must belong to the destination floor.
+        val monster = Balance.generateMonsterForFloor(finalFloor)
+
+        val inventory = state.inventory.toMutableList()
+        var herbs = 0
+        var ores = 0
+        for (item in loot.items) {
+            addToInventory(inventory, item.name, item.count)
+            if (ItemCatalog.isHerb(item.name)) herbs += item.count
+            if (ItemCatalog.isOre(item.name)) ores += item.count
+        }
+
+        var beasts = state.beasts
+        if (loot.beastsTamed > 0) {
+            val tamed = mutableListOf<Beast>()
+            repeat(loot.beastsTamed) {
+                if (beasts.beasts.size + tamed.size < Balance.BEAST_CAP) {
+                    tamed += tamedBeast(monster, "Autonomous Scout")
+                }
+            }
+            beasts = beasts.copy(beasts = beasts.beasts + tamed)
+        }
+
+        var xp = state.player.xp + loot.xpEarned
+        var lvl = state.player.lvl
+        var levels = 0
+        while (xp >= Balance.playerXpReq(lvl)) {
+            xp -= Balance.playerXpReq(lvl)
+            lvl++
+            levels++
+        }
+
+        var player = state.player.copy(
+            gold = state.player.gold + loot.goldEarned,
+            xp = xp,
+            lvl = lvl,
+            currentFloor = finalFloor,
+            maxUnlockedFloor = maxOf(state.player.maxUnlockedFloor, finalFloor),
+            killsOnFloor = loot.killsOnFloor.coerceIn(0, Balance.killsRequiredFor(finalFloor)),
+            killsRequired = Balance.killsRequiredFor(finalFloor),
+            failuresInRow = 0
+        )
+        if (levels > 0) {
+            // Level ups restore resources, exactly as they do on the live path.
+            val d = DerivedStats.of(state.copy(player = player))
+            player = player.copy(hp = d.maxHp, shield = d.maxShield, mana = d.maxMana)
+        }
+
+        state = state.copy(
+            player = player,
+            monster = monster,
+            necro = state.necro.copy(boneEssence = state.necro.boneEssence + loot.bonesEarned),
+            beasts = beasts,
+            inventory = inventory,
+            talent = state.talent.copy(
+                talentPoints = state.talent.talentPoints + levels + loot.talentPointsGained
+            ),
+            lifetime = state.lifetime.copy(
+                totalKills = state.lifetime.totalKills + loot.kills,
+                beastsTamed = state.lifetime.beastsTamed + loot.beastsTamed,
+                herbsHarvested = state.lifetime.herbsHarvested + herbs,
+                oresMined = state.lifetime.oresMined + ores
+            ),
+            pendingOfflineLoot = null,
+            logs = (state.logs + log(
+                LogType.MILESTONE,
+                "OFFLINE REPORT PROCESSED: +${loot.goldEarned} CREDITS, +${loot.xpEarned} XP, " +
+                    "+${loot.bonesEarned} BONE ESSENCE (${loot.kills} kills)."
+            )).takeLast(Balance.LOG_CAP)
+        )
+        evaluateAchievements(force = true)
+        return state
+    }
 
     fun simulateOfflineRecon(hours: Int = 8): GameState {
         val awayMs = hours * 3600_000L
-        val d = DerivedStats.of(state)
-        val loot = OfflineEngine.compute(state, d, awayMs, 0.65, random)
+        val derived = DerivedStats.of(state)
+        val loot = OfflineEngine.compute(state, derived, awayMs, Balance.OFFLINE_EFFICIENCY, random)
         state = state.copy(pendingOfflineLoot = loot)
         return state
     }
 
+    // ------------------------------------------------------------------ tick
+
+    /**
+     * Working copy of one simulation frame. Systems mutate this and [commit] writes it back once.
+     */
+    private class Frame(val base: GameState) {
+        var player: PlayerState = base.player
+        var monster: Monster = base.monster
+        var necro: NecromancyState = base.necro
+        var beasts: BeastTamingState = base.beasts
+        var harvest = base.harvest
+        var armory = base.armory
+        var essence: EssenceState = base.essence
+        var slayer = base.slayer
+        var talent: TalentState = base.talent
+        var lifetime = base.lifetime
+        var inventory: MutableList<InventoryItem> = base.inventory.toMutableList()
+        val logs: MutableList<LogEntry> = mutableListOf()
+
+        fun view(): GameState = base.copy(
+            player = player,
+            monster = monster,
+            necro = necro,
+            beasts = beasts,
+            harvest = harvest,
+            armory = armory,
+            essence = essence,
+            slayer = slayer,
+            talent = talent,
+            lifetime = lifetime,
+            inventory = inventory
+        )
+
+        fun commit(engine: GameEngine) {
+            engine.state = view().copy(logs = (base.logs + logs).takeLast(Balance.LOG_CAP))
+        }
+    }
+
     fun tick(deltaSeconds: Float): GameState {
         val dt = deltaSeconds.toDouble()
-        val derived = DerivedStats.of(state)
+        val frame = Frame(state)
 
-        var p = state.player
-        var m = state.monster
-        var necro = state.necro
-        var beasts = state.beasts
-        var harvest = state.harvest
-        var armory = state.armory
-        var training = state.training
-        var essence = state.essence
-        var slayer = state.slayer
-        var talent = state.talent
-        var lifetime = state.lifetime
-        var inventory = state.inventory.toMutableList()
-        val newLogs = mutableListOf<LogEntry>()
+        // Subsystems that must keep running while the hero is down or waiting to respawn.
+        tickPlayTime(frame, dt)
+        tickTalentTimers(frame, dt)
+        tickRegeneration(frame, dt)
+        tickAegisDrain(frame, dt)
+        tickHarvest(frame, deltaSeconds)
 
-        // Accumulate active gameplay time
-        playTimeSubSec += dt
-        if (playTimeSubSec >= 1.0) {
-            val secs = playTimeSubSec.toLong()
-            playTimeSubSec -= secs
-            lifetime = lifetime.copy(playTimeSeconds = lifetime.playTimeSeconds + secs)
-        }
-
-        // 1. Recovery state check (§4.5)
-        if (p.recoverLeft > 0.0) {
-            val remainingRecover = (p.recoverLeft - dt).coerceAtLeast(0.0)
-            if (remainingRecover == 0.0) {
-                // Completed recovery: restore HP & Shield to derived maxima
-                p = p.copy(
-                    recoverLeft = 0.0,
-                    hp = derived.maxHp,
-                    shield = derived.maxShield
-                )
-                newLogs.add(LogEntry(ids.next(), "SYSTEMS REBOOTED: Defensive shields and vital reserves restored.", "system"))
-            } else {
-                p = p.copy(recoverLeft = remainingRecover)
-            }
-            state = state.copy(player = p, logs = (state.logs + newLogs).takeLast(40))
+        if (frame.player.recoverLeft > 0.0) {
+            tickRecovery(frame, dt)
+            frame.commit(this)
             return state
         }
 
-        // 2. Respawn gap check
         if (respawnLeft > 0.0) {
             respawnLeft = (respawnLeft - dt).coerceAtLeast(0.0)
-            state = state.copy(player = p)
+            frame.commit(this)
             return state
         }
 
-        // 3. Hero + support damage to monster: dps * dt * mitigation(monster.armor); shield first, then HP
-        val totalDps = CombatMath.totalDps(state, derived)
-        val mitigation = CombatMath.mitigation(m.armor)
-        val effDps = totalDps * mitigation
-        val damageDealt = effDps * dt
+        tickCombat(frame, dt)
+        frame.commit(this)
+        if (frame.logs.isNotEmpty()) evaluateAchievements()
+        return state
+    }
 
-        var mShield = m.shield
-        var mHp = m.hp
-        if (mShield > 0.0) {
-            val shieldDmg = damageDealt.coerceAtMost(mShield)
-            mShield -= shieldDmg
-            val overflow = damageDealt - shieldDmg
-            mHp -= overflow
-        } else {
-            mHp -= damageDealt
+    private fun tickPlayTime(frame: Frame, dt: Double) {
+        playTimeSubSec += dt
+        if (playTimeSubSec >= 1.0) {
+            val whole = playTimeSubSec.toLong()
+            playTimeSubSec -= whole
+            frame.lifetime = frame.lifetime.copy(
+                playTimeSeconds = frame.lifetime.playTimeSeconds + whole
+            )
         }
+    }
 
-        // 4. Monster damage to hero: incomingPerSec * dt; shield absorbs first; remainder to HP
-        val incomingRate = CombatMath.incomingPerSec(m, derived, essence.aegisActive)
-        val monsterDmg = incomingRate * dt
-
-        // Struggle Passive adaptation: every point of damage endured makes the hero stronger!
-        if (monsterDmg > 0.0) {
-            talent = talent.copy(struggleDamageTaken = talent.struggleDamageTaken + monsterDmg.toLong().coerceAtLeast(1L))
-        }
-
-        // Tick active talent timers (cooldowns & active buff durations)
-        val updatedActiveTalents = talent.activeTalents.map { t ->
-            val cd = (t.cooldownRemaining - dt).coerceAtLeast(0.0)
-            val dur = (t.durationRemaining - dt).coerceAtLeast(0.0)
-            val active = if (dur <= 0.0) false else t.isActive
-            t.copy(cooldownRemaining = cd, durationRemaining = dur, isActive = active)
-        }
-        talent = talent.copy(activeTalents = updatedActiveTalents)
-
-        var pShield = p.shield
-        var pHp = p.hp
-        if (pShield > 0.0) {
-            val absorb = monsterDmg.coerceAtMost(pShield)
-            pShield -= absorb
-            val overflow = monsterDmg - absorb
-            pHp -= overflow
-        } else {
-            pHp -= monsterDmg
-        }
-
-        // 5. Mana regen (+2/s, capped by derived maxMana) & Essence aegis drain
-        var pMana = (p.mana + (2.0 * dt)).coerceAtMost(derived.maxMana)
-        if (essence.aegisActive) {
-            val faithPreserveRank = essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
-            val drainMult = (1.0 - (0.15 * faithPreserveRank)).coerceAtLeast(0.2)
-            val drain = 0.5 * dt * drainMult
-            if (essence.faith > 0) {
-                val newFaith = (essence.faith - drain.toLong().coerceAtLeast(1L)).coerceAtLeast(0L)
-                essence = essence.copy(faith = newFaith)
-                if (newFaith <= 0L) {
-                    essence = essence.copy(aegisActive = false)
-                    pushNotification("AEGIS DEPLETED", "Essence Aegis barrier extinguished due to zero faith", "combat", "ALERT")
-                }
-            } else {
-                essence = essence.copy(aegisActive = false)
-            }
-        }
-
-        // 6. Kill resolution
-        if (mHp <= 0.0) {
-            val goldGained = m.goldReward
-            val xpGained = m.xpReward
-            val killsOnFloor = p.killsOnFloor + 1
-            lifetime = lifetime.copy(totalKills = lifetime.totalKills + 1)
-            p = p.copy(failuresInRow = 0) // Any kill resets failuresInRow
-
-            newLogs.add(LogEntry(ids.next(), "HOSTILE NEUTRALIZED: ${m.name.uppercase()} (+${goldGained} 🪙, +${xpGained} XP)", "gain"))
-
-            // XP loop (supports multi-level up)
-            var curXp = p.xp + xpGained
-            var curLvl = p.lvl
-            var leveledUp = false
-            while (true) {
-                val xpReq = Balance.playerXpReq(curLvl)
-                if (curXp >= xpReq) {
-                    curXp -= xpReq
-                    curLvl++
-                    leveledUp = true
-                    newLogs.add(LogEntry(ids.next(), "PLAYER LEVEL UP: Advanced to Level $curLvl!", "milestone"))
-                    pushNotification("PLAYER LEVEL UP", "Advanced to Level $curLvl! Health, Shield & Mana replenished.", "level")
-                } else {
-                    break
-                }
-            }
-
-            if (leveledUp) {
-                // Derived max stats on level up
-                val postLvlDerived = DerivedStats.of(state.copy(player = p.copy(lvl = curLvl)))
-                pHp = postLvlDerived.maxHp
-                pShield = postLvlDerived.maxShield
-                pMana = postLvlDerived.maxMana
-                talent = talent.copy(talentPoints = talent.talentPoints + (curLvl - p.lvl))
-            }
-
-            if (m.isBoss) {
-                // Bosses grant +2 talent points
-                talent = talent.copy(talentPoints = talent.talentPoints + 2)
-            }
-
-            // Bone essence to Necromancy with Soul Siphon upgrade
-            val harvestRank = necro.upgrades.firstOrNull { it.id == "necro_harvest" }?.rank ?: 0
-            val boneMult = 1.0 + (0.25 * harvestRank)
-            val bonesGained = (random.nextLong(1, 4) * boneMult).toLong().coerceAtLeast(1L)
-            necro = necro.copy(boneEssence = necro.boneEssence + bonesGained)
-
-            // Faith on kill (+1, +5 for boss)
-            val faithGained = if (m.isBoss) 5L else 1L
-            essence = essence.copy(faith = essence.faith + faithGained)
-
-            // Slayer task progress
-            if (slayer.currentTask.targetName.equals(m.name, ignoreCase = true) && !slayer.currentTask.isCompleted) {
-                val taskKills = slayer.currentTask.currentKills + 1
-                if (taskKills >= slayer.currentTask.requiredKills) {
-                    slayer = slayer.copy(
-                        currentTask = slayer.currentTask.copy(currentKills = taskKills, isCompleted = true),
-                        slayerPoints = slayer.slayerPoints + slayer.currentTask.rewardPoints
-                    )
-                    p = p.copy(gold = p.gold + slayer.currentTask.rewardGold)
-                    pushNotification(
-                        title = "SLAYER DIRECTIVE COMPLETE",
-                        message = "Eliminated ${slayer.currentTask.targetName} (+${slayer.currentTask.rewardGold} 🪙, +${slayer.currentTask.rewardPoints} Points)",
-                        type = "milestone"
-                    )
-                    // Grant Slayer XP
-                    var sXp = slayer.xp + 100L
-                    var sLvl = slayer.lvl
-                    val sReq = Balance.slayerXpReq(sLvl)
-                    if (sXp >= sReq) {
-                        sXp -= sReq
-                        sLvl++
-                    }
-                    // Roll next task
-                    val nextTargetFloor = (p.currentFloor + random.nextInt(-3, 2)).coerceIn(1, 100)
-                    val nextMonster = Balance.generateMonsterForFloor(nextTargetFloor)
-                    val nextTask = SlayerTask(
-                        targetName = nextMonster.name,
-                        currentKills = 0,
-                        requiredKills = random.nextInt(10, 21),
-                        rewardGold = (nextTargetFloor * 25L).coerceAtLeast(100L),
-                        rewardPoints = (nextTargetFloor / 5 + 3).coerceIn(3, 15),
-                        isCompleted = false
-                    )
-                    slayer = slayer.copy(lvl = sLvl, xp = sXp, currentTask = nextTask)
-                } else {
-                    slayer = slayer.copy(
-                        currentTask = slayer.currentTask.copy(currentKills = taskKills)
-                    )
-                }
-            }
-
-            // Beast Taming roll (tameChance)
-            if (random.nextDouble() < derived.tameChance && beasts.beasts.size < 8) {
-                val beastName = "${m.name} Companion"
-                val newBeast = Beast(
-                    id = "beast_${ids.next()}",
-                    name = beastName,
-                    rank = 1,
-                    stars = 1,
-                    dps = (m.damage * 0.6).coerceAtLeast(4.0),
-                    hp = m.maxHp * 0.5,
-                    maxHp = m.maxHp * 0.5,
-                    trait = "Tamed Hunter"
+    private fun tickTalentTimers(frame: Frame, dt: Double) {
+        frame.talent = frame.talent.copy(
+            activeTalents = frame.talent.activeTalents.map { talent ->
+                val cooldown = (talent.cooldownRemaining - dt).coerceAtLeast(0.0)
+                val duration = (talent.durationRemaining - dt).coerceAtLeast(0.0)
+                talent.copy(
+                    cooldownRemaining = cooldown,
+                    durationRemaining = duration,
+                    isActive = duration > 0.0
                 )
-                beasts = beasts.copy(beasts = beasts.beasts + newBeast)
-                lifetime = lifetime.copy(beastsTamed = lifetime.beastsTamed + 1)
-                newLogs.add(LogEntry(ids.next(), "BEAST TAMED: Secured $beastName into squad!", "loot"))
-                pushNotification("BEAST TAMED", "Secured $beastName (${newBeast.dps.toInt()} DPS)", "tame")
             }
+        )
+    }
 
-            // Loot roll (lootChance, 50/50 ore or herb)
-            if (random.nextDouble() < derived.lootChance) {
-                val dropRes = if (random.nextBoolean()) "Copper Ore" else "Felweed"
-                val existing = inventory.indexOfFirst { it.name == dropRes }
-                if (existing >= 0) {
-                    inventory[existing] = inventory[existing].copy(count = inventory[existing].count + 1)
-                } else {
-                    inventory.add(
-                        InventoryItem(
-                            id = "item_${ids.next()}",
-                            name = dropRes,
-                            category = "Resource",
-                            count = 1,
-                            tier = 1,
-                            statDesc = "Crafting material",
-                            sellValue = 5L
-                        )
-                    )
-                }
-                newLogs.add(LogEntry(ids.next(), "SALVAGE ACQUIRED: $dropRes", "loot"))
-            }
+    private fun tickRegeneration(frame: Frame, dt: Double) {
+        if (frame.player.recoverLeft > 0.0) return // a downed hero does not regenerate
+        val d = DerivedStats.of(frame.view())
+        frame.player = frame.player.copy(
+            hp = (frame.player.hp + d.healthRegen * dt).coerceAtMost(d.maxHp),
+            shield = (frame.player.shield + d.shieldRegen * dt).coerceAtMost(d.maxShield),
+            mana = (frame.player.mana + Balance.MANA_REGEN_PER_SEC * dt).coerceAtMost(d.maxMana)
+        )
+    }
 
-            // Floor Advancement
-            var nextFloor = p.currentFloor
-            var nextMaxUnlocked = p.maxUnlockedFloor
-            var newKillsOnFloor = killsOnFloor
-
-            if (killsOnFloor >= p.killsRequired) {
-                newKillsOnFloor = 0
-                if (nextFloor >= nextMaxUnlocked) {
-                    nextMaxUnlocked = (nextFloor + 1).coerceAtMost(100)
-                    newLogs.add(LogEntry(ids.next(), "SECTOR UNLOCKED: Sector $nextFloor Secured!", "milestone"))
-                    pushNotification("SECTOR CLEARED", "Sector $nextFloor neutralized. Access code for Sector $nextMaxUnlocked granted.", "milestone")
-                    // Diamonds on boss first clear
-                    if (m.isBoss) {
-                        p = p.copy(diamonds = p.diamonds + 5L)
-                        pushNotification("DIAMONDS EARNED", "+5 Diamonds for boss first clear!", "gain")
-                    }
-                }
-                if (p.autoAdvance) {
-                    nextFloor = (nextFloor + 1).coerceAtMost(100)
-                }
-            }
-
-            // Respawn gap
-            respawnLeft = OfflineEngine.SPAWN_GAP_S
-            m = Balance.generateMonsterForFloor(nextFloor)
-
-            p = p.copy(
-                gold = p.gold + goldGained,
-                xp = curXp,
-                lvl = curLvl,
-                currentFloor = nextFloor,
-                maxUnlockedFloor = nextMaxUnlocked,
-                killsOnFloor = newKillsOnFloor
-            )
+    private fun tickAegisDrain(frame: Frame, dt: Double) {
+        if (!frame.essence.aegisActive) return
+        val rank = frame.essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
+        val mult = (1.0 - 0.15 * rank).coerceAtLeast(0.2)
+        // Accumulate the fractional drain so 0.5/s stays 0.5/s instead of rounding up to 4/s.
+        val accumulated = frame.essence.faithRemainder + Balance.AEGIS_DRAIN_PER_SEC * mult * dt
+        val whole = accumulated.toLong()
+        frame.essence = if (frame.essence.faith <= 0L) {
+            frame.essence.copy(aegisActive = false, faithRemainder = 0.0)
         } else {
-            m = m.copy(hp = mHp.coerceAtLeast(0.0), shield = mShield.coerceAtLeast(0.0))
+            val faith = (frame.essence.faith - whole).coerceAtLeast(0L)
+            frame.essence.copy(
+                faith = faith,
+                faithRemainder = if (faith == 0L) 0.0 else (accumulated - whole),
+                aegisActive = faith > 0L
+            )
+        }
+    }
+
+    private fun tickRecovery(frame: Frame, dt: Double) {
+        val remaining = (frame.player.recoverLeft - dt).coerceAtLeast(0.0)
+        if (remaining == 0.0) {
+            val d = DerivedStats.of(frame.view())
+            frame.player = frame.player.copy(
+                recoverLeft = 0.0,
+                hp = d.maxHp,
+                shield = d.maxShield
+            )
+            frame.logs += log(LogType.SYSTEM, "SYSTEMS REBOOTED: Defensive shields and vital reserves restored.")
+        } else {
+            frame.player = frame.player.copy(recoverLeft = remaining)
+        }
+    }
+
+    // ------------------------------------------------------------------ combat
+
+    private fun tickCombat(frame: Frame, dt: Double) {
+        val d = DerivedStats.of(frame.view())
+        val monster = frame.monster
+
+        val totalDps = CombatMath.totalDps(frame.view(), d)
+        val dealt = totalDps * CombatMath.mitigation(monster.armor) * dt
+        var monsterShield = monster.shield
+        var monsterHp = monster.hp
+        if (monsterShield > 0.0) {
+            val absorbed = dealt.coerceAtMost(monsterShield)
+            monsterShield -= absorbed
+            monsterHp -= (dealt - absorbed)
+        } else {
+            monsterHp -= dealt
+        }
+        frame.monster = monster.copy(
+            shield = monsterShield.coerceAtLeast(0.0),
+            hp = monsterHp
+        )
+
+        // Minion plating soaks a bounded share of incoming damage.
+        val soakRank = frame.necro.upgrades.firstOrNull { it.id == "necro_soak" }?.rank ?: 0
+        val soak = frame.necro.army.sumOf { it.soak * it.count }
+        val soakReduction = if (soak > 0.0) {
+            ((soak / (soak + 100.0)) * (1.0 + 0.2 * soakRank)).coerceAtMost(0.5)
+        } else 0.0
+        val aegisMult = if (frame.essence.aegisActive) 1.0 - Balance.AEGIS_DAMAGE_REDUCTION else 1.0
+        val incomingRate = CombatMath.incomingPerSec(monster, d, false) * aegisMult
+        val monsterDamage = incomingRate * dt * (1.0 - soakReduction)
+
+        val hpBefore = frame.player.hp
+        var playerShield = frame.player.shield
+        var playerHp = frame.player.hp
+        if (playerShield > 0.0) {
+            val absorbed = monsterDamage.coerceAtMost(playerShield)
+            playerShield -= absorbed
+            playerHp -= (monsterDamage - absorbed)
+        } else {
+            playerHp -= monsterDamage
         }
 
-        // 7. Hero Defeat Check (§4.5)
-        if (pHp <= 0.0) {
-            val newFailures = p.failuresInRow + 1
-            lifetime = lifetime.copy(defeats = lifetime.defeats + 1)
-            newLogs.add(LogEntry(ids.next(), "SYSTEMS REBOOTING: Hull compromised. Initializing emergency stasis.", "combat"))
-            pushNotification("TACTICAL RETREAT", "Systems rebooting. Emergency stasis engaged for 6.0s.", "combat", "ALERT")
-
-            var floorToStay = p.currentFloor
-            if (newFailures >= 3 && p.autoAdvance && p.currentFloor > 1) {
-                floorToStay = p.currentFloor - 1
-                newLogs.add(LogEntry(ids.next(), "RETREAT PROTOCOL ENGAGED: Descending to Sector $floorToStay for strategic regroup.", "system"))
-                pushNotification("RETREAT PROTOCOL", "Engaged retreat protocol to Sector $floorToStay", "combat", "ALERT")
-            }
-
-            p = p.copy(
-                hp = 0.0,
-                recoverLeft = 6.0,
-                killsOnFloor = 0,
-                failuresInRow = if (newFailures >= 3) 0 else newFailures,
-                currentFloor = floorToStay
+        // Struggle passives only count damage that reached HP, accumulated without truncation.
+        val hpDamage = (hpBefore - playerHp).coerceAtLeast(0.0)
+        if (hpDamage > 0.0) {
+            val accumulated = frame.talent.struggleDamageFraction + hpDamage
+            val whole = accumulated.toLong()
+            frame.talent = frame.talent.copy(
+                struggleDamageFraction = accumulated - whole,
+                struggleDamageTaken = frame.talent.struggleDamageTaken + whole
             )
-            m = Balance.generateMonsterForFloor(floorToStay)
-        } else {
-            p = p.copy(hp = pHp, shield = pShield, mana = pMana)
         }
 
-        // 8. Harvest Progress Tick (Bio-Plots & Plasma Veins)
-        val harvestSpeedRank = harvest.upgrades.firstOrNull { it.id == "harvest_speed" }?.rank ?: 0
-        val miningSpeedRank = harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
-        val extraYield = harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        frame.player = frame.player.copy(hp = playerHp, shield = playerShield)
 
-        val farmSpeedMult = (0.97.pow((harvest.farmingLvl - 1).toDouble()) * 0.92.pow(harvestSpeedRank)).coerceAtLeast(0.20).toFloat()
-        val mineSpeedMult = (0.97.pow((harvest.miningLvl - 1).toDouble()) * 0.92.pow(miningSpeedRank)).coerceAtLeast(0.20).toFloat()
+        val killedThisTick = frame.monster.hp <= 0.0
+        if (killedThisTick) {
+            resolveKill(frame, d)
+        }
+        // A kill and a defeat can land in the same tick; the kill wins, so the death path is
+        // skipped rather than resetting the floor the reward just advanced.
+        if (!killedThisTick && frame.player.hp <= 0.0) {
+            resolveDeath(frame)
+        }
+    }
 
-        var autoCollectedHerbs = 0
-        var autoCollectedOres = 0
+    private fun resolveKill(frame: Frame, d: Derived) {
+        val monster = frame.monster
+        var player = frame.player
+        val xpGained = maxOf(1L, (monster.xpReward * d.xpGain).toLong())
+        val goldGained = monster.goldReward
+        frame.lifetime = frame.lifetime.copy(totalKills = frame.lifetime.totalKills + 1)
+        frame.logs += log(
+            LogType.GAIN,
+            "HOSTILE NEUTRALIZED: ${monster.name.uppercase()} (+$goldGained CREDITS, +$xpGained XP)"
+        )
 
-        val updatedPlots = harvest.plots.map { plot ->
-            val effectiveDuration = plot.durationSeconds * farmSpeedMult
+        var xp = player.xp + xpGained
+        var lvl = player.lvl
+        var levels = 0
+        while (xp >= Balance.playerXpReq(lvl)) {
+            xp -= Balance.playerXpReq(lvl)
+            lvl++
+            levels++
+        }
+        player = player.copy(
+            gold = player.gold + goldGained,
+            xp = xp,
+            lvl = lvl,
+            killsOnFloor = player.killsOnFloor + 1
+        )
+        if (levels > 0) {
+            val after = DerivedStats.of(frame.view().copy(player = player))
+            player = player.copy(hp = after.maxHp, shield = after.maxShield, mana = after.maxMana)
+            frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + levels)
+            frame.logs += log(LogType.SKILL, "PLAYER LEVEL UP: Advanced to Level $lvl!")
+        }
+        if (monster.isBoss) {
+            frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + 2)
+        }
+        frame.player = player
+
+        // Bone essence honours Soul Siphon offline and live.
+        val boneMult = 1.0 + 0.25 * (frame.necro.upgrades.firstOrNull { it.id == "necro_harvest" }?.rank ?: 0)
+        val bones = (random.nextLong(1L, 4L) * boneMult).toLong().coerceAtLeast(1L)
+        frame.necro = frame.necro.copy(boneEssence = frame.necro.boneEssence + bones)
+
+        frame.essence = grantFaith(frame.essence, if (monster.isBoss) 5L else 1L)
+        frame.essence = grantEssenceXp(frame.essence, if (monster.isBoss) 25L else 5L, frame)
+
+        grantSlayerProgress(frame, monster)
+        rollTame(frame, monster, d)
+        rollLoot(frame, d)
+        if (monster.isBoss) grantTrophy(frame)
+        advanceFloor(frame, monster)
+        if (frame.base.automation.autoMergeBeasts) autoMergeBeasts(frame)
+    }
+
+    private fun resolveDeath(frame: Frame) {
+        val player = frame.player
+        val failures = player.failuresInRow + 1
+        frame.lifetime = frame.lifetime.copy(defeats = frame.lifetime.defeats + 1)
+        frame.logs += log(LogType.COMBAT, "SYSTEMS REBOOTING: Hull compromised. Initializing emergency stasis.")
+
+        var floor = player.currentFloor
+        var newFailures = failures
+        // Retreat engages regardless of auto-advance, otherwise an unwinnable floor is a death loop.
+        if (failures >= Balance.RETREAT_FAILURE_THRESHOLD && player.currentFloor > 1) {
+            floor = player.currentFloor - 1
+            newFailures = 0
+            frame.logs += log(
+                LogType.SYSTEM,
+                "RETREAT PROTOCOL ENGAGED: Descending to Sector $floor for strategic regroup."
+            )
+        }
+
+        frame.player = player.copy(
+            hp = 0.0,
+            recoverLeft = Balance.RECOVERY_SECONDS,
+            failuresInRow = newFailures,
+            currentFloor = floor,
+            killsRequired = Balance.killsRequiredFor(floor)
+        )
+        respawnLeft = 0.0
+        frame.monster = Balance.generateMonsterForFloor(floor)
+    }
+
+    private fun advanceFloor(frame: Frame, monster: Monster) {
+        var player = frame.player
+        val required = Balance.killsRequiredFor(player.currentFloor)
+        var floor = player.currentFloor
+        var maxUnlocked = player.maxUnlockedFloor
+
+        if (player.killsOnFloor >= required) {
+            // Floor 100 has nothing beyond it: re-clearing must not re-award diamonds forever.
+            if (floor >= maxUnlocked && maxUnlocked < Balance.MAX_FLOOR) {
+                maxUnlocked = (floor + 1).coerceAtMost(Balance.MAX_FLOOR)
+                frame.logs += log(LogType.MILESTONE, "SECTOR UNLOCKED: Sector $floor secured!")
+                if (monster.isBoss) {
+                    player = player.copy(diamonds = player.diamonds + 5L)
+                    frame.logs += log(LogType.MILESTONE, "DIAMONDS EARNED: +5 for a boss first clear.")
+                }
+            }
+            player = player.copy(killsOnFloor = 0, failuresInRow = 0)
+            if (player.autoAdvance) floor = (floor + 1).coerceAtMost(Balance.MAX_FLOOR)
+        }
+
+        frame.player = player.copy(
+            currentFloor = floor,
+            maxUnlockedFloor = maxUnlocked,
+            killsRequired = Balance.killsRequiredFor(floor)
+        )
+        respawnLeft = Balance.RESPAWN_GAP_SECONDS
+        frame.monster = Balance.generateMonsterForFloor(floor)
+    }
+
+    private fun grantFaith(essence: EssenceState, amount: Long): EssenceState =
+        essence.copy(faith = essence.faith + amount)
+
+    private fun grantEssenceXp(essence: EssenceState, amount: Long, frame: Frame): EssenceState {
+        var xp = essence.xp + amount
+        var lvl = essence.lvl
+        var leveled = false
+        while (xp >= Balance.skillXpReq(lvl)) {
+            xp -= Balance.skillXpReq(lvl)
+            lvl++
+            leveled = true
+        }
+        if (leveled) frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Essence reached Level $lvl!")
+        return essence.copy(xp = xp, lvl = lvl)
+    }
+
+    private fun grantSlayerProgress(frame: Frame, monster: Monster) {
+        val task = frame.slayer.currentTask
+        if (task.isCompleted) return
+        if (!task.targetName.equals(monster.name, ignoreCase = true)) return
+        val kills = task.currentKills + 1
+        if (kills < task.requiredKills) {
+            frame.slayer = frame.slayer.copy(currentTask = task.copy(currentKills = kills))
+            return
+        }
+        // Completed tasks stay visible (and claimable) until the player rolls the next one.
+        frame.slayer = frame.slayer.copy(
+            currentTask = task.copy(currentKills = kills, isCompleted = true),
+            slayerPoints = frame.slayer.slayerPoints + task.rewardPoints
+        )
+        frame.player = frame.player.copy(gold = frame.player.gold + task.rewardGold)
+        frame.logs += log(
+            LogType.MILESTONE,
+            "SLAYER DIRECTIVE FULFILLED: ${task.targetName} (+${task.rewardGold} CREDITS, +${task.rewardPoints} PTS)"
+        )
+        var xp = frame.slayer.xp + 100L
+        var lvl = frame.slayer.lvl
+        while (xp >= Balance.slayerXpReq(lvl)) {
+            xp -= Balance.slayerXpReq(lvl)
+            lvl++
+        }
+        frame.slayer = frame.slayer.copy(xp = xp, lvl = lvl)
+    }
+
+    private fun rollTame(frame: Frame, monster: Monster, d: Derived) {
+        if (frame.beasts.beasts.size >= Balance.BEAST_CAP) return
+        if (random.nextDouble() >= d.tameChance) return
+        val beast = tamedBeast(monster, "Tamed Hunter")
+        frame.beasts = frame.beasts.copy(beasts = frame.beasts.beasts + beast)
+        frame.lifetime = frame.lifetime.copy(beastsTamed = frame.lifetime.beastsTamed + 1)
+        frame.logs += log(LogType.LOOT, "BEAST TAMED: Secured ${beast.name} into the squad!")
+    }
+
+    /**
+     * Tamed beasts keep the plain species name. Embedding "Companion"/"Scout" in the name used to
+     * make beasts from the live and offline paths impossible to merge together.
+     */
+    private fun tamedBeast(monster: Monster, trait: String) = Beast(
+        id = "beast_${ids.next()}",
+        name = monster.name,
+        rank = 1,
+        stars = 1,
+        dps = (monster.damage * 0.6).coerceAtLeast(4.0),
+        hp = monster.maxHp * 0.5,
+        maxHp = monster.maxHp * 0.5,
+        trait = trait
+    )
+
+    private fun autoMergeBeasts(frame: Frame) {
+        var beasts = frame.beasts.beasts
+        var merged = true
+        while (merged) {
+            merged = false
+            val pair = beasts.firstOrNull { a ->
+                beasts.any { b -> b.id != a.id && b.name == a.name && b.stars == a.stars }
+            } ?: break
+            val partner = beasts.first { it.id != pair.id && it.name == pair.name && it.stars == pair.stars }
+            beasts = beasts - pair - partner
+            beasts = beasts + pair.copy(stars = pair.stars + 1, dps = pair.dps * 1.6, hp = pair.maxHp * 1.5, maxHp = pair.maxHp * 1.5)
+            frame.logs += log(LogType.MILESTONE, "AUTO-MERGE: ${pair.name} upgraded to ${pair.stars + 1} stars.")
+            merged = true
+        }
+        frame.beasts = frame.beasts.copy(beasts = beasts)
+    }
+
+    private fun rollLoot(frame: Frame, d: Derived) {
+        if (random.nextDouble() >= d.lootChance) return
+        val resource = if (random.nextBoolean()) ItemCatalog.COPPER_ORE else ItemCatalog.FELWEED
+        addToInventory(frame.inventory, resource, 1)
+        frame.logs += log(LogType.LOOT, "SALVAGE ACQUIRED: $resource")
+    }
+
+    private fun grantTrophy(frame: Frame) {
+        addToInventory(frame.inventory, ItemCatalog.BOSS_TROPHY, 1)
+        frame.logs += log(LogType.LOOT, "TROPHY CLAIMED: ${ItemCatalog.BOSS_TROPHY}")
+    }
+
+    private fun addToInventory(inventory: MutableList<InventoryItem>, name: String, qty: Int) {
+        val idx = inventory.indexOfFirst {
+            it.name == name && it.category != ItemCatalog.CATEGORY_EQUIPMENT
+        }
+        if (idx >= 0) {
+            inventory[idx] = inventory[idx].copy(count = inventory[idx].count + qty)
+        } else {
+            inventory.add(ItemCatalog.newResource("item_${ids.next()}", name, qty))
+        }
+    }
+
+    // ------------------------------------------------------------------ harvest
+
+    private fun tickHarvest(frame: Frame, dt: Float) {
+        val speedRank = frame.harvest.upgrades.firstOrNull { it.id == "harvest_speed" }?.rank ?: 0
+        val miningRank = frame.harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
+        val extraYield = frame.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        val farmMult = (0.97.pow((frame.harvest.farmingLvl - 1).toDouble()) * 0.92.pow(speedRank))
+            .coerceAtLeast(0.20).toFloat()
+        val mineMult = (0.97.pow((frame.harvest.miningLvl - 1).toDouble()) * 0.92.pow(miningRank))
+            .coerceAtLeast(0.20).toFloat()
+        val autoCollect = frame.harvest.autoCollectUnlocked && frame.harvest.autoCollectEnabled
+
+        val herbGains = mutableMapOf<String, Int>()
+        val oreGains = mutableMapOf<String, Int>()
+
+        val plots = frame.harvest.plots.map { plot ->
+            val duration = (plot.durationSeconds * farmMult).coerceAtLeast(0.1f)
             if (plot.isReady) {
-                if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
-                    autoCollectedHerbs += (2 + extraYield)
+                if (autoCollect) {
+                    herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0) + 2 + extraYield
                     plot.copy(growthProgress = 0f, isReady = false)
                 } else plot
             } else {
-                val newProg = plot.growthProgress + (deltaSeconds / effectiveDuration)
-                if (newProg >= 1f) {
-                    if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
-                        autoCollectedHerbs += (2 + extraYield)
+                val progress = plot.growthProgress + dt / duration
+                if (progress >= 1f) {
+                    if (autoCollect) {
+                        herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0) + 2 + extraYield
                         plot.copy(growthProgress = 0f, isReady = false)
                     } else {
                         plot.copy(growthProgress = 1f, isReady = true)
                     }
                 } else {
-                    plot.copy(growthProgress = newProg)
+                    plot.copy(growthProgress = progress)
                 }
             }
         }
 
-        val updatedVeins = harvest.veins.map { vein ->
-            val effectiveDuration = vein.durationSeconds * mineSpeedMult
-            if (vein.isReady) {
-                if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
-                    autoCollectedOres += (3 + extraYield)
-                    vein.copy(miningProgress = 0f, isReady = false)
-                } else vein
+        val veins = frame.harvest.veins.map { vein ->
+            // Mining level gates the vein: Iron Ore must not be farmable at level 1.
+            if (frame.harvest.miningLvl < vein.reqLvl) {
+                vein.copy(miningProgress = 0f, isReady = false)
             } else {
-                val newProg = vein.miningProgress + (deltaSeconds / effectiveDuration)
-                if (newProg >= 1f) {
-                    if (harvest.autoCollectUnlocked && harvest.autoCollectEnabled) {
-                        autoCollectedOres += (3 + extraYield)
+                val duration = (vein.durationSeconds * mineMult).coerceAtLeast(0.1f)
+                if (vein.isReady) {
+                    if (autoCollect) {
+                        oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0) + 3 + extraYield
                         vein.copy(miningProgress = 0f, isReady = false)
-                    } else {
-                        vein.copy(miningProgress = 1f, isReady = true)
-                    }
+                    } else vein
                 } else {
-                    vein.copy(miningProgress = newProg)
+                    val progress = vein.miningProgress + dt / duration
+                    if (progress >= 1f) {
+                        if (autoCollect) {
+                            oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0) + 3 + extraYield
+                            vein.copy(miningProgress = 0f, isReady = false)
+                        } else {
+                            vein.copy(miningProgress = 1f, isReady = true)
+                        }
+                    } else {
+                        vein.copy(miningProgress = progress)
+                    }
                 }
             }
         }
 
-        if (autoCollectedHerbs > 0) {
-            val idx = inventory.indexOfFirst { it.name == "Felweed" }
-            if (idx >= 0) {
-                inventory[idx] = inventory[idx].copy(count = inventory[idx].count + autoCollectedHerbs)
-            } else {
-                inventory.add(InventoryItem("herb_${ids.next()}", "Felweed", "Resource", autoCollectedHerbs, 1, "", "Alchemy herb", 3L))
-            }
-            lifetime = lifetime.copy(herbsHarvested = lifetime.herbsHarvested + autoCollectedHerbs)
+        var farmingXp = frame.harvest.farmingXp
+        var miningXp = frame.harvest.miningXp
+        var farmingLvl = frame.harvest.farmingLvl
+        var miningLvl = frame.harvest.miningLvl
+
+        if (herbGains.isNotEmpty()) {
+            val total = herbGains.values.sum()
+            herbGains.forEach { (name, qty) -> addToInventory(frame.inventory, name, qty) }
+            frame.lifetime = frame.lifetime.copy(herbsHarvested = frame.lifetime.herbsHarvested + total)
+            // Auto-collect grants XP too, otherwise the level-10 unlock could never be reached.
+            farmingXp += total * 25L
+        }
+        if (oreGains.isNotEmpty()) {
+            val total = oreGains.values.sum()
+            oreGains.forEach { (name, qty) -> addToInventory(frame.inventory, name, qty) }
+            frame.lifetime = frame.lifetime.copy(oresMined = frame.lifetime.oresMined + total)
+            miningXp += total * 30L
+        }
+        while (farmingXp >= Balance.skillXpReq(farmingLvl)) {
+            farmingXp -= Balance.skillXpReq(farmingLvl)
+            farmingLvl++
+            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Farming reached Level $farmingLvl!")
+        }
+        while (miningXp >= Balance.skillXpReq(miningLvl)) {
+            miningXp -= Balance.skillXpReq(miningLvl)
+            miningLvl++
+            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Mining reached Level $miningLvl!")
         }
 
-        if (autoCollectedOres > 0) {
-            val idx = inventory.indexOfFirst { it.name == "Copper Ore" }
-            if (idx >= 0) {
-                inventory[idx] = inventory[idx].copy(count = inventory[idx].count + autoCollectedOres)
-            } else {
-                inventory.add(InventoryItem("ore_${ids.next()}", "Copper Ore", "Resource", autoCollectedOres, 1, "", "Crafting metal ore", 2L))
-            }
-            lifetime = lifetime.copy(oresMined = lifetime.oresMined + autoCollectedOres)
-        }
-
-        // Auto-collect unlock thresholds (level 10 and 25)
-        val canAutoCollect = harvest.farmingLvl >= 10 || harvest.miningLvl >= 10
-        harvest = harvest.copy(
-            plots = updatedPlots,
-            veins = updatedVeins,
-            autoCollectUnlocked = canAutoCollect
+        frame.harvest = frame.harvest.copy(
+            plots = plots,
+            veins = veins,
+            farmingXp = farmingXp,
+            farmingLvl = farmingLvl,
+            miningXp = miningXp,
+            miningLvl = miningLvl,
+            autoCollectUnlocked = farmingLvl >= 10 || miningLvl >= 10
         )
+    }
+
+    fun harvestPlot(plotId: Int): GameState {
+        val plots = state.harvest.plots.toMutableList()
+        val idx = plots.indexOfFirst { it.id == plotId }
+        if (idx < 0 || !plots[idx].isReady) return state
+
+        val herbName = plots[idx].herbName
+        val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        val yield = 2 + extraYield
+        val inventory = state.inventory.toMutableList()
+        addToInventory(inventory, herbName, yield)
+        plots[idx] = plots[idx].copy(growthProgress = 0f, isReady = false)
+
+        val (xp, lvl, logs) = grantSkillXp(
+            state.harvest.farmingXp,
+            state.harvest.farmingLvl,
+            25L,
+            "Farming",
+            "BIO-HARVEST: Collected ${yield}x $herbName (+25 Farming XP)"
+        )
+        state = state.copy(
+            harvest = state.harvest.copy(plots = plots, farmingXp = xp, farmingLvl = lvl),
+            inventory = inventory,
+            lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + yield),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        evaluateAchievements(force = true)
+        return state
+    }
+
+    fun mineVein(veinId: Int): GameState {
+        val veins = state.harvest.veins.toMutableList()
+        val idx = veins.indexOfFirst { it.id == veinId }
+        if (idx < 0) return state
+        val vein = veins[idx]
+        if (state.harvest.miningLvl < vein.reqLvl) {
+            state = state.copy(
+                logs = (state.logs + log(
+                    LogType.SYSTEM,
+                    "EXTRACTION REFUSED: ${vein.oreName} requires Mining level ${vein.reqLvl}."
+                )).takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+        if (!vein.isReady) return state
+
+        val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        val yield = 3 + extraYield
+        val inventory = state.inventory.toMutableList()
+        addToInventory(inventory, vein.oreName, yield)
+        veins[idx] = vein.copy(miningProgress = 0f, isReady = false)
+
+        val (xp, lvl, logs) = grantSkillXp(
+            state.harvest.miningXp,
+            state.harvest.miningLvl,
+            30L,
+            "Mining",
+            "ORE EXTRACTED: Excavated ${yield}x ${vein.oreName} (+30 Mining XP)"
+        )
+        state = state.copy(
+            harvest = state.harvest.copy(veins = veins, miningXp = xp, miningLvl = lvl),
+            inventory = inventory,
+            lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + yield),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        evaluateAchievements(force = true)
+        return state
+    }
+
+    /** Loops skill level ups and returns the new xp/level plus the log entries to append. */
+    private fun grantSkillXp(
+        currentXp: Long,
+        currentLvl: Int,
+        amount: Long,
+        skillName: String,
+        successText: String
+    ): Triple<Long, Int, List<LogEntry>> {
+        var xp = currentXp + amount
+        var lvl = currentLvl
+        val logs = mutableListOf(log(LogType.LOOT, successText))
+        while (xp >= Balance.skillXpReq(lvl)) {
+            xp -= Balance.skillXpReq(lvl)
+            lvl++
+            logs += log(LogType.SKILL, "SKILL LEVEL UP: $skillName reached Level $lvl!")
+        }
+        return Triple(xp, lvl, logs)
+    }
+
+    // ------------------------------------------------------------------ economy
+
+    fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int): GameState {
+        val inventory = state.inventory.toMutableList()
+        val oreIdx = inventory.indexOfFirst { it.name == reqOre }
+        val owned = inventory.getOrNull(oreIdx)?.count ?: 0
+        if (oreIdx < 0 || owned < reqQty) {
+            state = state.copy(
+                logs = (state.logs + log(
+                    LogType.SYSTEM,
+                    "FORGE FAILED: requires ${reqQty}x $reqOre (have $owned)."
+                )).takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+
+        // "Max % of materials auto-crafters may use": the forge keeps a reserve instead of
+        // consuming the last of a stack. At 0% no reserve is enforced.
+        val usagePct = state.automation.craftMaterialUsagePct
+        val remainingAfter = owned - reqQty
+        val reserve = owned * (100 - usagePct) / 100.0
+        if (usagePct > 0 && remainingAfter < reserve) {
+            state = state.copy(
+                logs = (state.logs + log(
+                    LogType.SYSTEM,
+                    "FORGE REFUSED: $usagePct% material-usage cap would be exceeded for $reqOre."
+                )).takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+
+        val recycleRank = state.armory.upgrades.firstOrNull { it.id == "resource_saving" }?.rank ?: 0
+        val conserved = recycleRank > 0 && random.nextDouble() < (0.12 * recycleRank).coerceAtMost(0.60)
+        if (!conserved) {
+            val ore = inventory[oreIdx]
+            if (ore.count > reqQty) inventory[oreIdx] = ore.copy(count = ore.count - reqQty)
+            else inventory.removeAt(oreIdx)
+        }
+
+        // forge_quality is applied once, in DerivedStats. Baking it into the item as well used to
+        // double it, and left statDesc stale after every upgrade.
+        val atk = if (slot == Equipment.SLOT_WEAPON) tier * 12.0 else 0.0
+        val def = if (slot == Equipment.SLOT_WEAPON) 0.0 else tier * 8.0
+        val statDesc = if (slot == Equipment.SLOT_WEAPON) "+${atk.toInt()} Damage" else "+${def.toInt()} Defense"
+        inventory.add(
+            InventoryItem(
+                id = "craft_${ids.next()}",
+                name = name,
+                category = ItemCatalog.CATEGORY_EQUIPMENT,
+                count = 1,
+                tier = tier,
+                slot = slot,
+                statDesc = statDesc,
+                sellValue = tier * 35L,
+                atk = atk,
+                def = def
+            )
+        )
+
+        val (xp, lvl, logs) = grantSkillXp(
+            state.armory.smithingXp,
+            state.armory.smithingLvl,
+            50L,
+            "Armory Smithing",
+            "CYBER FORGE SUCCESS: Forged $name (Tier $tier)."
+        )
+        state = state.copy(
+            inventory = inventory,
+            armory = state.armory.copy(smithingXp = xp, smithingLvl = lvl),
+            lifetime = state.lifetime.copy(forged = state.lifetime.forged + 1),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        if (state.automation.autoEquipBestGear) autoEquipBestGear()
+        evaluateAchievements(force = true)
+        return state
+    }
+
+    fun brewPotion(name: String, reqHerb: String, reqQty: Int): GameState {
+        val inventory = state.inventory.toMutableList()
+        val herbIdx = inventory.indexOfFirst { it.name == reqHerb }
+        val owned = inventory.getOrNull(herbIdx)?.count ?: 0
+        if (herbIdx < 0 || owned < reqQty) {
+            state = state.copy(
+                logs = (state.logs + log(
+                    LogType.SYSTEM,
+                    "ALCHEMY FAILED: requires ${reqQty}x $reqHerb (have $owned)."
+                )).takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+        val herb = inventory[herbIdx]
+        if (herb.count > reqQty) inventory[herbIdx] = herb.copy(count = herb.count - reqQty)
+        else inventory.removeAt(herbIdx)
+
+        // Brewed potions stack instead of piling up as separate one-count entries.
+        val heal = ItemCatalog.potionHeal(name)
+        val existing = inventory.indexOfFirst { it.name == name && it.category == ItemCatalog.CATEGORY_POTION }
+        if (existing >= 0) {
+            inventory[existing] = inventory[existing].copy(count = inventory[existing].count + 1)
+        } else {
+            inventory.add(
+                InventoryItem(
+                    id = "potion_${ids.next()}",
+                    name = name,
+                    category = ItemCatalog.CATEGORY_POTION,
+                    count = 1,
+                    tier = 1,
+                    statDesc = "Restores ${heal.toInt()} HP",
+                    sellValue = 15L
+                )
+            )
+        }
+
+        val (xp, lvl, logs) = grantSkillXp(
+            state.armory.herbloreXp,
+            state.armory.herbloreLvl,
+            40L,
+            "Herblore",
+            "ALCHEMY SYNTHESIS: Brewed $name."
+        )
+        state = state.copy(
+            inventory = inventory,
+            armory = state.armory.copy(herbloreXp = xp, herbloreLvl = lvl),
+            lifetime = state.lifetime.copy(brewed = state.lifetime.brewed + 1),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        evaluateAchievements(force = true)
+        return state
+    }
+
+    fun sellItem(itemId: String, count: Int = 1): GameState {
+        val inventory = state.inventory.toMutableList()
+        val idx = inventory.indexOfFirst { it.id == itemId }
+        if (idx < 0) return state
+        val item = inventory[idx]
+        // The engine refuses to sell worn gear; the UI hiding the button was not enough.
+        if (item.isEquipped) {
+            state = state.copy(
+                logs = (state.logs + log(LogType.SYSTEM, "SALE REFUSED: ${item.name} is equipped."))
+                    .takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+        val actual = count.coerceIn(1, item.count)
+        val gold = actual * item.sellValue
+        if (item.count > actual) inventory[idx] = item.copy(count = item.count - actual)
+        else inventory.removeAt(idx)
 
         state = state.copy(
-            player = p,
-            monster = m,
-            necro = necro,
-            beasts = beasts,
-            harvest = harvest,
-            armory = armory,
-            training = training,
-            essence = essence,
-            slayer = slayer,
-            talent = talent,
+            player = state.player.copy(gold = state.player.gold + gold),
             inventory = inventory,
-            lifetime = lifetime,
-            logs = (state.logs + newLogs).takeLast(40)
+            logs = (state.logs + log(LogType.GAIN, "ITEM SOLD: $actual x ${item.name} for +$gold CREDITS."))
+                .takeLast(Balance.LOG_CAP)
         )
-
-        evaluateAchievements()
         return state
     }
 
-    private fun evaluateAchievements() {
-        val achievements = state.achievements.map { ach ->
-            if (ach.isUnlocked) ach
-            else {
-                val currentProgress = when (ach.id) {
-                    "ach_first_blood" -> state.lifetime.totalKills.toInt()
-                    "ach_floor_10" -> state.player.maxUnlockedFloor
-                    "ach_tamer" -> state.lifetime.beastsTamed.toInt()
-                    "ach_necro" -> state.necro.army.sumOf { it.count }
-                    "ach_miner" -> state.lifetime.oresMined.toInt()
-                    else -> ach.progress
-                }
-                val unlocked = currentProgress >= ach.target
-                if (unlocked && !ach.isUnlocked) {
-                    pushNotification(
-                        title = "ACHIEVEMENT UNLOCKED",
-                        message = "${ach.title}: ${ach.desc}",
-                        type = "milestone",
-                        status = "SUCCESS"
-                    )
-                }
-                ach.copy(
-                    progress = currentProgress.coerceAtMost(ach.target),
-                    isUnlocked = unlocked
-                )
+    fun equipItem(itemId: String): GameState {
+        val inventory = state.inventory.toMutableList()
+        val idx = inventory.indexOfFirst { it.id == itemId }
+        if (idx < 0) return state
+        val item = inventory[idx]
+        if (item.category == ItemCatalog.CATEGORY_POTION) return usePotion(itemId)
+        if (!Equipment.isEquipment(item) || item.slot.isBlank()) return state
+
+        // Rings and amulets are real slots too; they used to have no equip branch at all.
+        for (i in inventory.indices) {
+            if (inventory[i].slot.equals(item.slot, ignoreCase = true) && inventory[i].isEquipped) {
+                inventory[i] = inventory[i].copy(isEquipped = false)
             }
         }
-        state = state.copy(achievements = achievements)
+        inventory[idx] = item.copy(isEquipped = true)
+        state = state.copy(
+            inventory = inventory,
+            logs = (state.logs + log(LogType.SYSTEM, "GEAR EQUIPPED: ${item.name.uppercase()} -> ${item.slot}."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
     }
 
-    fun claimAchievement(achId: String): GameState {
-        val achs = state.achievements.toMutableList()
-        val idx = achs.indexOfFirst { it.id == achId }
-        if (idx >= 0 && achs[idx].isUnlocked && !achs[idx].isClaimed) {
-            val ach = achs[idx]
-            achs[idx] = ach.copy(isClaimed = true)
+    fun unequipItem(itemId: String): GameState {
+        val inventory = state.inventory.toMutableList()
+        val idx = inventory.indexOfFirst { it.id == itemId }
+        if (idx < 0 || !inventory[idx].isEquipped) return state
+        val item = inventory[idx]
+        inventory[idx] = item.copy(isEquipped = false)
+        state = state.copy(
+            inventory = inventory,
+            logs = (state.logs + log(LogType.SYSTEM, "GEAR UNEQUIPPED: ${item.name.uppercase()}."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun usePotion(itemId: String): GameState {
+        val inventory = state.inventory.toMutableList()
+        val idx = inventory.indexOfFirst { it.id == itemId }
+        if (idx < 0) return state
+        val item = inventory[idx]
+        if (item.category != ItemCatalog.CATEGORY_POTION) return state
+        // A downed hero cannot drink, and a potion must not be consumed at full health.
+        if (state.player.recoverLeft > 0.0) return state
+        val derived = DerivedStats.of(state)
+        if (state.player.hp >= derived.maxHp) {
             state = state.copy(
-                achievements = achs,
-                player = state.player.copy(gold = state.player.gold + ach.rewardGold)
+                logs = (state.logs + log(LogType.SYSTEM, "POTION HELD: already at full health."))
+                    .takeLast(Balance.LOG_CAP)
             )
-            pushNotification(
-                title = "ACHIEVEMENT CLAIMED",
-                message = "Claimed reward of ${ach.rewardGold} 🪙 for ${ach.title}",
-                type = "gain"
+            return state
+        }
+        val potencyRank = state.armory.upgrades.firstOrNull { it.id == "alchemy_potency" }?.rank ?: 0
+        val potency = 1.0 + 0.25 * potencyRank
+        val heal = ItemCatalog.potionHeal(item.name) * potency
+        val healed = (state.player.hp + heal).coerceAtMost(derived.maxHp)
+        if (item.count > 1) inventory[idx] = item.copy(count = item.count - 1)
+        else inventory.removeAt(idx)
+
+        state = state.copy(
+            player = state.player.copy(hp = healed),
+            inventory = inventory,
+            logs = (state.logs + log(LogType.GAIN, "POTION DEPLOYED: restored ${heal.toInt()} HP."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun autoEquipBestGear(): GameState {
+        val inventory = state.inventory.toMutableList()
+        var changed = false
+        for (slot in Equipment.SLOTS) {
+            val candidates = inventory.filter {
+                Equipment.isEquipment(it) && it.slot.equals(slot, ignoreCase = true)
+            }
+            if (candidates.isEmpty()) continue
+            // Uses the same tier fallback as DerivedStats instead of the raw atk field.
+            val best = candidates.maxByOrNull {
+                if (slot == Equipment.SLOT_WEAPON || slot == Equipment.SLOT_RING) {
+                    Equipment.baseAttack(it)
+                } else {
+                    Equipment.baseDefense(it)
+                }
+            } ?: continue
+            if (best.isEquipped) continue
+            for (i in inventory.indices) {
+                if (inventory[i].slot.equals(slot, ignoreCase = true)) {
+                    inventory[i] = inventory[i].copy(isEquipped = inventory[i].id == best.id)
+                }
+            }
+            changed = true
+        }
+        if (changed) {
+            state = state.copy(
+                inventory = inventory,
+                logs = (state.logs + log(LogType.SYSTEM, "AUTO-EQUIP: best available gear equipped."))
+                    .takeLast(Balance.LOG_CAP)
             )
         }
         return state
     }
+
+    fun summonMinion(type: String): GameState {
+        val kind = Balance.minionTypeFor(type)
+        val cost = Balance.minionCost(kind)
+        val armySize = state.necro.army.sumOf { it.count }
+        if (armySize >= Balance.MINION_CAP) {
+            state = state.copy(
+                logs = (state.logs + log(LogType.SYSTEM, "REANIMATION REFUSED: legion at ${Balance.MINION_CAP}/${Balance.MINION_CAP}."))
+                    .takeLast(Balance.LOG_CAP)
+            )
+            return state
+        }
+        if (state.necro.boneEssence < cost) return state
+
+        val army = state.necro.army.toMutableList()
+        val existing = army.indexOfFirst { it.type == kind }
+        if (existing >= 0) {
+            army[existing] = army[existing].copy(count = army[existing].count + 1)
+        } else {
+            army.add(
+                com.aistudio.trueidle.model.Minion(
+                    id = "minion_${ids.next()}",
+                    type = kind,
+                    count = 1,
+                    lvl = 1,
+                    dps = Balance.minionDps(kind),
+                    soak = Balance.MINION_SOAK
+                )
+            )
+        }
+
+        var xp = state.necro.xp + 20L
+        var lvl = state.necro.lvl
+        while (xp >= Balance.skillXpReq(lvl)) {
+            xp -= Balance.skillXpReq(lvl)
+            lvl++
+        }
+        state = state.copy(
+            necro = state.necro.copy(
+                boneEssence = state.necro.boneEssence - cost,
+                army = army,
+                xp = xp,
+                lvl = lvl
+            ),
+            logs = (state.logs + log(LogType.SYSTEM, "NECRO ANIMATION: reanimated $kind for $cost BONE ESSENCE."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        evaluateAchievements(force = true)
+        return state
+    }
+
+    fun mergeBeasts(beastId1: String, beastId2: String): GameState {
+        val beasts = state.beasts.beasts.toMutableList()
+        val first = beasts.find { it.id == beastId1 }
+        val second = beasts.find { it.id == beastId2 }
+        if (first == null || second == null) return state
+        if (first.name != second.name || first.stars != second.stars) return state
+
+        beasts.remove(first)
+        beasts.remove(second)
+        val upgraded = first.copy(
+            stars = first.stars + 1,
+            dps = first.dps * 1.6,
+            maxHp = first.maxHp * 1.5,
+            hp = first.maxHp * 1.5
+        )
+        beasts.add(upgraded)
+
+        val (xp, lvl, logs) = grantSkillXp(
+            state.beasts.xp,
+            state.beasts.lvl,
+            60L,
+            "Beast Taming",
+            "BEAST SYNTHESIS: ${upgraded.name} upgraded to ${upgraded.stars} stars."
+        )
+        state = state.copy(
+            beasts = state.beasts.copy(beasts = beasts, xp = xp, lvl = lvl),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun trainNode(nodeId: String): GameState {
+        val nodes = state.training.nodes.toMutableList()
+        val idx = nodes.indexOfFirst { it.id == nodeId }
+        if (idx < 0) return state
+        val node = nodes[idx]
+        if (node.rank >= node.maxRank || state.player.gold < node.costGold) return state
+
+        val goldCost = node.costGold
+        nodes[idx] = node.copy(rank = node.rank + 1, costGold = (node.costGold * 1.4).toLong())
+        val (xp, lvl, logs) = grantSkillXp(
+            state.training.xp,
+            state.training.lvl,
+            40L,
+            "Training",
+            "DOJO ENHANCEMENT: ${node.name} upgraded to Rank ${node.rank + 1}."
+        )
+        state = state.copy(
+            player = state.player.copy(gold = state.player.gold - goldCost),
+            training = state.training.copy(nodes = nodes, xp = xp, lvl = lvl),
+            logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    // ------------------------------------------------------------------ talents
+
+    fun activateTalent(talentId: String): GameState {
+        val talent = state.talent.activeTalents.firstOrNull { it.id == talentId } ?: return state
+        if (talent.cooldownRemaining > 0.0) return state
+        // No talent may be used while downed or waiting to respawn.
+        if (state.player.recoverLeft > 0.0) return state
+        if (respawnLeft > 0.0) return state
+
+        val derived = DerivedStats.of(state)
+        val manaCost = Balance.talentManaCost(talentId)
+        if (state.player.mana < manaCost) return state
+
+        val rank = talent.rank.coerceAtLeast(1)
+        val rankScale = 1.0 + 0.1 * (rank - 1)
+        var player = state.player.copy(mana = state.player.mana - manaCost)
+        var monster = state.monster
+
+        when (talentId) {
+            "nanite_heal" -> {
+                val healHp = derived.maxHp * 0.40 * rankScale
+                val healShield = derived.maxShield * 0.25 * rankScale
+                player = player.copy(
+                    hp = (player.hp + healHp).coerceAtMost(derived.maxHp),
+                    shield = (player.shield + healShield).coerceAtMost(derived.maxShield)
+                )
+            }
+            "mana_rampage" -> {
+                // A single strike, not a per-second figure, and armour still mitigates it.
+                val burst = CombatMath.heroHitDamage(derived) * 2.5 * rankScale *
+                    CombatMath.mitigation(monster.armor)
+                var shield = monster.shield
+                var hp = monster.hp
+                if (shield > 0.0) {
+                    val absorbed = burst.coerceAtMost(shield)
+                    shield -= absorbed
+                    hp -= (burst - absorbed)
+                } else {
+                    hp -= burst
+                }
+                monster = monster.copy(shield = shield.coerceAtLeast(0.0), hp = hp.coerceAtLeast(0.0))
+            }
+            "aegis_bastion" -> {
+                val barrier = derived.maxShield * 0.60 * rankScale
+                player = player.copy(shield = (player.shield + barrier).coerceAtMost(derived.maxShield * 1.5))
+            }
+            else -> Unit // Timed buffs are picked up by DerivedStats while active.
+        }
+
+        val duration = talent.durationSeconds * rankScale
+        val cooldown = (talent.cooldownSeconds * (1.0 - 0.05 * (rank - 1))).coerceAtLeast(5.0)
+        state = state.copy(
+            player = player,
+            monster = monster,
+            talent = state.talent.copy(
+                activeTalents = state.talent.activeTalents.map {
+                    if (it.id == talentId) {
+                        it.copy(
+                            isActive = talent.durationSeconds > 0.0,
+                            durationRemaining = duration,
+                            cooldownRemaining = cooldown
+                        )
+                    } else it
+                }
+            ),
+            logs = (state.logs + log(LogType.MILESTONE, "TALENT DEPLOYED: ${talent.name} (Rank $rank)."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun upgradeTalent(talentId: String): GameState {
+        if (state.talent.talentPoints <= 0) return state
+        val active = state.talent.activeTalents.firstOrNull { it.id == talentId }
+        if (active != null) {
+            if (active.rank >= active.maxRank) return state
+            state = state.copy(
+                talent = state.talent.copy(
+                    talentPoints = state.talent.talentPoints - 1,
+                    activeTalents = state.talent.activeTalents.map {
+                        if (it.id == talentId) it.copy(rank = it.rank + 1) else it
+                    }
+                )
+            )
+            return state
+        }
+        val struggle = state.talent.struggleTalents.firstOrNull { it.id == talentId } ?: return state
+        if (struggle.rank >= struggle.maxRank) return state
+        state = state.copy(
+            talent = state.talent.copy(
+                talentPoints = state.talent.talentPoints - 1,
+                struggleTalents = state.talent.struggleTalents.map {
+                    if (it.id == talentId) it.copy(rank = it.rank + 1) else it
+                }
+            )
+        )
+        return state
+    }
+
+    // ------------------------------------------------------------------ disciplines
+
+    fun upgradeDiscipline(category: DisciplineCategory, upgradeId: String): GameState {
+        val upgrades: List<DisciplineUpgrade> = when (category) {
+            DisciplineCategory.HARVEST -> state.harvest.upgrades
+            DisciplineCategory.ARMORY -> state.armory.upgrades
+            DisciplineCategory.GENESIS_BEAST -> state.beasts.upgrades
+            DisciplineCategory.GENESIS_NECRO -> state.necro.upgrades
+            DisciplineCategory.ESSENCE -> state.essence.upgrades
+        }
+        val upgrade = upgrades.firstOrNull { it.id == upgradeId } ?: return state
+        if (upgrade.rank >= upgrade.maxRank) return state
+        val cost = Balance.upgradeCost(upgrade)
+        val currency = upgrade.costCurrency.uppercase()
+        val available = when (currency) {
+            "FAITH" -> state.essence.faith
+            "BONE" -> state.necro.boneEssence
+            "SLAYER" -> state.slayer.slayerPoints.toLong()
+            else -> state.player.gold
+        }
+        if (available < cost) return state
+
+        val updated = upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
+        state = when (category) {
+            DisciplineCategory.HARVEST -> state.copy(
+                player = if (currency == "GOLD") state.player.copy(gold = state.player.gold - cost) else state.player,
+                harvest = state.harvest.copy(upgrades = updated)
+            )
+            DisciplineCategory.ARMORY -> state.copy(
+                player = if (currency == "GOLD") state.player.copy(gold = state.player.gold - cost) else state.player,
+                armory = state.armory.copy(upgrades = updated)
+            )
+            DisciplineCategory.GENESIS_BEAST -> state.copy(
+                player = if (currency == "GOLD") state.player.copy(gold = state.player.gold - cost) else state.player,
+                beasts = state.beasts.copy(upgrades = updated)
+            )
+            DisciplineCategory.GENESIS_NECRO -> state.copy(
+                necro = state.necro.copy(boneEssence = state.necro.boneEssence - cost, upgrades = updated)
+            )
+            DisciplineCategory.ESSENCE -> state.copy(
+                essence = state.essence.copy(faith = state.essence.faith - cost, upgrades = updated)
+            )
+        }
+        state = state.copy(
+            logs = (state.logs + log(LogType.MILESTONE, "UPGRADE COMPLETE: ${upgrade.name} -> Rank ${upgrade.rank + 1}."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun toggleEssenceAegis(): GameState {
+        val next = !state.essence.aegisActive
+        if (next && state.essence.faith <= 0L) return state
+        state = state.copy(essence = state.essence.copy(aegisActive = next))
+        return state
+    }
+
+    fun upgradeEssenceSmite(): GameState {
+        val cost = Balance.smiteUpgradeCost(state.essence.smiteLevel)
+        if (state.essence.faith < cost) return state
+        state = state.copy(
+            essence = state.essence.copy(
+                faith = state.essence.faith - cost,
+                smiteLevel = state.essence.smiteLevel + 1
+            )
+        )
+        return state
+    }
+
+    fun upgradeDiscipline(category: String, upgradeId: String): GameState =
+        DisciplineCategory.entries.firstOrNull { it.name == category.uppercase() }
+            ?.let { upgradeDiscipline(it, upgradeId) }
+            ?: state
+
+    // ------------------------------------------------------------------ slayer
+
+    fun rerollSlayerTask(): GameState {
+        val task = state.slayer.currentTask
+        // Fulfilling a completed directive is free; rerolling an open one costs a point.
+        if (!task.isCompleted) {
+            if (state.slayer.slayerPoints < 1) return state
+        }
+        val next = newSlayerTask()
+        state = state.copy(
+            slayer = state.slayer.copy(
+                slayerPoints = if (task.isCompleted) state.slayer.slayerPoints else state.slayer.slayerPoints - 1,
+                currentTask = next
+            ),
+            logs = (state.logs + log(LogType.SYSTEM, "SLAYER DIRECTIVE: new target ${next.targetName}."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    /**
+     * Picks a target the player can actually reach: the floor window is clamped to the unlocked
+     * range, so the directive is never impossible.
+     */
+    private fun newSlayerTask(): com.aistudio.trueidle.model.SlayerTask {
+        val reachable = state.player.maxUnlockedFloor.coerceIn(1, Balance.MAX_FLOOR)
+        val offset = random.nextInt(-3, 4) // symmetric window
+        val floor = (state.player.currentFloor + offset).coerceIn(1, reachable)
+        val monster = Balance.generateMonsterForFloor(floor)
+        return com.aistudio.trueidle.model.SlayerTask(
+            targetName = monster.name,
+            currentKills = 0,
+            requiredKills = random.nextInt(10, 21),
+            rewardGold = (floor * 25L).coerceAtLeast(100L),
+            rewardPoints = (floor / 5 + 3).coerceIn(3, 15),
+            isCompleted = false
+        )
+    }
+
+    // ------------------------------------------------------------------ misc actions
 
     fun navFloor(delta: Int): GameState {
-        val target = (state.player.currentFloor + delta).coerceIn(1, state.player.maxUnlockedFloor)
-        if (target != state.player.currentFloor) {
-            val newMonster = Balance.generateMonsterForFloor(target)
-            state = state.copy(
-                player = state.player.copy(currentFloor = target, killsOnFloor = 0),
-                monster = newMonster
-            )
-            pushNotification("SECTOR TRANSFER", "Traversing to Sector ${target.toString().padStart(2, '0')}", "system")
-        }
-        return state
+        if (state.player.recoverLeft > 0.0) return state
+        val target = (state.player.currentFloor + delta).coerceIn(1, reachableFloor())
+        if (target == state.player.currentFloor) return state
+        return moveToFloor(target, "SECTOR TRANSFER: traversing to Sector $target.")
     }
 
     fun setFloor(floor: Int): GameState {
-        val target = floor.coerceIn(1, state.player.maxUnlockedFloor)
-        val newMonster = Balance.generateMonsterForFloor(target)
+        if (state.player.recoverLeft > 0.0) return state
+        return moveToFloor(floor.coerceIn(1, reachableFloor()), null)
+    }
+
+    private fun reachableFloor(): Int =
+        state.player.maxUnlockedFloor.coerceIn(1, Balance.MAX_FLOOR)
+
+    /**
+     * Floor changes always consume a spawn gap and clear the death streak, so hopping floors cannot
+     * be used to dodge damage or reset a boss for free.
+     */
+    private fun moveToFloor(target: Int, logText: String?): GameState {
+        respawnLeft = Balance.RESPAWN_GAP_SECONDS
         state = state.copy(
-            player = state.player.copy(currentFloor = target, killsOnFloor = 0),
-            monster = newMonster
+            player = state.player.copy(
+                currentFloor = target,
+                killsOnFloor = 0,
+                failuresInRow = 0,
+                killsRequired = Balance.killsRequiredFor(target)
+            ),
+            monster = Balance.generateMonsterForFloor(target),
+            logs = if (logText != null) {
+                (state.logs + log(LogType.SYSTEM, logText)).takeLast(Balance.LOG_CAP)
+            } else state.logs
         )
         return state
     }
 
     fun toggleAutoAdvance(): GameState {
-        val next = !state.player.autoAdvance
-        state = state.copy(player = state.player.copy(autoAdvance = next))
-        pushNotification("AUTO-ADVANCE", if (next) "Auto-advance ENABLED" else "Auto-advance DISABLED", "system")
+        state = state.copy(player = state.player.copy(autoAdvance = !state.player.autoAdvance))
         return state
     }
 
     fun toggleAutoCollect(): GameState {
         if (!state.harvest.autoCollectUnlocked) return state
-        val next = !state.harvest.autoCollectEnabled
-        state = state.copy(harvest = state.harvest.copy(autoCollectEnabled = next))
-        pushNotification("AUTO-COLLECT", if (next) "Harvest auto-collect ENABLED" else "Harvest auto-collect DISABLED", "system")
+        state = state.copy(harvest = state.harvest.copy(autoCollectEnabled = !state.harvest.autoCollectEnabled))
         return state
     }
 
     fun toggleAutoEquipBestGear(): GameState {
         val next = !state.automation.autoEquipBestGear
         state = state.copy(automation = state.automation.copy(autoEquipBestGear = next))
-        if (next) {
-            autoEquipBestGear()
-        }
-        pushNotification("AUTO-EQUIP", if (next) "Auto-equip best gear ENABLED" else "Auto-equip best gear DISABLED", "system")
+        if (next) autoEquipBestGear()
         return state
     }
 
     fun toggleAutoMergeBeasts(): GameState {
         val next = !state.automation.autoMergeBeasts
         state = state.copy(automation = state.automation.copy(autoMergeBeasts = next))
-        pushNotification("AUTO-MERGE", if (next) "Auto-merge beasts ENABLED" else "Auto-merge beasts DISABLED", "system")
+        if (next) {
+            val frame = Frame(state)
+            autoMergeBeasts(frame)
+            frame.commit(this)
+        }
         return state
     }
 
@@ -755,752 +1507,45 @@ class GameEngine(
         return state
     }
 
-    fun autoEquipBestGear(): GameState {
-        val slots = listOf("Weapon", "Armor", "Ring", "Amulet")
-        var inv = state.inventory.toMutableList()
-        var changed = false
-        for (slot in slots) {
-            val itemsForSlot = inv.filter { it.category == "Equipment" && it.slot.equals(slot, ignoreCase = true) }
-            if (itemsForSlot.isNotEmpty()) {
-                val best = itemsForSlot.maxByOrNull { if (slot == "Weapon" || slot == "Ring") it.atk else it.def }
-                if (best != null && !best.isEquipped) {
-                    inv = inv.map {
-                        if (it.slot.equals(slot, ignoreCase = true)) it.copy(isEquipped = (it.id == best.id))
-                        else it
-                    }.toMutableList()
-                    changed = true
-                }
-            }
-        }
-        if (changed) {
-            state = state.copy(inventory = inv)
-            val d = DerivedStats.of(state)
-            val weapon = inv.firstOrNull { it.isEquipped && it.slot == "Weapon" }
-            val armor = inv.firstOrNull { it.isEquipped && it.slot == "Armor" }
-            state = state.copy(
-                player = state.player.copy(
-                    weaponSlot = weapon?.name ?: state.player.weaponSlot,
-                    armorSlot = armor?.name ?: state.player.armorSlot,
-                    weaponDmg = d.weaponDmg,
-                    armorDef = d.armorDef
-                )
-            )
-        }
-        return state
-    }
-
     fun fightPromotionBoss(): GameState {
-        val promo = state.promotion
-        val d = DerivedStats.of(state)
-        val floorOk = state.player.currentFloor >= promo.requiredFloor
-        val gearOk = d.gearScore >= promo.requiredGearScore
-        if (!floorOk || !gearOk) {
-            pushNotification("PROMOTION BLOCKED", "Requirements not yet fulfilled (${state.player.currentFloor}/${promo.requiredFloor} Floor, ${d.gearScore}/${promo.requiredGearScore} GS)", "alert", "FAILED")
-            return state
-        }
-        val nextTier = (promo.tier + 1).coerceAtMost(promo.maxTier)
-        val tierNames = listOf(
-            "Novice Vanguard", "Ironbound Warden", "Crypt Cleaver", "Aether Sentinel",
-            "Dawnbreaker", "Void Sovereign", "Abyssal Juggernaut", "Eclipse Titan",
-            "Solar Warlord", "Apex Immortal"
-        )
-        val nextName = tierNames.getOrElse(nextTier - 1) { "Apex Rank $nextTier" }
-        val nextReqFloor = (promo.requiredFloor + 15).coerceAtMost(100)
-        val nextReqGear = promo.requiredGearScore + 400
-        val nextBonus = promo.bonusPercent + 8
+        val promotion = state.promotion
+        val derived = DerivedStats.of(state)
+        // Uses the deepest unlocked floor, not the floor the hero happens to stand on.
+        val floorOk = state.player.maxUnlockedFloor >= promotion.requiredFloor
+        val gearOk = derived.gearScore >= promotion.requiredGearScore
+        if (!floorOk || !gearOk) return state
+
+        val nextTier = (promotion.tier + 1).coerceAtMost(promotion.maxTier)
+        if (nextTier == promotion.tier) return state
+        val nextBonus = promotion.bonusPercent + 8
 
         state = state.copy(
-            promotion = promo.copy(
+            promotion = promotion.copy(
                 tier = nextTier,
-                tierName = nextName,
-                requiredFloor = nextReqFloor,
-                requiredGearScore = nextReqGear,
+                tierName = Balance.tierName(nextTier),
+                requiredFloor = Balance.requiredFloorFor(nextTier + 1),
+                requiredGearScore = Balance.requiredGearScoreFor(nextTier + 1),
                 bonusPercent = nextBonus
             ),
-            logs = (state.logs + LogEntry(ids.next(), "PROMOTION ACHIEVED: Ascended to $nextName! Unlocked +${nextBonus}% All Stats Bonus.", "milestone")).takeLast(40)
-        )
-        pushNotification(
-            title = "PROMOTION TRIUMPH",
-            message = "Defeated Promotion Boss! Promoted to $nextName (+${nextBonus}% stats).",
-            type = "milestone",
-            status = "SUCCESS"
+            logs = (state.logs + log(
+                LogType.MILESTONE,
+                "PROMOTION ACHIEVED: ascended to ${Balance.tierName(nextTier)} (+$nextBonus% all stats)."
+            )).takeLast(Balance.LOG_CAP)
         )
         return state
     }
 
-    fun harvestPlot(plotId: Int): GameState {
-        val plots = state.harvest.plots.toMutableList()
-        val idx = plots.indexOfFirst { it.id == plotId }
-        if (idx >= 0 && plots[idx].isReady) {
-            val herbName = plots[idx].herbName
-            val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
-            val yieldQty = 2 + extraYield
-            val inv = state.inventory.toMutableList()
-            val existing = inv.indexOfFirst { it.name == herbName }
-            if (existing >= 0) {
-                inv[existing] = inv[existing].copy(count = inv[existing].count + yieldQty)
-            } else {
-                inv.add(InventoryItem("herb_${ids.next()}", herbName, "Resource", yieldQty, 1, "", "Harvested herb", 8L))
-            }
-            plots[idx] = plots[idx].copy(growthProgress = 0f, isReady = false)
-
-            var fXp = state.harvest.farmingXp + 25L
-            var fLvl = state.harvest.farmingLvl
-            val reqXp = Balance.skillXpReq(fLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "BIO-HARVEST: Collected ${yieldQty}x $herbName (+25 Farming XP)", "loot"))
-
-            if (fXp >= reqXp) {
-                fXp -= reqXp
-                fLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Farming reached Level $fLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Farming reached Level $fLvl!", "level")
-            } else {
-                pushNotification("HARVEST COMPLETE", "Harvested ${yieldQty}x $herbName", "craft")
-            }
-
-            state = state.copy(
-                harvest = state.harvest.copy(plots = plots, farmingXp = fXp, farmingLvl = fLvl),
-                inventory = inv,
-                lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + yieldQty),
-                logs = newLogs.takeLast(40)
-            )
-            evaluateAchievements()
-        }
-        return state
-    }
-
-    fun mineVein(veinId: Int): GameState {
-        val veins = state.harvest.veins.toMutableList()
-        val idx = veins.indexOfFirst { it.id == veinId }
-        if (idx >= 0 && veins[idx].isReady) {
-            val oreName = veins[idx].oreName
-            val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
-            val yieldQty = 3 + extraYield
-            val inv = state.inventory.toMutableList()
-            val existing = inv.indexOfFirst { it.name == oreName }
-            if (existing >= 0) {
-                inv[existing] = inv[existing].copy(count = inv[existing].count + yieldQty)
-            } else {
-                inv.add(InventoryItem("ore_${ids.next()}", oreName, "Resource", yieldQty, 1, "", "Mined metal ore", 10L))
-            }
-            veins[idx] = veins[idx].copy(miningProgress = 0f, isReady = false)
-
-            var mXp = state.harvest.miningXp + 30L
-            var mLvl = state.harvest.miningLvl
-            val reqXp = Balance.skillXpReq(mLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "ORE EXTRACTED: Excavated ${yieldQty}x $oreName (+30 Mining XP)", "loot"))
-
-            if (mXp >= reqXp) {
-                mXp -= reqXp
-                mLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Mining reached Level $mLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Mining reached Level $mLvl!", "level")
-            } else {
-                pushNotification("EXTRACTION COMPLETE", "Extracted ${yieldQty}x $oreName", "craft")
-            }
-
-            state = state.copy(
-                harvest = state.harvest.copy(veins = veins, miningXp = mXp, miningLvl = mLvl),
-                inventory = inv,
-                lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + yieldQty),
-                logs = newLogs.takeLast(40)
-            )
-            evaluateAchievements()
-        }
-        return state
-    }
-
-    fun summonMinion(type: String): GameState {
-        val cost = when (type) {
-            "Bone Mage" -> 25L
-            "Dread Knight" -> 50L
-            "Bone Lich" -> 100L
-            else -> 10L
-        }
-        if (state.necro.boneEssence >= cost) {
-            val army = state.necro.army.toMutableList()
-            val existing = army.indexOfFirst { it.type == type }
-            if (existing >= 0) {
-                army[existing] = army[existing].copy(count = army[existing].count + 1)
-            } else {
-                val dps = when (type) {
-                    "Bone Mage" -> 8.0
-                    "Dread Knight" -> 16.0
-                    "Bone Lich" -> 35.0
-                    else -> 4.0
-                }
-                army.add(Minion("minion_${ids.next()}", type, 1, 1, dps, 15.0))
-            }
-
-            var nXp = state.necro.xp + 20L
-            var nLvl = state.necro.lvl
-            val req = Balance.skillXpReq(nLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "NECRO ANIMATION: Reanimated $type into Legion!", "system"))
-
-            if (nXp >= req) {
-                nXp -= req
-                nLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Necromancy reached Level $nLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Necromancy reached Level $nLvl!", "level")
-            } else {
-                pushNotification("REANIMATION COMPLETE", "Animated $type ($cost 💀 consumed)", "craft")
-            }
-
-            state = state.copy(
-                necro = state.necro.copy(
-                    boneEssence = state.necro.boneEssence - cost,
-                    army = army,
-                    xp = nXp,
-                    lvl = nLvl
-                ),
-                logs = newLogs.takeLast(40)
-            )
-            evaluateAchievements()
-        }
-        return state
-    }
-
-    fun mergeBeasts(beastId1: String, beastId2: String): GameState {
-        val beasts = state.beasts.beasts.toMutableList()
-        val b1 = beasts.find { it.id == beastId1 }
-        val b2 = beasts.find { it.id == beastId2 }
-        if (b1 != null && b2 != null && b1.name == b2.name && b1.stars == b2.stars) {
-            beasts.remove(b1)
-            beasts.remove(b2)
-            val upgraded = b1.copy(
-                stars = b1.stars + 1,
-                dps = b1.dps * 1.6,
-                maxHp = b1.maxHp * 1.5,
-                hp = b1.maxHp * 1.5
-            )
-            beasts.add(upgraded)
-
-            var bXp = state.beasts.xp + 60L
-            var bLvl = state.beasts.lvl
-            val req = Balance.skillXpReq(bLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "BEAST SYNTHESIS: Upgraded ${upgraded.name} to ⭐${upgraded.stars}!", "milestone"))
-
-            if (bXp >= req) {
-                bXp -= req
-                bLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Beast Taming reached Level $bLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Beast Taming reached Level $bLvl!", "level")
-            } else {
-                pushNotification("BEAST MERGE SUCCESS", "${upgraded.name} upgraded to ⭐${upgraded.stars}", "tame")
-            }
-
-            state = state.copy(
-                beasts = state.beasts.copy(beasts = beasts, xp = bXp, lvl = bLvl),
-                logs = newLogs.takeLast(40)
-            )
-        }
-        return state
-    }
-
-    fun trainNode(nodeId: String): GameState {
-        val nodes = state.training.nodes.toMutableList()
-        val idx = nodes.indexOfFirst { it.id == nodeId }
-        if (idx >= 0) {
-            val node = nodes[idx]
-            if (state.player.gold >= node.costGold && node.rank < node.maxRank) {
-                nodes[idx] = node.copy(rank = node.rank + 1, costGold = (node.costGold * 1.4).toLong())
-                val p = state.player.copy(gold = state.player.gold - node.costGold)
-
-                var tXp = state.training.xp + 40L
-                var tLvl = state.training.lvl
-                val req = Balance.skillXpReq(tLvl)
-                val newLogs = state.logs.toMutableList()
-                newLogs.add(LogEntry(ids.next(), "DOJO ENHANCEMENT: ${node.name} upgraded to Rank ${node.rank + 1}!", "system"))
-
-                if (tXp >= req) {
-                    tXp -= req
-                    tLvl++
-                    newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Training reached Level $tLvl!", "milestone"))
-                    pushNotification("SKILL LEVEL UP", "Training reached Level $tLvl!", "level")
-                } else {
-                    pushNotification("ENHANCEMENT COMPLETE", "${node.name} Rank ${node.rank + 1} acquired", "gear")
-                }
-
-                state = state.copy(
-                    player = p,
-                    training = state.training.copy(nodes = nodes, xp = tXp, lvl = tLvl),
-                    logs = newLogs.takeLast(40)
-                )
-            }
-        }
-        return state
-    }
-
-    fun equipItem(itemId: String): GameState {
-        val inv = state.inventory.toMutableList()
-        val idx = inv.indexOfFirst { it.id == itemId }
-        if (idx >= 0) {
-            val item = inv[idx]
-            if (item.category == "Equipment") {
-                var p = state.player
-                if (item.slot == "Weapon") {
-                    val prevWeapon = p.weaponSlot
-                    for (i in inv.indices) {
-                        if (inv[i].slot == "Weapon" && inv[i].isEquipped) {
-                            inv[i] = inv[i].copy(isEquipped = false)
-                        }
-                    }
-                    inv[idx] = item.copy(isEquipped = true)
-                    val atkVal = if (item.atk > 0.0) item.atk else item.tier * 12.0
-                    p = p.copy(weaponSlot = item.name, weaponDmg = atkVal)
-                    pushNotification("EQUIP: WEAPON", "Equipped ${item.name}", "gear", "SUCCESS", "+${atkVal.toInt()} ATK | Replaced $prevWeapon")
-                    val newLogs = state.logs + LogEntry(ids.next(), "GEAR EQUIPPED: ${item.name.uppercase()} assigned to Weapon Slot", "system")
-                    state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
-                } else if (item.slot == "Armor") {
-                    val prevArmor = p.armorSlot
-                    for (i in inv.indices) {
-                        if (inv[i].slot == "Armor" && inv[i].isEquipped) {
-                            inv[i] = inv[i].copy(isEquipped = false)
-                        }
-                    }
-                    inv[idx] = item.copy(isEquipped = true)
-                    val defVal = if (item.def > 0.0) item.def else item.tier * 8.0
-                    p = p.copy(armorSlot = item.name, armorDef = defVal)
-                    pushNotification("EQUIP: ARMOR", "Equipped ${item.name}", "gear", "SUCCESS", "+${defVal.toInt()} DEF | Replaced $prevArmor")
-                    val newLogs = state.logs + LogEntry(ids.next(), "GEAR EQUIPPED: ${item.name.uppercase()} assigned to Armor Slot", "system")
-                    state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
-                }
-            } else if (item.category == "Potion") {
-                usePotion(itemId)
-            }
-        }
-        return state
-    }
-
-    fun unequipItem(itemId: String): GameState {
-        val inv = state.inventory.toMutableList()
-        val idx = inv.indexOfFirst { it.id == itemId }
-        if (idx >= 0 && inv[idx].isEquipped) {
-            val item = inv[idx]
-            inv[idx] = item.copy(isEquipped = false)
-            var p = state.player
-            if (item.slot == "Weapon") {
-                p = p.copy(weaponSlot = "Bare Hands", weaponDmg = 2.0)
-            } else if (item.slot == "Armor") {
-                p = p.copy(armorSlot = "None", armorDef = 0.0)
-            }
-            pushNotification("UNEQUIPPED", "Removed ${item.name} from ${item.slot} slot", "gear")
-            val newLogs = state.logs + LogEntry(ids.next(), "GEAR UNEQUIPPED: ${item.name.uppercase()} unequipped", "system")
-            state = state.copy(player = p, inventory = inv, logs = newLogs.takeLast(40))
-        }
-        return state
-    }
-
-    fun usePotion(itemId: String): GameState {
-        val inv = state.inventory.toMutableList()
-        val idx = inv.indexOfFirst { it.id == itemId }
-        if (idx >= 0) {
-            val item = inv[idx]
-            val derived = DerivedStats.of(state)
-            val healAmount = when (item.name) {
-                "Minor Health Flask", "Lesser Healing Potion" -> 50.0
-                "Bloodroot Tonic" -> 80.0
-                "Moonlight Philter" -> 150.0
-                else -> 75.0
-            }
-            val healed = (state.player.hp + healAmount).coerceAtMost(derived.maxHp)
-            if (item.count > 1) {
-                inv[idx] = item.copy(count = item.count - 1)
-            } else {
-                inv.removeAt(idx)
-            }
-            pushNotification("POTION DEPLOYED", "Restored ${healAmount.toInt()} HP", "gain")
-            val newLogs = state.logs + LogEntry(ids.next(), "POTION DEPLOYED: Restored ${healAmount.toInt()} HP", "gain")
-            state = state.copy(
-                player = state.player.copy(hp = healed),
-                inventory = inv,
-                logs = newLogs.takeLast(40)
-            )
-        }
-        return state
-    }
-
-    fun sellItem(itemId: String, count: Int = 1): GameState {
-        val inv = state.inventory.toMutableList()
-        val idx = inv.indexOfFirst { it.id == itemId }
-        if (idx >= 0) {
-            val item = inv[idx]
-            val actualCount = count.coerceIn(1, item.count)
-            val goldEarned = actualCount * item.sellValue
-            if (item.count > actualCount) {
-                inv[idx] = item.copy(count = item.count - actualCount)
-            } else {
-                inv.removeAt(idx)
-            }
-            state = state.copy(
-                player = state.player.copy(gold = state.player.gold + goldEarned),
-                inventory = inv
-            )
-            pushNotification("ITEM SOLD", "Sold $actualCount x ${item.name} for +$goldEarned 🪙", "gain")
-        }
-        return state
-    }
-
-    fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int): GameState {
-        val inv = state.inventory.toMutableList()
-        val oreIdx = inv.indexOfFirst { it.name == reqOre && it.count >= reqQty }
-        if (oreIdx >= 0) {
-            // Check alloy recycling upgrade (12% chance to conserve materials)
-            val recycleRank = state.armory.upgrades.firstOrNull { it.id == "resource_saving" }?.rank ?: 0
-            val didRecycle = recycleRank > 0 && random.nextDouble() < (0.12 * recycleRank).coerceAtMost(0.60)
-            if (!didRecycle) {
-                val ore = inv[oreIdx]
-                if (ore.count > reqQty) {
-                    inv[oreIdx] = ore.copy(count = ore.count - reqQty)
-                } else {
-                    inv.removeAt(oreIdx)
-                }
-            }
-
-            val forgeQualityRank = state.armory.upgrades.firstOrNull { it.id == "forge_quality" }?.rank ?: 0
-            val qualityMult = 1.0 + (0.12 * forgeQualityRank)
-            val (atk, def, statDesc) = if (slot == "Weapon") {
-                val atkVal = (tier * 12.0) * qualityMult
-                Triple(atkVal, 0.0, "+${atkVal.toInt()} Damage")
-            } else {
-                val defVal = (tier * 8.0) * qualityMult
-                Triple(0.0, defVal, "+${defVal.toInt()} Defense")
-            }
-            val newItem = InventoryItem(
-                id = "craft_${ids.next()}",
-                name = name,
-                category = "Equipment",
-                count = 1,
-                tier = tier,
-                slot = slot,
-                statDesc = statDesc,
-                sellValue = tier * 35L,
-                isEquipped = false,
-                atk = atk,
-                def = def
-            )
-            inv.add(newItem)
-
-            var sXp = state.armory.smithingXp + 50L
-            var sLvl = state.armory.smithingLvl
-            val req = Balance.skillXpReq(sLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "CYBER FORGE SUCCESS: Forged $name (Tier $tier)!", "milestone"))
-
-            if (sXp >= req) {
-                sXp -= req
-                sLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Armory Smithing reached Level $sLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Armory Smithing reached Level $sLvl!", "level")
-            } else {
-                pushNotification("FORGE SUCCESS", "Forged $name ($statDesc)", "craft")
-            }
-
-            state = state.copy(
-                inventory = inv,
-                armory = state.armory.copy(smithingXp = sXp, smithingLvl = sLvl),
-                lifetime = state.lifetime.copy(forged = state.lifetime.forged + 1),
-                logs = newLogs.takeLast(40)
-            )
-        } else {
-            val have = inv.find { it.name == reqOre }?.count ?: 0
-            pushNotification("FORGE FAILED", "REQUIRES ${reqQty}x $reqOre (HAVE $have)", "combat", "FAILED")
-        }
-        return state
-    }
-
-    fun brewPotion(name: String, reqHerb: String, reqQty: Int): GameState {
-        val inv = state.inventory.toMutableList()
-        val herbIdx = inv.indexOfFirst { it.name == reqHerb && it.count >= reqQty }
-        if (herbIdx >= 0) {
-            val herb = inv[herbIdx]
-            if (herb.count > reqQty) {
-                inv[herbIdx] = herb.copy(count = herb.count - reqQty)
-            } else {
-                inv.removeAt(herbIdx)
-            }
-            val healDesc = when (name) {
-                "Minor Health Flask" -> "Restores 50 HP"
-                "Bloodroot Tonic" -> "Restores 80 HP"
-                "Moonlight Philter" -> "Restores 150 HP"
-                else -> "Restores 75 HP"
-            }
-            inv.add(InventoryItem("potion_${ids.next()}", name, "Potion", 1, 1, "", healDesc, 15L))
-
-            var hXp = state.armory.herbloreXp + 40L
-            var hLvl = state.armory.herbloreLvl
-            val req = Balance.skillXpReq(hLvl)
-            val newLogs = state.logs.toMutableList()
-            newLogs.add(LogEntry(ids.next(), "ALCHEMY SYNTHESIS: Brewed $name!", "milestone"))
-
-            if (hXp >= req) {
-                hXp -= req
-                hLvl++
-                newLogs.add(LogEntry(ids.next(), "SKILL LEVEL UP: Herblore reached Level $hLvl!", "milestone"))
-                pushNotification("SKILL LEVEL UP", "Herblore reached Level $hLvl!", "level")
-            } else {
-                pushNotification("ALCHEMY SUCCESS", "Brewed $name successfully", "craft")
-            }
-
-            state = state.copy(
-                inventory = inv,
-                armory = state.armory.copy(herbloreXp = hXp, herbloreLvl = hLvl),
-                lifetime = state.lifetime.copy(brewed = state.lifetime.brewed + 1),
-                logs = newLogs.takeLast(40)
-            )
-        } else {
-            val have = inv.find { it.name == reqHerb }?.count ?: 0
-            pushNotification("ALCHEMY FAILED", "REQUIRES ${reqQty}x $reqHerb (HAVE $have)", "combat", "FAILED")
-        }
-        return state
-    }
-
-    fun toggleEssenceAegis(): GameState {
-        val next = !state.essence.aegisActive
-        if (next && state.essence.faith <= 0) {
-            pushNotification("ESSENCE AEGIS", "Insufficient faith to activate Aegis (0 Faith)", "combat", "ALERT")
-            return state
-        }
-        state = state.copy(essence = state.essence.copy(aegisActive = next))
-        pushNotification("ESSENCE AEGIS", if (next) "Aegis barrier activated (-20% incoming damage)" else "Aegis barrier deactivated", "system")
-        return state
-    }
-
-    fun toggleSanctifiedAegis(): GameState = toggleEssenceAegis()
-
-    fun upgradeEssenceSmite(): GameState {
-        val cost = (25.0 * 1.5.pow(state.essence.smiteLevel.toDouble())).toLong()
-        if (state.essence.faith >= cost) {
-            val nextLvl = state.essence.smiteLevel + 1
-            state = state.copy(
-                essence = state.essence.copy(
-                    faith = state.essence.faith - cost,
-                    smiteLevel = nextLvl
-                )
-            )
-            pushNotification("SMITE UPGRADE", "Holy Smite upgraded to Level $nextLvl (+${nextLvl * 3} DPS)", "milestone")
-        } else {
-            pushNotification("UPGRADE FAILED", "Requires $cost Faith (Have ${state.essence.faith})", "combat", "ALERT")
-        }
-        return state
-    }
-
-    fun upgradeSanctifiedSmite(): GameState = upgradeEssenceSmite()
-
-    fun upgradeDiscipline(category: String, upgradeId: String): GameState {
-        when (category.uppercase()) {
-            "HARVEST" -> {
-                val upg = state.harvest.upgrades.firstOrNull { it.id == upgradeId } ?: return state
-                if (upg.rank >= upg.maxRank) return state
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
-                if (state.player.gold < cost) {
-                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
-                    return state
-                }
-                val updatedUpgs = state.harvest.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
-                state = state.copy(
-                    player = state.player.copy(gold = state.player.gold - cost),
-                    harvest = state.harvest.copy(upgrades = updatedUpgs)
-                )
-                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
-            }
-            "ARMORY" -> {
-                val upg = state.armory.upgrades.firstOrNull { it.id == upgradeId } ?: return state
-                if (upg.rank >= upg.maxRank) return state
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
-                if (state.player.gold < cost) {
-                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
-                    return state
-                }
-                val updatedUpgs = state.armory.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
-                state = state.copy(
-                    player = state.player.copy(gold = state.player.gold - cost),
-                    armory = state.armory.copy(upgrades = updatedUpgs)
-                )
-                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
-            }
-            "GENESIS_BEAST" -> {
-                val upg = state.beasts.upgrades.firstOrNull { it.id == upgradeId } ?: return state
-                if (upg.rank >= upg.maxRank) return state
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
-                if (state.player.gold < cost) {
-                    pushNotification("UPGRADE FAILED", "Requires $cost Gold (Have ${state.player.gold})", "combat", "ALERT")
-                    return state
-                }
-                val updatedUpgs = state.beasts.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
-                state = state.copy(
-                    player = state.player.copy(gold = state.player.gold - cost),
-                    beasts = state.beasts.copy(upgrades = updatedUpgs)
-                )
-                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
-            }
-            "GENESIS_NECRO" -> {
-                val upg = state.necro.upgrades.firstOrNull { it.id == upgradeId } ?: return state
-                if (upg.rank >= upg.maxRank) return state
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
-                if (state.necro.boneEssence < cost) {
-                    pushNotification("UPGRADE FAILED", "Requires $cost Bone Essence (Have ${state.necro.boneEssence})", "combat", "ALERT")
-                    return state
-                }
-                val updatedUpgs = state.necro.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
-                state = state.copy(
-                    necro = state.necro.copy(
-                        boneEssence = state.necro.boneEssence - cost,
-                        upgrades = updatedUpgs
-                    )
-                )
-                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
-            }
-            "ESSENCE" -> {
-                val upg = state.essence.upgrades.firstOrNull { it.id == upgradeId } ?: return state
-                if (upg.rank >= upg.maxRank) return state
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
-                if (state.essence.faith < cost) {
-                    pushNotification("UPGRADE FAILED", "Requires $cost Faith (Have ${state.essence.faith})", "combat", "ALERT")
-                    return state
-                }
-                val updatedUpgs = state.essence.upgrades.map { if (it.id == upgradeId) it.copy(rank = it.rank + 1) else it }
-                state = state.copy(
-                    essence = state.essence.copy(
-                        faith = state.essence.faith - cost,
-                        upgrades = updatedUpgs
-                    )
-                )
-                pushNotification("UPGRADE COMPLETE", "${upg.name} upgraded to Rank ${upg.rank + 1}", "milestone")
-            }
-        }
-        return state
-    }
-
-    fun activateTalent(talentId: String): GameState {
-        val t = state.talent.activeTalents.firstOrNull { it.id == talentId } ?: return state
-        if (t.cooldownRemaining > 0.0) {
-            pushNotification("ON COOLDOWN", "${t.name} on cooldown (${t.cooldownRemaining.toInt()}s remaining)", "combat", "ALERT")
-            return state
-        }
-        val derived = DerivedStats.of(state)
-        var p = state.player
-        var m = state.monster
-
-        when (talentId) {
-            "nanite_heal" -> {
-                val healHp = derived.maxHp * 0.40
-                val healShield = derived.maxShield * 0.25
-                p = p.copy(
-                    hp = (p.hp + healHp).coerceAtMost(derived.maxHp),
-                    shield = (p.shield + healShield).coerceAtMost(derived.maxShield)
-                )
-                pushNotification("NANITE REPAIR", "Restored +${healHp.toInt()} HP & +${healShield.toInt()} Shield!", "milestone")
-            }
-            "mana_rampage" -> {
-                if (p.mana < 25.0) {
-                    pushNotification("INSUFFICIENT MANA", "Mana Tempest requires 25 Mana", "combat", "ALERT")
-                    return state
-                }
-                p = p.copy(mana = p.mana - 25.0)
-                val burstDamage = derived.physicalDamage * 2.5
-                var mShield = m.shield
-                var mHp = m.hp
-                if (mShield > 0.0) {
-                    val absorb = burstDamage.coerceAtMost(mShield)
-                    mShield -= absorb
-                    mHp -= (burstDamage - absorb)
-                } else {
-                    mHp -= burstDamage
-                }
-                m = m.copy(shield = mShield.coerceAtLeast(0.0), hp = mHp)
-                pushNotification("MANA TEMPEST", "Unleashed devastating cosmic storm for ${burstDamage.toInt()} Damage!", "milestone")
-            }
-            "aegis_bastion" -> {
-                val barrier = derived.maxShield * 0.60
-                p = p.copy(shield = (p.shield + barrier).coerceAtMost(derived.maxShield * 1.5))
-                pushNotification("AEGIS BASTION", "Deployed reinforced barrier (+${barrier.toInt()} Shield)!", "milestone")
-            }
-            "berserk" -> {
-                pushNotification("BERSERK OVERDRIVE", "Overclocking physical output: +50% ATK Speed, +35% DMG!", "milestone")
-            }
-            "support_overclock" -> {
-                pushNotification("LEGION OVERCLOCK", "Minions and Companion Beasts deal 300% DPS!", "milestone")
-            }
-            "arcane_enchant" -> {
-                pushNotification("ENCHANTMENT MATRIX", "Crit Chance +25% and Crit Damage +50%!", "milestone")
-            }
-        }
-
-        val updatedTalents = state.talent.activeTalents.map {
-            if (it.id == talentId) {
-                it.copy(
-                    isActive = t.durationSeconds > 0.0,
-                    durationRemaining = t.durationSeconds,
-                    cooldownRemaining = t.cooldownSeconds
-                )
-            } else it
-        }
-
+    fun claimAchievement(achId: String): GameState {
+        val achievements = state.achievements.toMutableList()
+        val idx = achievements.indexOfFirst { it.id == achId }
+        if (idx < 0) return state
+        val achievement = achievements[idx]
+        if (!achievement.isUnlocked || achievement.isClaimed) return state
+        achievements[idx] = achievement.copy(isClaimed = true)
         state = state.copy(
-            player = p,
-            monster = m,
-            talent = state.talent.copy(activeTalents = updatedTalents)
+            achievements = achievements,
+            player = state.player.copy(gold = state.player.gold + achievement.rewardGold)
         )
-        return state
-    }
-
-    fun upgradeTalent(talentId: String): GameState {
-        if (state.talent.talentPoints <= 0) {
-            pushNotification("TALENT SYSTEM", "No Talent Points available. Level up or defeat bosses to earn points!", "combat", "ALERT")
-            return state
-        }
-        val active = state.talent.activeTalents.firstOrNull { it.id == talentId }
-        val struggle = state.talent.struggleTalents.firstOrNull { it.id == talentId }
-
-        if (active != null) {
-            if (active.rank >= active.maxRank) return state
-            val updated = state.talent.activeTalents.map { if (it.id == talentId) it.copy(rank = it.rank + 1) else it }
-            state = state.copy(
-                talent = state.talent.copy(
-                    talentPoints = state.talent.talentPoints - 1,
-                    activeTalents = updated
-                )
-            )
-            pushNotification("TALENT UPGRADED", "${active.name} enhanced to Rank ${active.rank + 1}!", "milestone")
-        } else if (struggle != null) {
-            if (struggle.rank >= struggle.maxRank) return state
-            val updated = state.talent.struggleTalents.map { if (it.id == talentId) it.copy(rank = it.rank + 1) else it }
-            state = state.copy(
-                talent = state.talent.copy(
-                    talentPoints = state.talent.talentPoints - 1,
-                    struggleTalents = updated
-                )
-            )
-            pushNotification("STRUGGLE ADAPTATION", "${struggle.name} enhanced to Rank ${struggle.rank + 1}!", "milestone")
-        }
-        return state
-    }
-
-    fun rerollSlayerTask(): GameState {
-        if (state.slayer.slayerPoints >= 1) {
-            val nextTargetFloor = (state.player.currentFloor + random.nextInt(-3, 2)).coerceIn(1, 100)
-            val nextMonster = Balance.generateMonsterForFloor(nextTargetFloor)
-            val nextTask = SlayerTask(
-                targetName = nextMonster.name,
-                currentKills = 0,
-                requiredKills = random.nextInt(10, 21),
-                rewardGold = (nextTargetFloor * 25L).coerceAtLeast(100L),
-                rewardPoints = (nextTargetFloor / 5 + 3).coerceIn(3, 15),
-                isCompleted = false
-            )
-            state = state.copy(
-                slayer = state.slayer.copy(
-                    slayerPoints = state.slayer.slayerPoints - 1,
-                    currentTask = nextTask
-                )
-            )
-            pushNotification("SLAYER REROLL", "Contract rerolled to target ${nextTask.targetName}", "system")
-        }
         return state
     }
 
@@ -1509,27 +1554,203 @@ class GameEngine(
         return state
     }
 
-    fun exportSaveJson(): String {
-        return jsonSerializer.encodeToString(state)
-    }
+    fun exportSaveJson(): String = saves.exportText(snapshotForSave(nowSnapshot()))
 
     fun importSaveJson(jsonString: String): Boolean {
-        return try {
-            val imported = jsonSerializer.decodeFromString<GameState>(jsonString)
-            state = imported.copy(pendingOfflineLoot = null)
-            ids.reset(state.meta.nextId)
-            pushNotification("SAVE RESTORED", "Game state successfully imported from archive", "system")
-            true
-        } catch (e: Exception) {
-            pushNotification("IMPORT ERROR", "Invalid save format: ${e.localizedMessage ?: "Parse failure"}", "combat")
-            false
-        }
+        val imported = saves.decode(jsonString.trim().toByteArray(Charsets.UTF_8)) ?: return false
+        restore(imported)
+        state = state.copy(
+            pendingOfflineLoot = null,
+            logs = (state.logs + log(LogType.SYSTEM, "SAVE RESTORED: game state imported from archive."))
+                .takeLast(Balance.LOG_CAP)
+        )
+        return true
     }
 
     fun resetGame(): GameState {
-        state = GameState()
-        ids.reset(1L)
-        pushNotification("SYSTEM RESET", "Game state reset to initial factory protocol", "system")
+        restore(GameState())
+        state = state.copy(
+            logs = (state.logs + log(LogType.SYSTEM, "SYSTEM RESET: factory protocol restored."))
+                .takeLast(Balance.LOG_CAP)
+        )
         return state
+    }
+
+    // ------------------------------------------------------------------ achievements
+
+    /**
+     * Recomputes progress only for achievements whose underlying counter changed, so a 4 Hz tick no
+     * longer rebuilds the whole list (and the whole state object) on every frame.
+     */
+    private fun evaluateAchievements(force: Boolean = false) {
+        var changed = false
+        val updated = state.achievements.map { achievement ->
+            if (achievement.isUnlocked) {
+                achievement
+            } else {
+                val original = achievement.progress
+                val progress = minOf(progressFor(achievement.id), achievement.target)
+                val unlocked = progress >= achievement.target
+                if (!force && progress == original && !unlocked) {
+                    achievement
+                } else {
+                    if (progress != original || unlocked) changed = true
+                    achievement.copy(progress = progress, isUnlocked = unlocked)
+                }
+            }
+        }
+        if (changed) state = state.copy(achievements = updated)
+    }
+
+    private fun progressFor(id: String): Int = when (id) {
+        "ach_first_blood" -> state.lifetime.totalKills.toInt()
+        "ach_floor_10" -> state.player.maxUnlockedFloor
+        // The starting Dusk Wolf counts; the old lifetime-only figure never included it.
+        "ach_tamer" -> state.lifetime.beastsTamed.toInt() + 1
+        "ach_necro" -> state.necro.army.sumOf { it.count }
+        "ach_miner" -> state.lifetime.oresMined.toInt()
+        else -> 0
+    }
+
+    // ------------------------------------------------------------------ save helpers
+
+    companion object {
+        private val ID_SUFFIX = Regex("""[_-](\d+)$""")
+
+        /** Highest issued id across logs, inventory, beasts and minions, plus the reserved floor. */
+        fun nextIdFrom(source: GameState): Long {
+            var max = Balance.RESERVED_ID_FLOOR - 1L
+            source.logs.forEach { max = maxOf(max, it.id) }
+            fun scan(ids: List<String>) {
+                ids.forEach { id ->
+                    ID_SUFFIX.find(id)?.groupValues?.get(1)?.toLongOrNull()?.let { max = maxOf(max, it) }
+                }
+            }
+            scan(source.inventory.map { it.id })
+            scan(source.beasts.beasts.map { it.id })
+            scan(source.necro.army.map { it.id })
+            return maxOf(max + 1L, source.meta.nextId, Balance.RESERVED_ID_FLOOR)
+        }
+
+        /** Clamps a loaded or imported state into a legal, self-consistent shape. */
+        fun sanitize(input: GameState): GameState {
+            val maxFloor = input.player.maxUnlockedFloor.coerceIn(1, Balance.MAX_FLOOR)
+            val currentFloor = input.player.currentFloor.coerceIn(1, maxFloor)
+            val required = Balance.killsRequiredFor(currentFloor)
+
+            val player = input.player.copy(
+                lvl = input.player.lvl.coerceAtLeast(1),
+                xp = input.player.xp.coerceAtLeast(0L),
+                gold = input.player.gold.coerceAtLeast(0L),
+                diamonds = input.player.diamonds.coerceAtLeast(0L),
+                hp = input.player.hp.coerceAtLeast(0.0),
+                shield = input.player.shield.coerceAtLeast(0.0),
+                mana = input.player.mana.coerceAtLeast(0.0),
+                currentFloor = currentFloor,
+                maxUnlockedFloor = maxFloor,
+                killsOnFloor = input.player.killsOnFloor.coerceIn(0, required),
+                killsRequired = required,
+                recoverLeft = input.player.recoverLeft.coerceIn(0.0, Balance.RECOVERY_SECONDS),
+                failuresInRow = input.player.failuresInRow.coerceAtLeast(0)
+            )
+
+            val army = mutableListOf<com.aistudio.trueidle.model.Minion>()
+            var remaining = Balance.MINION_CAP
+            for (minion in input.necro.army) {
+                if (remaining <= 0) break
+                val count = minion.count.coerceIn(1, remaining)
+                remaining -= count
+                army += minion.copy(count = count, lvl = minion.lvl.coerceAtLeast(1))
+            }
+
+            fun clampUpgrades(list: List<DisciplineUpgrade>) =
+                list.map { it.copy(rank = it.rank.coerceIn(0, it.maxRank)) }
+
+            return input.copy(
+                player = player,
+                monster = if (input.monster.hp <= 0.0) Balance.generateMonsterForFloor(currentFloor) else input.monster,
+                necro = input.necro.copy(
+                    lvl = input.necro.lvl.coerceAtLeast(1),
+                    xp = input.necro.xp.coerceAtLeast(0L),
+                    boneEssence = input.necro.boneEssence.coerceAtLeast(0L),
+                    army = army,
+                    upgrades = clampUpgrades(input.necro.upgrades)
+                ),
+                harvest = input.harvest.copy(
+                    farmingLvl = input.harvest.farmingLvl.coerceAtLeast(1),
+                    farmingXp = input.harvest.farmingXp.coerceAtLeast(0L),
+                    miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
+                    miningXp = input.harvest.miningXp.coerceAtLeast(0L),
+                    plots = input.harvest.plots.map {
+                        it.copy(growthProgress = it.growthProgress.coerceIn(0f, 1f))
+                    },
+                    veins = input.harvest.veins.map {
+                        it.copy(miningProgress = it.miningProgress.coerceIn(0f, 1f), reqLvl = it.reqLvl.coerceAtLeast(1))
+                    },
+                    upgrades = clampUpgrades(input.harvest.upgrades)
+                ),
+                armory = input.armory.copy(
+                    smithingLvl = input.armory.smithingLvl.coerceAtLeast(1),
+                    herbloreLvl = input.armory.herbloreLvl.coerceAtLeast(1),
+                    smithingXp = input.armory.smithingXp.coerceAtLeast(0L),
+                    herbloreXp = input.armory.herbloreXp.coerceAtLeast(0L),
+                    upgrades = clampUpgrades(input.armory.upgrades)
+                ),
+                training = input.training.copy(
+                    lvl = input.training.lvl.coerceAtLeast(1),
+                    xp = input.training.xp.coerceAtLeast(0L),
+                    nodes = input.training.nodes.map { it.copy(rank = it.rank.coerceIn(0, it.maxRank)) }
+                ),
+                essence = input.essence.copy(
+                    lvl = input.essence.lvl.coerceAtLeast(1),
+                    xp = input.essence.xp.coerceAtLeast(0L),
+                    faith = input.essence.faith.coerceAtLeast(0L),
+                    faithRemainder = input.essence.faithRemainder.coerceIn(0.0, 1.0),
+                    smiteLevel = input.essence.smiteLevel.coerceAtLeast(1),
+                    upgrades = clampUpgrades(input.essence.upgrades)
+                ),
+                beasts = input.beasts.copy(
+                    lvl = input.beasts.lvl.coerceAtLeast(1),
+                    xp = input.beasts.xp.coerceAtLeast(0L),
+                    beasts = input.beasts.beasts.take(Balance.BEAST_CAP),
+                    upgrades = clampUpgrades(input.beasts.upgrades)
+                ),
+                talent = input.talent.copy(
+                    talentPoints = input.talent.talentPoints.coerceAtLeast(0),
+                    struggleDamageTaken = input.talent.struggleDamageTaken.coerceAtLeast(0L),
+                    struggleDamageFraction = input.talent.struggleDamageFraction.coerceIn(0.0, 1.0),
+                    activeTalents = clampTalents(input.talent.activeTalents),
+                    struggleTalents = clampTalents(input.talent.struggleTalents)
+                ),
+                slayer = input.slayer.copy(
+                    lvl = input.slayer.lvl.coerceAtLeast(1),
+                    xp = input.slayer.xp.coerceAtLeast(0L),
+                    slayerPoints = input.slayer.slayerPoints.coerceAtLeast(0),
+                    currentTask = input.slayer.currentTask.copy(
+                        currentKills = input.slayer.currentTask.currentKills.coerceAtLeast(0),
+                        requiredKills = input.slayer.currentTask.requiredKills.coerceAtLeast(1)
+                    )
+                ),
+                promotion = input.promotion.copy(
+                    tier = input.promotion.tier.coerceIn(1, input.promotion.maxTier),
+                    bonusPercent = input.promotion.bonusPercent.coerceAtLeast(0),
+                    requiredGearScore = input.promotion.requiredGearScore.coerceAtLeast(0)
+                ),
+                automation = input.automation.copy(
+                    craftMaterialUsagePct = input.automation.craftMaterialUsagePct.coerceIn(0, 100)
+                ),
+                meta = input.meta.copy(
+                    nextId = nextIdFrom(input).coerceAtLeast(Balance.RESERVED_ID_FLOOR)
+                )
+            )
+        }
+
+        private fun clampTalents(list: List<Talent>) = list.map {
+            it.copy(
+                rank = it.rank.coerceIn(0, it.maxRank),
+                cooldownRemaining = it.cooldownRemaining.coerceAtLeast(0.0),
+                durationRemaining = it.durationRemaining.coerceAtLeast(0.0)
+            )
+        }
     }
 }

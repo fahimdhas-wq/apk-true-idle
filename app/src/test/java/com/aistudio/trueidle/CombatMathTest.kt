@@ -9,7 +9,6 @@ import com.aistudio.trueidle.model.Minion
 import com.aistudio.trueidle.model.Monster
 import com.aistudio.trueidle.model.NecromancyState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CombatMathTest {
@@ -40,7 +39,7 @@ class CombatMathTest {
             tameChance = 0.15,
             smiteBonus = 0.0
         )
-        // (str * 1.2 + weaponDmg + smiteBonus) * atkSpeed = (12 + 8 + 0) * 1.0 = 20.0
+        // (str * 1.2 + weaponDmg) * atkSpeed = (12 + 8) * 1.0 = 20.0
         assertEquals(20.0, CombatMath.heroDps(derived), 1e-6)
     }
 
@@ -78,7 +77,7 @@ class CombatMathTest {
         val armyDps = CombatMath.armyDps(necro) // 10.0
         val expected = heroDps + beastDps + armyDps // 40.0
 
-        assertEquals(40.0, CombatMath.totalDps(state, derived), 1e-6)
+        assertEquals(expected, CombatMath.totalDps(state, derived), 1e-6)
     }
 
     @Test

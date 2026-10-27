@@ -14,16 +14,24 @@ True IDLE features 10 interconnected skills and systems where progression in one
 - **Achievements & Settings**: Offline progress calculation and persistent state.
 
 ## Tech Stack
-- **Language**: Kotlin 2.1
+- **Language**: Kotlin (see `gradle/libs.versions.toml` for the pinned version)
 - **UI Framework**: Jetpack Compose with Material Design 3
-- **Build System**: Gradle 9.3.1 with Kotlin DSL (`build.gradle.kts`)
-- **Android Target**: SDK 36, minSdk 26
-- **Architecture**: MVVM with `StateFlow` and Coroutine-driven game loop (4 ticks/sec)
+- **Build System**: Gradle 8.14.6 with Kotlin DSL, driven by the committed wrapper
+- **Android Target**: SDK 36, minSdk 26, JDK 21
+- **Architecture**: MVVM with `StateFlow` and a coroutine-driven game loop (4 ticks/sec, 0.25 s per tick)
 
 ## Building the App
-Run the standard Gradle command:
+Always build through the wrapper so everyone (and CI) uses the same Gradle version:
 ```bash
-gradle :app:assembleDebug
+./gradlew :app:assembleDebug
+```
+Run the unit tests and lint before pushing; CI gates on both:
+```bash
+./gradlew testDebugUnitTest lintDebug
 ```
 The resulting debug APK is located at:
 `app/build/outputs/apk/debug/app-debug.apk`
+
+A release build is signed only when a `keystore.properties` file exists at the repo root
+(`storeFile`, `storePassword`, `keyAlias`, `keyPassword`); without it the release output is
+left unsigned. The absolute keystore path should be kept out of version control.

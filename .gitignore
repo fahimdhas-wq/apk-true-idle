@@ -1,55 +1,35 @@
-# Dependencies
-node_modules
+# Android / Gradle
+.gradle/
+build/
+app/build/
+.kotlin/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
 
-# Build output
-dist
-dist-ssr
+# Local SDK location and machine-specific build config (never commit)
+local.properties
+keystore.properties
+*.jks
+*.keystore
+debug.keystore
+debug.keystore.base64
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Editor / OS
-.vscode/*
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
 !.vscode/extensions.json
-.idea
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
 # Local env
 .env
 .env.*
 
-# Playwright MCP artifacts (console logs, page snapshots — must never be committed)
-.playwright-mcp/
-playwright-report/
-test-results/
-
-# AI/design scratch files (screenshots are unreadable to the AI — never commit them)
-shots/
-/*.png
-
-# Dev server / local helpers
-dev-server.log
-start-dev.bat
-
-# Local agent/tooling config (machine-specific, never commit)
-.mcp.json
-.pi/
-.opencode/
-
-# Android & Gradle
-.gradle/
-build/
-app/build/
-*.apk
-*.aab
-debug.keystore
-debug.keystore.base64
-
+# Logs / scratch
+*.log

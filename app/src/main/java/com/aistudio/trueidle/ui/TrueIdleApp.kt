@@ -1,5 +1,7 @@
 package com.aistudio.trueidle.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,34 +9,47 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
+import com.aistudio.trueidle.ui.components.SupportKind
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
 import com.aistudio.trueidle.viewmodel.GameViewModel
 
-enum class TrueIdleTab(val label: String, val icon: ImageVector) {
-    COMBAT("COMBAT", Icons.Default.SportsMartialArts),
-    SKILLS("SKILLS", Icons.Default.AutoFixHigh),
-    STATS("STATS", Icons.Default.BarChart),
-    INVENTORY("ARSENAL", Icons.Default.Inventory2),
-    SETTINGS("SYSTEM", Icons.Default.Settings)
+enum class TrueIdleTab(@StringRes val labelRes: Int, val icon: ImageVector) {
+    COMBAT(R.string.tab_combat, Icons.Default.PlayArrow),
+    SKILLS(R.string.tab_skills, Icons.Default.Build),
+    STATS(R.string.tab_stats, Icons.Default.Star),
+    INVENTORY(R.string.tab_arsenal, Icons.Default.ShoppingCart),
+    SETTINGS(R.string.tab_system, Icons.Default.Settings)
 }
 
 @Composable
@@ -44,12 +59,50 @@ fun TrueIdleApp(
 ) {
     val state by viewModel.gameState.collectAsStateWithLifecycle()
     val logFilter by viewModel.logFilter.collectAsStateWithLifecycle()
+    val recoveryReason by viewModel.recoveryReason.collectAsStateWithLifecycle()
     var currentTab by rememberSaveable { mutableStateOf(TrueIdleTab.COMBAT) }
-    // Offline Loot Claim Modal
-    if (state.pendingOfflineLoot != null) {
+    // Hoisted so the Support module can open Genesis directly instead of the overview.
+    var skillsSection by rememberSaveable { mutableStateOf(SkillSubSection.OVERVIEW) }
+
+    // System back returns to Combat rather than dropping out of the app from any tab.
+    BackHandler(enabled = currentTab != TrueIdleTab.COMBAT) {
+        currentTab = TrueIdleTab.COMBAT
+    }
+
+    // Offline report modal. Only the explicit claim button banks the rewards.
+    val pendingLoot = state.pendingOfflineLoot
+    if (pendingLoot != null) {
         OfflineLootDialog(
-            loot = state.pendingOfflineLoot!!,
-            onClaim = { viewModel.claimOfflineLoot() }
+            loot = pendingLoot,
+            onClaim = { viewModel.claimOfflineLoot() },
+            onDismiss = { }
+        )
+    }
+
+    if (recoveryReason != null) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("SAVE RECOVERY", style = TrueIdleType.title, color = Warn) },
+            text = {
+                Text(
+                    text = "The stored save could not be read (${recoveryReason}). The raw bytes have " +
+                        "been quarantined and saving is paused so nothing overwrites them. Retry the " +
+                        "load, or start a fresh game.",
+                    style = TrueIdleType.body,
+                    color = TextMuted
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.retryLoad() }) {
+                    Text("RETRY LOAD", style = TrueIdleType.tag, color = PrimaryNeon)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.discardCorruptSave() }) {
+                    Text("START FRESH", style = TrueIdleType.tag, color = HpRed)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -122,25 +175,23 @@ fun TrueIdleApp(
                                 color = NecroPurple
                             )
                         }
-                        // Top bar shortcut: ⚙ Settings / Interface
+                        // Top bar shortcut: Settings / Interface. Min 48dp touch target.
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(48.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, PrimaryNeon.copy(alpha = 0.7f), RectangleShape)
-                                .clickable { currentTab = TrueIdleTab.SETTINGS }
+                                .clickable(role = Role.Button) { currentTab = TrueIdleTab.SETTINGS }
                                 .testTag("topbar_settings_shortcut"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("⚙", style = TrueIdleType.tag, color = PrimaryNeon)
+                            Text("⚙", style = TrueIdleType.title, color = PrimaryNeon)
                         }
                     }
                 }
-
             }
         },
         bottomBar = {
-            // Accessible Cyberpunk 5-Tab Navigation Bar (§7.4)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,13 +202,14 @@ fun TrueIdleApp(
                     .testTag("main_navigation_bar"),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                TrueIdleTab.values().forEach { tab ->
+                TrueIdleTab.entries.forEach { tab ->
                     val isSelected = (currentTab == tab)
                     val tint = if (isSelected) PrimaryNeon else TextMuted
+                    val label = stringResource(tab.labelRes)
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .heightIn(min = 40.dp)
+                            .heightIn(min = 48.dp)
                             .selectable(
                                 selected = isSelected,
                                 onClick = { currentTab = tab },
@@ -168,20 +220,22 @@ fun TrueIdleApp(
                                     drawRect(PrimaryNeon, size = Size(size.width, 2.dp.toPx()))
                                 }
                             }
-                            .padding(vertical = 3.dp)
+                            .padding(vertical = 4.dp)
                             .testTag("nav_tab_${tab.name.lowercase()}"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             imageVector = tab.icon,
-                            contentDescription = tab.label,
+                            // The visible label already names the tab; a duplicate description
+                            // would be read twice by TalkBack.
+                            contentDescription = null,
                             tint = tint,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = tab.label,
+                            text = label,
                             style = TrueIdleType.tag,
                             color = tint,
                             maxLines = 1
@@ -205,10 +259,20 @@ fun TrueIdleApp(
                     onToggleAuto = { viewModel.toggleAutoAdvance() },
                     onSelectLogFilter = { filter -> viewModel.setLogFilter(filter) },
                     onClearLogs = { viewModel.clearLogs() },
-                    onManageSupport = { currentTab = TrueIdleTab.SKILLS }
+                    onManageSupport = { kind ->
+                        // Honour which squad was asked for instead of always landing on OVERVIEW.
+                        skillsSection = SkillSubSection.GENESIS
+                        currentTab = TrueIdleTab.SKILLS
+                        when (kind) {
+                            SupportKind.BEAST -> viewModel.setLogFilter(logFilter)
+                            SupportKind.UNDEAD -> viewModel.setLogFilter(logFilter)
+                        }
+                    }
                 )
                 TrueIdleTab.SKILLS -> SkillsScreen(
                     state = state,
+                    currentSection = skillsSection,
+                    onSectionChange = { skillsSection = it },
                     onHarvestPlot = { id -> viewModel.harvestPlot(id) },
                     onMineVein = { id -> viewModel.mineVein(id) },
                     onCraftEquipment = { name, tier, slot, ore, qty -> viewModel.craftEquipment(name, tier, slot, ore, qty) },

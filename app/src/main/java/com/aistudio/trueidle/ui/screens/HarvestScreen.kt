@@ -16,7 +16,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.DisciplineUpgrade
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
@@ -29,7 +30,7 @@ fun HarvestScreen(
     state: GameState,
     onHarvestPlot: (Int) -> Unit,
     onMineVein: (Int) -> Unit,
-    onUpgradeDiscipline: (String, String) -> Unit = { _, _ -> },
+    onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val harvest = state.harvest
@@ -76,7 +77,7 @@ fun HarvestScreen(
                     skillName = "BIO-FARMING",
                     level = harvest.farmingLvl,
                     currentXp = harvest.farmingXp,
-                    requiredXp = Balance.skillXpReq(harvest.farmingLvl),
+                    requiredXp = XpCurves.skill(harvest.farmingLvl),
                     barColor = GreenSuccess
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -84,7 +85,7 @@ fun HarvestScreen(
                     skillName = "PLASMA MINING",
                     level = harvest.miningLvl,
                     currentXp = harvest.miningXp,
-                    requiredXp = Balance.skillXpReq(harvest.miningLvl),
+                    requiredXp = XpCurves.skill(harvest.miningLvl),
                     barColor = SecondaryGold
                 )
             }
@@ -242,7 +243,7 @@ fun HarvestScreen(
                         }
 
                         Button(
-                            onClick = { onUpgradeDiscipline("HARVEST", upg.id) },
+                            onClick = { onUpgradeDiscipline(DisciplineCategory.HARVEST, upg.id) },
                             enabled = canAfford && !isMax,
                             shape = RectangleShape,
                             colors = ButtonDefaults.buttonColors(

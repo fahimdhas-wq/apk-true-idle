@@ -13,10 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
@@ -48,8 +47,8 @@ fun TrainingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("CYBER DOJO PROTOCOL", style = MaterialTheme.typography.titleLarge, color = PrimaryNeon, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                        Text("Neural attribute enhancements via Credits", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                        Text("CYBER DOJO PROTOCOL", style = TrueIdleType.titleLarge, color = PrimaryNeon)
+                        Text("Neural attribute enhancements via Credits", style = TrueIdleType.meta, color = TextMuted)
                     }
                     Box(
                         modifier = Modifier
@@ -58,10 +57,9 @@ fun TrainingScreen(
                             .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "🪙 ${state.player.gold}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = SecondaryGold,
-                            fontWeight = FontWeight.Bold
+                            text = "🪙 ${NumberFormatter.short(state.player.gold)}",
+                            style = TrueIdleType.numberSmall,
+                            color = SecondaryGold
                         )
                     }
                 }
@@ -70,7 +68,7 @@ fun TrainingScreen(
                     skillName = "PHYSICAL TRAINING",
                     level = state.training.lvl,
                     currentXp = state.training.xp,
-                    requiredXp = Balance.skillXpReq(state.training.lvl),
+                    requiredXp = XpCurves.skill(state.training.lvl),
                     barColor = PrimaryNeon
                 )
             }

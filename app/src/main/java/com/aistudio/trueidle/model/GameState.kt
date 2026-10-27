@@ -2,14 +2,13 @@ package com.aistudio.trueidle.model
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class PlayerStats(
-    val str: Double = 10.0,
-    val intVal: Double = 10.0,
-    val vit: Double = 10.0,
-    val luck: Double = 5.0,
-    val atkSpeed: Double = 1.0
-)
+/**
+ * Save model.
+ *
+ * Every property has a default so saves written by an older build (before a field existed) still
+ * deserialize. Serialization also runs with `coerceInputValues`, which maps a mismatched value onto
+ * the declared default instead of throwing.
+ */
 
 @Serializable
 data class PlayerState(
@@ -18,47 +17,42 @@ data class PlayerState(
     val gold: Long = 100L,
     val diamonds: Long = 0L,
     val hp: Double = 100.0,
-    val maxHp: Double = 100.0,
     val shield: Double = 25.0,
-    val maxShield: Double = 25.0,
     val mana: Double = 50.0,
-    val maxMana: Double = 50.0,
     val currentFloor: Int = 1,
     val maxUnlockedFloor: Int = 1,
     val killsOnFloor: Int = 0,
     val killsRequired: Int = 10,
     val autoAdvance: Boolean = true,
-    val floorTimeLeft: Double = 60.0,
-    val maxFloorTime: Double = 60.0,
-    val stats: PlayerStats = PlayerStats(),
-    val weaponSlot: String = "Rusty Blade",
-    val armorSlot: String = "Tattered Leather",
-    val weaponDmg: Double = 8.0,
-    val armorDef: Double = 4.0,
     val recoverLeft: Double = 0.0,
     val failuresInRow: Int = 0
 )
+// NOTE: maxHp/maxShield/maxMana/weaponDmg/armorDef/weaponSlot/armorSlot/stats/floorTimeLeft/
+// maxFloorTime used to live here as stale duplicates. They are all derived on demand from the
+// inventory and discipline states by `DerivedStats`, so nothing can drift out of sync.
 
 @Serializable
 data class Monster(
     val name: String = "Cave Rat",
     val lvl: Int = 1,
-    val hp: Double = 50.0,
-    val maxHp: Double = 50.0,
+    // Matches Balance.generateMonsterForFloor(1): 55 HP, 7.0 damage, 1.5 armor, 15 XP.
+    val hp: Double = 55.0,
+    val maxHp: Double = 55.0,
     val shield: Double = 0.0,
     val maxShield: Double = 0.0,
-    val damage: Double = 5.0,
-    val armor: Double = 2.0,
+    val damage: Double = 7.0,
+    val armor: Double = 1.5,
     val tag: String = "Normal",
     val isBoss: Boolean = false,
     val goldReward: Long = 5L,
-    val xpReward: Long = 15L
+    val xpReward: Long = 15L,
+    val killsRequired: Int = 10
 )
 
 @Serializable
 data class Beast(
-    val id: String,
-    val name: String,
+    val id: String = "",
+    val name: String = "",
     val rank: Int = 1,
     val stars: Int = 1,
     val dps: Double = 4.0,
@@ -70,8 +64,8 @@ data class Beast(
 
 @Serializable
 data class Minion(
-    val id: String,
-    val type: String, // "Skeleton", "Bone Mage", "Dread Knight", "Bone Lich"
+    val id: String = "",
+    val type: String = "Skeleton",
     val count: Int = 1,
     val lvl: Int = 1,
     val dps: Double = 3.0,
@@ -100,7 +94,6 @@ data class BeastTamingState(
     val beasts: List<Beast> = listOf(
         Beast(id = "beast_1", name = "Dusk Wolf", rank = 1, stars = 1, dps = 6.0, hp = 50.0, maxHp = 50.0, trait = "Pack Hunter")
     ),
-    val trophies: Long = 0L,
     val upgrades: List<DisciplineUpgrade> = listOf(
         DisciplineUpgrade(id = "beast_ferocity", name = "Predatory Conditioning", description = "+15% Companion beast DPS per rank", rank = 0, baseCost = 150L),
         DisciplineUpgrade(id = "beast_tame_rate", name = "Pheromone Baits", description = "+5% Beast taming encounter chance per floor", rank = 0, baseCost = 200L)
@@ -109,9 +102,9 @@ data class BeastTamingState(
 
 @Serializable
 data class DisciplineUpgrade(
-    val id: String,
-    val name: String,
-    val description: String,
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
     val rank: Int = 0,
     val maxRank: Int = 10,
     val baseCost: Long = 100L,
@@ -121,20 +114,19 @@ data class DisciplineUpgrade(
 
 @Serializable
 data class Plot(
-    val id: Int,
-    val herbName: String,
+    val id: Int = 0,
+    val herbName: String = "Felweed",
     val growthProgress: Float = 0f,
     val durationSeconds: Float = 10f,
-    val isReady: Boolean = false,
-    val isCorrupted: Boolean = false
+    val isReady: Boolean = false
 )
 
 @Serializable
 data class MiningVein(
-    val id: Int,
-    val oreName: String,
-    val reqLvl: Int,
-    val hardness: Int,
+    val id: Int = 0,
+    val oreName: String = "Copper Ore",
+    val reqLvl: Int = 1,
+    val hardness: Int = 1,
     val miningProgress: Float = 0f,
     val durationSeconds: Float = 5f,
     val isReady: Boolean = false
@@ -164,7 +156,6 @@ data class HarvestState(
         DisciplineUpgrade(id = "harvest_yield", name = "Rich Bio-Extracts", description = "+1 additional resource yield per harvest", rank = 0, baseCost = 150L)
     )
 )
-typealias GatheringState = HarvestState
 
 @Serializable
 data class ArmoryState(
@@ -178,13 +169,12 @@ data class ArmoryState(
         DisciplineUpgrade(id = "resource_saving", name = "Alloy Recycling", description = "12% chance to conserve crafting materials", rank = 0, baseCost = 180L)
     )
 )
-typealias CraftingState = ArmoryState
 
 @Serializable
 data class TrainingNode(
-    val id: String,
-    val name: String,
-    val stat: String,
+    val id: String = "",
+    val name: String = "",
+    val stat: String = "",
     val rank: Int = 0,
     val maxRank: Int = 20,
     val costGold: Long = 50L,
@@ -195,12 +185,10 @@ data class TrainingNode(
 data class TrainingState(
     val lvl: Int = 1,
     val xp: Long = 0L,
-    val talentPoints: Int = 2,
-    val talentPointsBought: Int = 0,
     val nodes: List<TrainingNode> = listOf(
         TrainingNode(id = "str_bonus", name = "Titan Strength", stat = "+5 STR per rank", rank = 0, maxRank = 30, costGold = 50L),
-        TrainingNode(id = "vit_bonus", name = "Iron Constitution", stat = "+50 Max HP per rank", rank = 0, maxRank = 30, costGold = 50L),
-        TrainingNode(id = "int_bonus", name = "Arcane Mind", stat = "+25 Max Mana per rank", rank = 0, maxRank = 30, costGold = 50L),
+        TrainingNode(id = "vit_bonus", name = "Iron Constitution", stat = "+5 VIT per rank", rank = 0, maxRank = 30, costGold = 50L),
+        TrainingNode(id = "int_bonus", name = "Arcane Mind", stat = "+5 INT per rank", rank = 0, maxRank = 30, costGold = 50L),
         TrainingNode(id = "speed_bonus", name = "Swift Strikes", stat = "+5% Attack Speed per rank", rank = 0, maxRank = 15, costGold = 100L),
         TrainingNode(id = "luck_bonus", name = "Fortune's Favor", stat = "+5% Drop Chance per rank", rank = 0, maxRank = 20, costGold = 75L)
     )
@@ -211,6 +199,8 @@ data class EssenceState(
     val lvl: Int = 1,
     val xp: Long = 0L,
     val faith: Long = 50L,
+    /** Sub-unit remainder so the Aegis drain is not truncated to a whole faith every tick. */
+    val faithRemainder: Double = 0.0,
     val aegisActive: Boolean = true,
     val smiteLevel: Int = 1,
     val auraName: String = "Holy Light",
@@ -220,14 +210,13 @@ data class EssenceState(
         DisciplineUpgrade(id = "faith_preserve", name = "Aura Efficiency", description = "-15% Faith drain rate during Aegis deployment", rank = 0, baseCost = 60L, costCurrency = "FAITH")
     )
 )
-typealias SanctifiedState = EssenceState
 
 @Serializable
 data class Talent(
-    val id: String,
-    val name: String,
-    val description: String,
-    val type: String, // "ACTIVE", "PASSIVE_STRUGGLE"
+    val id: String = "",
+    val name: String = "",
+    val description: String = "",
+    val type: String = "ACTIVE", // "ACTIVE", "PASSIVE_STRUGGLE"
     val rank: Int = 0,
     val maxRank: Int = 10,
     val cooldownSeconds: Double = 30.0,
@@ -240,21 +229,21 @@ data class Talent(
 
 @Serializable
 data class TalentState(
-    val lvl: Int = 1,
-    val xp: Long = 0L,
     val talentPoints: Int = 5,
     val struggleDamageTaken: Long = 0L,
+    /** Sub-unit remainder of damage endured, so struggle scaling is not truncated every tick. */
+    val struggleDamageFraction: Double = 0.0,
     val struggleHpThreshold: Long = 100L,
     val struggleArmorThreshold: Long = 500L,
     val struggleManaThreshold: Long = 150L,
     val struggleAtkThreshold: Long = 250L,
     val activeTalents: List<Talent> = listOf(
-        Talent(id = "berserk", name = "Berserk Overdrive", description = "+50% ATK Speed & +35% Damage for 10s", type = "ACTIVE", rank = 1, cooldownSeconds = 30.0, durationSeconds = 10.0),
-        Talent(id = "nanite_heal", name = "Nanite Repair", description = "Instantly restores 40% Max HP & 25% Shield", type = "ACTIVE", rank = 1, cooldownSeconds = 25.0, durationSeconds = 0.0),
-        Talent(id = "support_overclock", name = "Legion Overclock", description = "Minions and Beasts deal 300% DPS for 12s", type = "ACTIVE", rank = 1, cooldownSeconds = 40.0, durationSeconds = 12.0),
+        Talent(id = "berserk", name = "Berserk Overdrive", description = "+50% ATK Speed & +35% Damage for 10s (20 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 30.0, durationSeconds = 10.0),
+        Talent(id = "nanite_heal", name = "Nanite Repair", description = "Instantly restores 40% Max HP & 25% Shield (15 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 25.0, durationSeconds = 0.0),
+        Talent(id = "support_overclock", name = "Legion Overclock", description = "Minions and Beasts deal 300% DPS for 12s (30 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 40.0, durationSeconds = 12.0),
         Talent(id = "mana_rampage", name = "Mana Tempest", description = "Consumes 25 Mana to strike enemy with 250% Arcane Damage", type = "ACTIVE", rank = 1, cooldownSeconds = 20.0, durationSeconds = 0.0),
-        Talent(id = "aegis_bastion", name = "Aegis Bastion", description = "Deploys a defensive kinetic barrier (+60% Max Shield)", type = "ACTIVE", rank = 1, cooldownSeconds = 35.0, durationSeconds = 0.0),
-        Talent(id = "arcane_enchant", name = "Enchantment Matrix", description = "+25% Critical Strike Chance & +50% Crit DMG for 12s", type = "ACTIVE", rank = 1, cooldownSeconds = 30.0, durationSeconds = 12.0)
+        Talent(id = "aegis_bastion", name = "Aegis Bastion", description = "Deploys a defensive kinetic barrier (+60% Max Shield, 20 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 35.0, durationSeconds = 0.0),
+        Talent(id = "arcane_enchant", name = "Enchantment Matrix", description = "+25% Critical Strike Chance & +50% Crit DMG for 12s (25 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 30.0, durationSeconds = 12.0)
     ),
     val struggleTalents: List<Talent> = listOf(
         Talent(id = "struggle_hp", name = "Pain Adaptation (HP)", description = "+5 Max HP per 100 DMG taken per rank", type = "PASSIVE_STRUGGLE", rank = 1, costPoints = 1),
@@ -266,7 +255,7 @@ data class TalentState(
 
 @Serializable
 data class SlayerTask(
-    val targetName: String = "Cave Goblin",
+    val targetName: String = "Cave Rat",
     val currentKills: Int = 0,
     val requiredKills: Int = 15,
     val rewardGold: Long = 200L,
@@ -284,12 +273,12 @@ data class SlayerState(
 
 @Serializable
 data class InventoryItem(
-    val id: String,
-    val name: String,
-    val category: String, // "Equipment", "Potion", "Resource", "Trophy"
+    val id: String = "",
+    val name: String = "",
+    val category: String = "Resource", // "Equipment", "Potion", "Resource", "Trophy"
     val count: Int = 1,
     val tier: Int = 1,
-    val slot: String = "", // "Weapon", "Armor", ""
+    val slot: String = "", // "Weapon", "Armor", "Ring", "Amulet"
     val statDesc: String = "",
     val sellValue: Long = 10L,
     val isEquipped: Boolean = false,
@@ -299,16 +288,16 @@ data class InventoryItem(
 
 @Serializable
 data class LogEntry(
-    val id: Long,
-    val text: String,
-    val type: String = "info", // "combat", "loot", "system", "gain", "milestone"
+    val id: Long = 0L,
+    val text: String = "",
+    val type: String = "info", // "combat", "loot", "system", "gain", "milestone", "skill", "tame"
     val timestampMs: Long = 0L
 )
 
 @Serializable
 data class LootItem(
-    val name: String,
-    val count: Int
+    val name: String = "",
+    val count: Int = 0
 )
 
 @Serializable
@@ -319,9 +308,12 @@ data class OfflineLoot(
     val xpEarned: Long = 0L,
     val bonesEarned: Long = 0L,
     val playerLevelsGained: Int = 0,
+    val talentPointsGained: Int = 0,
     val floorsGained: Int = 0,
     val startFloor: Int = 1,
     val finalFloor: Int = 1,
+    /** Per-floor kill progress carried out of the simulation, so the live monster matches. */
+    val killsOnFloor: Int = 0,
     val efficiency: Double = 0.65,
     val capApplied: Boolean = false,
     val killsPerHour: Long = 0L,
@@ -337,11 +329,11 @@ data class OfflineLoot(
 
 @Serializable
 data class Achievement(
-    val id: String,
-    val title: String,
-    val desc: String,
-    val progress: Int,
-    val target: Int,
+    val id: String = "",
+    val title: String = "",
+    val desc: String = "",
+    val progress: Int = 0,
+    val target: Int = 1,
     val isUnlocked: Boolean = false,
     val isClaimed: Boolean = false,
     val rewardGold: Long = 100L
@@ -356,12 +348,12 @@ data class AutomationSettings(
 
 @Serializable
 data class PromotionState(
-    val tier: Int = 5,
+    val tier: Int = 1,
     val maxTier: Int = 20,
-    val tierName: String = "Dawnbreaker",
-    val requiredFloor: Int = 60,
-    val requiredGearScore: Int = 2200,
-    val bonusPercent: Int = 8
+    val tierName: String = "Novice Vanguard",
+    val requiredFloor: Int = 5,
+    val requiredGearScore: Int = 0,
+    val bonusPercent: Int = 0
 )
 
 @Serializable
@@ -369,9 +361,7 @@ data class SaveMeta(
     val savedWallMs: Long = 0L,
     val savedElapsedMs: Long = 0L,
     val bootCount: Int = 0,
-    val offlineAppliedUntilWallMs: Long = 0L,
-    val nextId: Long = 100L,
-    val rngSeed: Long = 0L
+    val nextId: Long = 100L
 )
 
 @Serializable
@@ -403,16 +393,15 @@ data class GameState(
     val automation: AutomationSettings = AutomationSettings(),
     val promotion: PromotionState = PromotionState(),
     val inventory: List<InventoryItem> = listOf(
-        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, isEquipped = false, atk = 18.0),
-        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, isEquipped = false, def = 12.0),
+        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, atk = 18.0),
+        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, def = 12.0),
         InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true, atk = 8.0),
         InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true, def = 4.0),
-        InventoryItem(id = "item_ember_band", name = "Ember Band", category = "Equipment", count = 1, tier = 2, slot = "Ring", statDesc = "Crit +2.1%", sellValue = 60L, isEquipped = true, atk = 6.0),
-        InventoryItem(id = "item_warden_sigil", name = "Warden Sigil", category = "Equipment", count = 1, tier = 2, slot = "Amulet", statDesc = "Vit +18", sellValue = 60L, isEquipped = true, def = 6.0),
+        InventoryItem(id = "item_ember_band", name = "Ember Band", category = "Equipment", count = 1, tier = 2, slot = "Ring", statDesc = "+6 Attack", sellValue = 60L, isEquipped = true, atk = 6.0),
+        InventoryItem(id = "item_warden_sigil", name = "Warden Sigil", category = "Equipment", count = 1, tier = 2, slot = "Amulet", statDesc = "+6 Defense", sellValue = 60L, isEquipped = true, def = 6.0),
         InventoryItem(id = "item_hp_pot", name = "Lesser Healing Potion", category = "Potion", count = 5, tier = 1, statDesc = "Restores 50 HP", sellValue = 10L),
         InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Crafting Ore", sellValue = 2L),
-        InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L),
-        InventoryItem(id = "item_wolf_fang", name = "Wolf Fang", category = "Trophy", count = 3, tier = 1, statDesc = "Beast Trophy", sellValue = 15L)
+        InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L)
     ),
     val logs: List<LogEntry> = listOf(
         LogEntry(id = 1L, text = "SYSTEM INITIALIZED: Welcome to True IDLE Sector 01.", type = "system"),
@@ -422,15 +411,8 @@ data class GameState(
     val achievements: List<Achievement> = listOf(
         Achievement(id = "ach_first_blood", title = "First Blood", desc = "Defeat your first monster", progress = 0, target = 1, isUnlocked = false, rewardGold = 50L),
         Achievement(id = "ach_floor_10", title = "Dungeon Crawler", desc = "Reach Floor 10", progress = 1, target = 10, isUnlocked = false, rewardGold = 250L),
-        Achievement(id = "ach_tamer", title = "Beast Whisperer", desc = "Tame 3 companion beasts", progress = 1, target = 3, isUnlocked = false, rewardGold = 200L),
+        Achievement(id = "ach_tamer", title = "Beast Whisperer", desc = "Tame 3 companion beasts", progress = 0, target = 3, isUnlocked = false, rewardGold = 200L),
         Achievement(id = "ach_necro", title = "Lord of Bones", desc = "Summon an army of 10 minions", progress = 2, target = 10, isUnlocked = false, rewardGold = 300L),
         Achievement(id = "ach_miner", title = "Master Miner", desc = "Mine 50 ores", progress = 0, target = 50, isUnlocked = false, rewardGold = 150L)
-    ),
-    val totalKills: Long = 0L,
-    val rank: Int = 0,
-    val lastSaveTimestamp: Long = 0L
-) {
-    val gathering: HarvestState get() = harvest
-    val crafting: ArmoryState get() = armory
-    val sanctified: EssenceState get() = essence
-}
+    )
+)

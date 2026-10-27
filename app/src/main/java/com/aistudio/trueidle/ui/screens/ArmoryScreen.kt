@@ -16,7 +16,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
@@ -31,7 +32,7 @@ fun ArmoryScreen(
     state: GameState,
     onCraftEquipment: (String, Int, String, String, Int) -> Unit,
     onBrewPotion: (String, String, Int) -> Unit,
-    onUpgradeDiscipline: (String, String) -> Unit = { _, _ -> },
+    onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val armory = state.armory
@@ -89,7 +90,7 @@ fun ArmoryScreen(
                     skillName = "SMITHING FORGE",
                     level = armory.smithingLvl,
                     currentXp = armory.smithingXp,
-                    requiredXp = Balance.skillXpReq(armory.smithingLvl),
+                    requiredXp = XpCurves.skill(armory.smithingLvl),
                     barColor = SecondaryGold
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -97,7 +98,7 @@ fun ArmoryScreen(
                     skillName = "BIO-CHEMICAL ALCHEMY",
                     level = armory.herbloreLvl,
                     currentXp = armory.herbloreXp,
-                    requiredXp = Balance.skillXpReq(armory.herbloreLvl),
+                    requiredXp = XpCurves.skill(armory.herbloreLvl),
                     barColor = GreenSuccess
                 )
             }
@@ -237,7 +238,7 @@ fun ArmoryScreen(
                         }
 
                         Button(
-                            onClick = { onUpgradeDiscipline("ARMORY", upg.id) },
+                            onClick = { onUpgradeDiscipline(DisciplineCategory.ARMORY, upg.id) },
                             enabled = canAfford && !isMax,
                             shape = RectangleShape,
                             colors = ButtonDefaults.buttonColors(

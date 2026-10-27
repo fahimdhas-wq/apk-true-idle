@@ -19,8 +19,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.Equipment
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.*
 import com.aistudio.trueidle.ui.theme.*
@@ -45,15 +47,16 @@ fun CombatScreen(
     val mitigation = CombatMath.mitigation(m.armor)
     val effDps = totalDps * mitigation
     val incomingRate = CombatMath.incomingPerSec(m, derived, state.essence.aegisActive)
-    val reqXp = Balance.playerXpReq(p.lvl)
+    val reqXp = XpCurves.player(p.lvl)
 
     // Support module data mappings
     val beastsGroup = SupportGroupUi(
         count = state.beasts.beasts.size,
-        cap = 8,
+        cap = GameCaps.BEAST,
         totalDps = "${CombatMath.beastDps(state.beasts).toInt()} DPS",
         emptyText = "NO BEASTS ACTIVE. DEFEAT HOSTILES TO TAME.",
-        top3 = state.beasts.beasts.take(3).map { b ->
+        // Top three by real DPS, not simply the first three in the roster.
+        top = state.beasts.beasts.sortedByDescending { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }.take(3).map { b ->
             SupportItemUi(
                 name = b.name.uppercase(),
                 stars = b.stars,
@@ -65,13 +68,14 @@ fun CombatScreen(
 
     val undeadGroup = SupportGroupUi(
         count = state.necro.army.sumOf { it.count },
-        cap = 12,
+        cap = GameCaps.MINION,
         totalDps = "${CombatMath.armyDps(state.necro).toInt()} DPS",
         emptyText = "NO MINIONS ACTIVE. REANIMATE AT ALTAR OF BONES.",
-        top3 = state.necro.army.take(3).map { minion ->
+        top = state.necro.army.sortedByDescending { it.dps * it.count }.take(3).map { minion ->
             SupportItemUi(
                 name = minion.type.uppercase(),
-                stars = minion.lvl,
+                // Minions have no star rank; showing minion.lvl as stars was misleading.
+                stars = 0,
                 dpsText = "${(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2)).toInt()} DPS",
                 meta = "CORPS x${minion.count} · LVL ${minion.lvl}"
             )
@@ -102,7 +106,7 @@ fun CombatScreen(
         SciFiPanel(
             title = "HOSTILE // ${m.name.uppercase()}",
             accent = if (m.isBoss) HpRed else PrimaryNeon,
-            tag = if (m.isBoss) "BOSS Lv${m.lvl}" else "ELITE Lv${m.lvl}",
+            tag = if (m.isBoss) "BOSS Lv${m.lvl}" else "NORMAL Lv${m.lvl}",
             borderColor = if (m.isBoss) HpRed else BorderDark,
             modifier = Modifier.testTag("hostile_combat_card")
         ) {
@@ -225,7 +229,7 @@ fun CombatScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = p.weaponSlot,
+                            text = Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS"),
                             style = TrueIdleType.label,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
@@ -253,7 +257,7 @@ fun CombatScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = p.armorSlot,
+                            text = Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE"),
                             style = TrueIdleType.label,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,

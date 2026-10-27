@@ -3,6 +3,7 @@ package com.aistudio.trueidle.engine
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Derived
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.LootItem
 import com.aistudio.trueidle.model.Monster
@@ -15,43 +16,68 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/**
+ * Offline (idle) simulation. Kept in step with the live engine: the same spawn gap, the same
+ * kills-per-floor requirement, the same Soul Siphon bone multiplier and the same faith drain rate.
+ */
 object OfflineEngine {
-    const val SPAWN_GAP_S = 0.5 // identical to live respawnLeft
     const val SAFETY = 1.25
 
-    fun trustedAwayMs(meta: SaveMeta, now: ClockSnapshot, capMs: Long = 8 * 3600_000L): Long {
+    /** Aegis drain per second — deliberately equal to the live engine's Value in Balance. */
+    const val AEGIS_DRAIN_PER_SEC = 0.5
+
+    fun trustedAwayMs(meta: SaveMeta, now: ClockSnapshot, capMs: Long = Balance.OFFLINE_CAP_MS): Long {
         val raw = when {
             meta.savedWallMs == 0L -> 0L // first launch
             meta.bootCount == now.bootCount && now.elapsedMs >= meta.savedElapsedMs ->
                 now.elapsedMs - meta.savedElapsedMs // monotonic: immune to clock edits
             now.wallMs >= meta.savedWallMs ->
-                minOf(now.wallMs - meta.savedWallMs, 10 * 60_000L) // rebooted: wall clock, capped at 10 min
+                minOf(now.wallMs - meta.savedWallMs, WALL_FALLBACK_CAP_MS) // rebooted: wall clock, capped
             else -> return -1L // clock moved backwards
         }
         return minOf(raw, capMs)
     }
 
+    /** When BOOT_COUNT is unavailable the wall-clock path is only trusted for this long. */
+    const val WALL_FALLBACK_CAP_MS = 10 * 60_000L
+
     private class FloorStats(val perKillS: Double, val survivable: Boolean, val m: Monster)
 
-    private fun stats(f: Int, dps: Double, d: Derived, s: GameState): FloorStats {
+    private fun stats(f: Int, dps: Double, d: Derived, s: GameState, aegisFraction: Double): FloorStats {
         val m = Balance.generateMonsterForFloor(f)
         val effDps = dps * CombatMath.mitigation(m.armor)
         val ttk = (m.maxHp + m.maxShield) / maxOf(effDps, 1e-6)
-        val incoming = CombatMath.incomingPerSec(m, d, s.sanctified.aegisActive)
+        // Aegis is only counted for the share of the window the faith actually pays for.
+        val incoming = CombatMath.incomingPerSec(m, d, true) * aegisFraction +
+            CombatMath.incomingPerSec(m, d, false) * (1.0 - aegisFraction)
         val ehp = d.maxHp + d.maxShield
-        return FloorStats(ttk + SPAWN_GAP_S, ehp / incoming > ttk * s.player.killsRequired * SAFETY, m)
+        val regen = d.healthRegen + d.shieldRegen
+        val killsRequired = m.killsRequired
+        val fightS = (ttk + Balance.RESPAWN_GAP_SECONDS) * killsRequired
+        val sustained = (ehp + regen * fightS) / incoming
+        return FloorStats(ttk + Balance.RESPAWN_GAP_SECONDS, sustained > fightS * SAFETY, m)
     }
 
     fun compute(s: GameState, d: Derived, awayMs: Long, efficiency: Double, rnd: Random): OfflineLoot {
-        val capMs = 8 * 3600_000L
-        val effectiveAwayMs = minOf(awayMs, capMs)
-        val capApplied = awayMs >= capMs
-        var remaining = effectiveAwayMs / 1000.0 * efficiency
+        val effectiveAwayMs = minOf(awayMs, Balance.OFFLINE_CAP_MS)
+        val capApplied = awayMs >= Balance.OFFLINE_CAP_MS
+        val awaySeconds = effectiveAwayMs / 1000.0
+        var remaining = awaySeconds * efficiency
         val dps = CombatMath.totalDps(s, d)
         val startFloor = s.player.currentFloor
         var floor = s.player.currentFloor
         val ceiling = s.player.maxUnlockedFloor // offline never unlocks new floors
-        repeat(10) { if (floor > 1 && !stats(floor, dps, d, s).survivable) floor-- }
+
+        // Faith is spent while away, so Aegis only covers part of the window.
+        val faithPreserveRank = s.essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
+        val drainMult = (1.0 - 0.15 * faithPreserveRank).coerceAtLeast(0.2)
+        val drainPerSec = AEGIS_DRAIN_PER_SEC * drainMult
+        val aegisSeconds = if (s.essence.aegisActive && drainPerSec > 0.0) {
+            minOf(awaySeconds, s.essence.faith / drainPerSec)
+        } else 0.0
+        val aegisFraction = if (awaySeconds > 0.0) (aegisSeconds / awaySeconds).coerceIn(0.0, 1.0) else 0.0
+
+        repeat(10) { if (floor > 1 && !stats(floor, dps, d, s, aegisFraction).survivable) floor-- }
         var killsOnFloor = if (floor == s.player.currentFloor) s.player.killsOnFloor else 0
         var kills = 0L
         var gold = 0L
@@ -70,10 +96,20 @@ object OfflineEngine {
         }
 
         while (remaining > 0 && guard++ < 500) {
-            val st = stats(floor, dps, d, s)
-            val need = s.player.killsRequired - killsOnFloor
+            val st = stats(floor, dps, d, s, aegisFraction)
+            // Clamp: a floor that is already complete (imported save, floor mismatch) must not
+            // subtract negative clearance time and walk the loop backwards.
+            val required = Balance.killsRequiredFor(floor)
+            val need = (required - killsOnFloor).coerceAtLeast(0)
+            if (need == 0) {
+                if (floor >= ceiling) break
+                floor++
+                killsOnFloor = 0
+                continue
+            }
             val clearS = need * st.perKillS
-            val advance = s.player.autoAdvance && floor < ceiling && stats(floor + 1, dps, d, s).survivable
+            val advance = s.player.autoAdvance && floor < ceiling &&
+                stats(floor + 1, dps, d, s, aegisFraction).survivable
             if (advance && remaining >= clearS) {
                 award(floor, need)
                 remaining -= clearS
@@ -84,37 +120,53 @@ object OfflineEngine {
                 val k = (remaining / st.perKillS).toInt()
                 award(floor, k)
                 remaining = 0.0
-                killsOnFloor = (killsOnFloor + k) % s.player.killsRequired
+                killsOnFloor = (killsOnFloor + k) % required
             }
         }
 
         val lootRolls = binomial(rnd, kills.toInt(), d.lootChance)
         val ore = binomial(rnd, lootRolls, 0.5)
         val herb = lootRolls - ore
-        val tamed = minOf(binomial(rnd, kills.toInt(), d.tameChance), (8 - s.beasts.beasts.size).coerceAtLeast(0))
+        val tamed = minOf(binomial(rnd, kills.toInt(), d.tameChance), (Balance.BEAST_CAP - s.beasts.beasts.size).coerceAtLeast(0))
+
+        // Soul Siphon applies offline exactly as it does live.
+        val boneMult = 1.0 + 0.25 * (s.necro.upgrades.firstOrNull { it.id == "necro_harvest" }?.rank ?: 0)
+        val bones = (kills * 2.0 * boneMult).toLong()
 
         val effectiveHours = (effectiveAwayMs / 3600_000.0).coerceAtLeast(0.01)
         val kPerHour = (kills / effectiveHours).toLong()
         val gPerHour = (gold / effectiveHours).toLong()
         val xPerHour = (xp / effectiveHours).toLong()
 
-        val timeline = listOf(
-            "T+00h-02h // SECTOR $startFloor INFILTRATION: Autonomous combat unit engaged. Cleared ${kills * 28 / 100} hostiles with ${(efficiency * 100).toInt()}% efficiency.",
-            "T+02h-04h // RESOURCE EXTRACTION: Sub-surface drones harvested $herb Felweed and excavated $ore Copper Ore.",
-            "T+04h-06h // TACTICAL TRANSLOCATION: ${if (gained > 0) "Overcame $gained sector perimeters to secure Sector $floor." else "Held Sector $floor perimeter with zero fatal breaches."}",
-            "T+06h-08h // SYSTEM FORTIFICATION: Secured total +$gold Credits and +${kills * 2} Bone Essence. ${if (capApplied) "8-Hour operational limit engaged." else "Recon session completed."}"
-        )
+        // Real per-floor data instead of a fabricated two-hour narrative.
+        val timeline = buildList {
+            add(
+                "AWAY ${NumberFormatter.duration(effectiveAwayMs / 1000)} AT " +
+                    "${(efficiency * 100).toInt()}% EFFICIENCY"
+            )
+            perFloorKills.takeLast(5).forEach { (f, k) ->
+                add("SECTOR $f // $k hostiles neutralized")
+            }
+            if (perFloorKills.size > 5) {
+                add("... and ${perFloorKills.size - 5} earlier sector engagement(s)")
+            }
+            if (gained > 0) add("ADVANCED $gained SECTOR(S): $startFloor -> $floor")
+            else add("HELD SECTOR $floor with no fatal breaches")
+            add("SECURED +$gold CREDITS, +$xp XP, +$bones BONE ESSENCE")
+            if (capApplied) add("${Balance.OFFLINE_CAP_MS / 3600_000L}-HOUR CAP ENGAGED")
+        }
 
         return OfflineLoot(
             timeAwaySeconds = effectiveAwayMs / 1000,
             kills = kills,
             goldEarned = gold,
             xpEarned = xp,
-            bonesEarned = kills * 2,
+            bonesEarned = bones,
             playerLevelsGained = 0,
             floorsGained = gained,
             startFloor = startFloor,
             finalFloor = floor,
+            killsOnFloor = killsOnFloor,
             efficiency = efficiency,
             capApplied = capApplied,
             killsPerHour = kPerHour,

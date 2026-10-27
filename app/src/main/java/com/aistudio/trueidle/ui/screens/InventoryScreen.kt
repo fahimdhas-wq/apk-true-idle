@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,9 +19,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
-import com.aistudio.trueidle.model.InventoryItem
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.theme.*
 
@@ -33,8 +34,11 @@ fun InventoryScreen(
     onUsePotion: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var selectedCategory by remember { mutableStateOf("All") }
-    var inspectingItem by remember { mutableStateOf<InventoryItem?>(null) }
+    // rememberSaveable: these survive rotation and process recreation.
+    var selectedCategory by rememberSaveable { mutableStateOf("All") }
+    // The id is stored, not the item: a stale snapshot showed outdated stats after equip/sell.
+    var inspectingItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    val inspectingItem = inspectingItemId?.let { id -> state.inventory.firstOrNull { it.id == id } }
     val categories = listOf("All", "Equipment", "Potion", "Resource")
 
     val filteredItems = when (selectedCategory) {
@@ -43,9 +47,6 @@ fun InventoryScreen(
         "Resource" -> state.inventory.filter { it.category == "Resource" || it.category == "Trophy" }
         else -> state.inventory
     }
-
-    val equippedWeapon = state.inventory.firstOrNull { it.isEquipped && it.slot == "Weapon" }
-    val equippedArmor = state.inventory.firstOrNull { it.isEquipped && it.slot == "Armor" }
 
     Column(
         modifier = modifier
@@ -91,11 +92,15 @@ fun InventoryScreen(
         // Gear Compare Card (§4.8 / §7.7)
         inspectingItem?.let { item ->
             if (item.category == "Equipment" && !item.isEquipped) {
-                val currentEquipped = if (item.slot == "Weapon") equippedWeapon else equippedArmor
-                val curVal = if (item.slot == "Weapon") (currentEquipped?.atk ?: 2.0) else (currentEquipped?.def ?: 0.0)
-                val newVal = if (item.slot == "Weapon") item.atk else item.def
+                // Rings compare on ATK and amulets on DEF, matching how DerivedStats reads them.
+                val usesAttack = item.slot == Equipment.SLOT_WEAPON || item.slot == Equipment.SLOT_RING
+                val currentEquipped = state.inventory.firstOrNull {
+                    it.isEquipped && it.slot.equals(item.slot, ignoreCase = true)
+                }
+                val curVal = if (usesAttack) Equipment.baseAttack(currentEquipped) else Equipment.baseDefense(currentEquipped)
+                val newVal = if (usesAttack) Equipment.baseAttack(item) else Equipment.baseDefense(item)
                 val delta = newVal - curVal
-                val statLabel = if (item.slot == "Weapon") "ATK" else "DEF"
+                val statLabel = if (usesAttack) "ATK" else "DEF"
 
                 SciFiPanel(
                     title = "COMPARISON // ${item.name.uppercase()}",
@@ -138,12 +143,12 @@ fun InventoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                itemsIndexed(filteredItems, key = { index, item -> "${item.id}_$index" }) { _, item ->
+                itemsIndexed(filteredItems, key = { _, item -> item.id }) { _, item ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                inspectingItem = if (inspectingItem?.id == item.id) null else item
+                                inspectingItemId = if (inspectingItemId == item.id) null else item.id
                             }
                             .testTag("inventory_item_${item.id}"),
                         colors = CardDefaults.cardColors(containerColor = SurfaceDark),

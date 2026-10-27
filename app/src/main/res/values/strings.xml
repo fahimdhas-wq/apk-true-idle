@@ -1,10 +1,20 @@
 <resources>
     <string name="app_name">True IDLE</string>
-    <string name="tab_combat">Combat</string>
-    <string name="tab_stats">Stats</string>
-    <string name="tab_skills">Skills</string>
-    <string name="tab_beasts">Beasts</string>
-    <string name="tab_necro">Necro</string>
-    <string name="tab_inventory">Inventory</string>
-    <string name="tab_settings">Settings</string>
+
+    <!-- Bottom navigation labels. These must match the tabs defined in TrueIdleTab. -->
+    <string name="tab_combat">COMBAT</string>
+    <string name="tab_skills">SKILLS</string>
+    <string name="tab_stats">STATS</string>
+    <string name="tab_arsenal">ARSENAL</string>
+    <string name="tab_system">SYSTEM</string>
+
+    <!-- Offline recon notification. -->
+    <string name="notification_channel_offline_recon">Offline Recon</string>
+    <string name="notification_idle_title">TRUE IDLE // RECON COMPLETE</string>
+    <string name="notification_idle_text">Your offline recon report is ready.</string>
+    <string name="notification_idle_big_text">Your offline recon report is ready. Open True IDLE to claim the recovered rewards.</string>
+
+    <!-- Offline progression copy. -->
+    <string name="offline_recon_cap_label">%1$dH ACTIVE</string>
+    <string name="offline_recon_description">Accumulates up to %1$d hours of rewards while offline (%2$d%% efficiency rate)</string>
 </resources>

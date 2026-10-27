@@ -14,17 +14,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
@@ -50,14 +54,14 @@ fun SettingsScreen(
     val promo = state.promotion
     val auto = state.automation
 
-    var showExportDialog by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
-    var exportedCode by remember { mutableStateOf("") }
-    var importInputText by remember { mutableStateOf("") }
-    var copyStatus by remember { mutableStateOf("") }
-    var importError by remember { mutableStateOf("") }
-    var telemetryCopyFeedback by remember { mutableStateOf("") }
+    var showExportDialog by rememberSaveable { mutableStateOf(false) }
+    var showImportDialog by rememberSaveable { mutableStateOf(false) }
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
+    var exportedCode by rememberSaveable { mutableStateOf("") }
+    var importInputText by rememberSaveable { mutableStateOf("") }
+    var copyStatus by rememberSaveable { mutableStateOf("") }
+    var importError by rememberSaveable { mutableStateOf("") }
+    var telemetryCopyFeedback by rememberSaveable { mutableStateOf("") }
 
     val floorMet = state.player.currentFloor >= promo.requiredFloor
     val gearMet = d.gearScore >= promo.requiredGearScore
@@ -182,7 +186,11 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text("AUTONOMOUS STASIS RECON", style = TrueIdleType.label, color = TextLight)
-                        Text("Accumulates up to 8 hours of rewards while offline (65% efficiency rate)", style = TrueIdleType.meta, color = TextMuted)
+                        Text(
+                            text = stringResource(R.string.offline_recon_description, GameCaps.OFFLINE_CAP_HOURS, GameCaps.OFFLINE_EFFICIENCY_PCT),
+                            style = TrueIdleType.meta,
+                            color = TextMuted
+                        )
                     }
                     Box(
                         modifier = Modifier
@@ -190,7 +198,11 @@ fun SettingsScreen(
                             .border(1.dp, GreenSuccess, RectangleShape)
                             .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
-                        Text("8H ACTIVE", style = TrueIdleType.numberSmall, color = GreenSuccess)
+                        Text(
+                            text = stringResource(R.string.offline_recon_cap_label, GameCaps.OFFLINE_CAP_HOURS),
+                            style = TrueIdleType.numberSmall,
+                            color = GreenSuccess
+                        )
                     }
                 }
             }

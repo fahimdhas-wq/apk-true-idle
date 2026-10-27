@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,7 +19,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.engine.Balance
+import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.GameCaps
+import com.aistudio.trueidle.core.MinionCatalog
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.Beast
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.RosterRow
@@ -38,10 +42,10 @@ fun GenesisScreen(
     state: GameState,
     onMergeBeasts: (String, String) -> Unit,
     onSummonMinion: (String) -> Unit,
-    onUpgradeDiscipline: (String, String) -> Unit = { _, _ -> },
+    onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    var activeSubTab by remember { mutableStateOf(GenesisTab.BEASTS) }
+    var activeSubTab by rememberSaveable { mutableStateOf(GenesisTab.BEASTS) }
     var selectedBeast1 by remember { mutableStateOf<String?>(null) }
     var selectedBeast2 by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
@@ -88,7 +92,7 @@ fun GenesisScreen(
                     skillName = "BEAST TAMING",
                     level = beasts.lvl,
                     currentXp = beasts.xp,
-                    requiredXp = Balance.skillXpReq(beasts.lvl),
+                    requiredXp = XpCurves.skill(beasts.lvl),
                     barColor = GreenSuccess
                 )
                 Spacer(modifier = Modifier.height(6.dp))
@@ -96,7 +100,7 @@ fun GenesisScreen(
                     skillName = "NECROMANCY REANIMATION",
                     level = necro.lvl,
                     currentXp = necro.xp,
-                    requiredXp = Balance.skillXpReq(necro.lvl),
+                    requiredXp = XpCurves.skill(necro.lvl),
                     barColor = NecroPurple
                 )
             }
@@ -111,7 +115,7 @@ fun GenesisScreen(
                 .padding(3.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            GenesisTab.values().forEach { tab ->
+            GenesisTab.entries.forEach { tab ->
                 val isSelected = activeSubTab == tab
                 Button(
                     onClick = { activeSubTab = tab },
@@ -135,7 +139,7 @@ fun GenesisScreen(
                 SciFiPanel(
                     title = "COMPANION BEAST ROSTER",
                     accent = GreenSuccess,
-                    tag = "${beasts.beasts.size}/8 BEASTS ACTIVE"
+                    tag = "${beasts.beasts.size}/${GameCaps.BEAST} BEASTS ACTIVE"
                 ) {
                     if (beasts.beasts.isEmpty()) {
                         Text(
@@ -224,12 +228,11 @@ fun GenesisScreen(
                     accent = NecroPurple,
                     tag = "💀 ${NumberFormatter.short(necro.boneEssence)} ESSENCE"
                 ) {
-                    val minionTypes = listOf(
-                        Triple("Skeleton", 10L, "Frontline bone warrior (Soak +10, DPS +5)"),
-                        Triple("Bone Mage", 25L, "Ranged arcane caster (DPS +14, Arcane)"),
-                        Triple("Dread Knight", 50L, "Heavy armored juggernaut (Soak +35, DPS +22)"),
-                        Triple("Bone Lich", 100L, "Supreme necromantic commander (DPS +45, Aura)")
-                    )
+                    // Read straight from the engine's minion table: the advertised DPS used to
+                    // disagree with what summonMinion actually created.
+                    val minionTypes = MinionCatalog.TYPES.map { type ->
+                        Triple(type, MinionCatalog.cost(type), MinionCatalog.blurb(type))
+                    }
 
                     // Active army summary
                     necro.army.forEach { minion ->
@@ -333,7 +336,7 @@ fun GenesisScreen(
                                 }
 
                                 Button(
-                                    onClick = { onUpgradeDiscipline("GENESIS_BEAST", upg.id) },
+                                    onClick = { onUpgradeDiscipline(DisciplineCategory.GENESIS_BEAST, upg.id) },
                                     enabled = canAfford && !isMax,
                                     shape = RectangleShape,
                                     colors = ButtonDefaults.buttonColors(
@@ -384,7 +387,7 @@ fun GenesisScreen(
                                 }
 
                                 Button(
-                                    onClick = { onUpgradeDiscipline("GENESIS_NECRO", upg.id) },
+                                    onClick = { onUpgradeDiscipline(DisciplineCategory.GENESIS_NECRO, upg.id) },
                                     enabled = canAfford && !isMax,
                                     shape = RectangleShape,
                                     colors = ButtonDefaults.buttonColors(

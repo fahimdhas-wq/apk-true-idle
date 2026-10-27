@@ -1,7 +1,8 @@
 package com.aistudio.trueidle
 
-import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.GameClock
+import com.aistudio.trueidle.core.snapshot
+import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.Monster
@@ -123,12 +124,12 @@ class GameEngineTest {
 
     @Test
     fun testEightHourIdleAlertOnlyTriggersAtEightHours() {
-        val clock = FakeClock().apply { elapsed = 8 * 3600_000L + 10_000L }
+        val clock = FakeClock().apply { elapsed = Balance.OFFLINE_CAP_MS + 10_000L }
         val saved = GameState().copy(
             meta = GameState().meta.copy(
-                savedWallMs = wall - 8 * 3600_000L,
+                savedWallMs = clock.wall - Balance.OFFLINE_CAP_MS,
                 savedElapsedMs = 10_000L,
-                bootCount = boots
+                bootCount = clock.boots
             )
         )
         val engine = GameEngine(initialState = saved, clock = clock, random = Random(1234))
@@ -144,9 +145,9 @@ class GameEngineTest {
         val clock = FakeClock().apply { elapsed = 2 * 3600_000L + 10_000L }
         val saved = GameState().copy(
             meta = GameState().meta.copy(
-                savedWallMs = wall - 2 * 3600_000L,
+                savedWallMs = clock.wall - 2 * 3600_000L,
                 savedElapsedMs = 10_000L,
-                bootCount = boots
+                bootCount = clock.boots
             )
         )
         val engine = GameEngine(initialState = saved, clock = clock, random = Random(1234))
