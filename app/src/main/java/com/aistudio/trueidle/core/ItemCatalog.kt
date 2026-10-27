@@ -62,10 +62,14 @@ object ItemCatalog {
     /** Potion recipes: name -> (required herb, herb count, heal amount). */
     data class PotionDef(val name: String, val herb: String, val herbCost: Int, val heal: Double)
 
+    /**
+     * The engine charges these costs and the Armory screen renders this same table, so a recipe can
+     * never quote one price and take another.
+     */
     val POTIONS = listOf(
-        PotionDef("Minor Health Flask", FELWEED, 2, 50.0),
-        PotionDef("Bloodroot Tonic", BLOODROOT, 3, 80.0),
-        PotionDef("Moonlight Philter", MOONFLOWER, 4, 150.0)
+        PotionDef("Minor Health Flask", FELWEED, 4, 50.0),
+        PotionDef("Bloodroot Tonic", BLOODROOT, 6, 80.0),
+        PotionDef("Moonlight Philter", MOONFLOWER, 8, 150.0)
     )
 
     fun potion(name: String): PotionDef? = POTIONS.firstOrNull { it.name == name }

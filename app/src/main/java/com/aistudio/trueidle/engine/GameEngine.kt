@@ -936,20 +936,24 @@ class GameEngine(
     }
 
     fun brewPotion(name: String, reqHerb: String, reqQty: Int): GameState {
+        // The catalog is authoritative for a known potion; the caller only supplies the fallback.
+        val recipe = ItemCatalog.potion(name)
+        val herbName = recipe?.herb ?: reqHerb
+        val herbCost = recipe?.herbCost ?: reqQty
         val inventory = state.inventory.toMutableList()
-        val herbIdx = inventory.indexOfFirst { it.name == reqHerb }
+        val herbIdx = inventory.indexOfFirst { it.name == herbName }
         val owned = inventory.getOrNull(herbIdx)?.count ?: 0
-        if (herbIdx < 0 || owned < reqQty) {
+        if (herbIdx < 0 || owned < herbCost) {
             state = state.copy(
                 logs = (state.logs + log(
                     LogType.SYSTEM,
-                    "ALCHEMY FAILED: requires ${reqQty}x $reqHerb (have $owned)."
+                    "ALCHEMY FAILED: requires ${herbCost}x $herbName (have $owned)."
                 )).takeLast(Balance.LOG_CAP)
             )
             return state
         }
         val herb = inventory[herbIdx]
-        if (herb.count > reqQty) inventory[herbIdx] = herb.copy(count = herb.count - reqQty)
+        if (herb.count > herbCost) inventory[herbIdx] = herb.copy(count = herb.count - herbCost)
         else inventory.removeAt(herbIdx)
 
         // Brewed potions stack instead of piling up as separate one-count entries.
@@ -1301,7 +1305,7 @@ class GameEngine(
             if (active.rank >= active.maxRank) return state
             state = state.copy(
                 talent = state.talent.copy(
-                    talentPoints = state.talent.talentPoints - 1,
+                    talentPoints = (state.talent.talentPoints - active.costPoints).coerceAtLeast(0),
                     activeTalents = state.talent.activeTalents.map {
                         if (it.id == talentId) it.copy(rank = it.rank + 1) else it
                     }
@@ -1313,7 +1317,7 @@ class GameEngine(
         if (struggle.rank >= struggle.maxRank) return state
         state = state.copy(
             talent = state.talent.copy(
-                talentPoints = state.talent.talentPoints - 1,
+                talentPoints = (state.talent.talentPoints - struggle.costPoints).coerceAtLeast(0),
                 struggleTalents = state.talent.struggleTalents.map {
                     if (it.id == talentId) it.copy(rank = it.rank + 1) else it
                 }

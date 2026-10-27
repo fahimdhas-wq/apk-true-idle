@@ -42,10 +42,10 @@ fun StatsScreen(
     val armyDps = CombatMath.armyDps(state.necro)
     val totalDps = CombatMath.totalDps(state, d)
 
-    val weapon = state.inventory.firstOrNull { it.isEquipped && it.slot == "Weapon" }
-    val armor = state.inventory.firstOrNull { it.isEquipped && it.slot == "Armor" }
-    val ring = state.inventory.firstOrNull { it.isEquipped && it.slot == "Ring" }
-    val amulet = state.inventory.firstOrNull { it.isEquipped && it.slot == "Amulet" }
+    val weapon = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_WEAPON }
+    val armor = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_ARMOR }
+    val ring = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_RING }
+    val amulet = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_AMULET }
 
     Column(
         modifier = modifier

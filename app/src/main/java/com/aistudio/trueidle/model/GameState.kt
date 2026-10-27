@@ -80,7 +80,6 @@ data class NecromancyState(
     val army: List<Minion> = listOf(
         Minion(id = "minion_1", type = "Skeleton", count = 2, lvl = 1, dps = 5.0, soak = 10.0)
     ),
-    val activeSpells: List<String> = emptyList(),
     val upgrades: List<DisciplineUpgrade> = listOf(
         DisciplineUpgrade(id = "necro_soak", name = "Hardened Bone Plating", description = "+20% Minion damage absorption per rank", rank = 0, baseCost = 30L, costCurrency = "BONE"),
         DisciplineUpgrade(id = "necro_harvest", name = "Soul Siphon", description = "+25% Bone essence salvage from fallen foes", rank = 0, baseCost = 50L, costCurrency = "BONE")
@@ -126,7 +125,6 @@ data class MiningVein(
     val id: Int = 0,
     val oreName: String = "Copper Ore",
     val reqLvl: Int = 1,
-    val hardness: Int = 1,
     val miningProgress: Float = 0f,
     val durationSeconds: Float = 5f,
     val isReady: Boolean = false
@@ -144,9 +142,9 @@ data class HarvestState(
         Plot(id = 2, herbName = "Moonflower", growthProgress = 0f, durationSeconds = 15f)
     ),
     val veins: List<MiningVein> = listOf(
-        MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, hardness = 1, durationSeconds = 5f),
-        MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 3, hardness = 2, durationSeconds = 7f),
-        MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 5, hardness = 3, durationSeconds = 10f)
+        MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, durationSeconds = 5f),
+        MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 3, durationSeconds = 7f),
+        MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 5, durationSeconds = 10f)
     ),
     val autoCollectUnlocked: Boolean = false,
     val autoCollectEnabled: Boolean = true,
@@ -177,8 +175,7 @@ data class TrainingNode(
     val stat: String = "",
     val rank: Int = 0,
     val maxRank: Int = 20,
-    val costGold: Long = 50L,
-    val costPoints: Int = 1
+    val costGold: Long = 50L
 )
 
 @Serializable
@@ -203,7 +200,6 @@ data class EssenceState(
     val faithRemainder: Double = 0.0,
     val aegisActive: Boolean = true,
     val smiteLevel: Int = 1,
-    val auraName: String = "Holy Light",
     val upgrades: List<DisciplineUpgrade> = listOf(
         DisciplineUpgrade(id = "essence_shield", name = "Radiant Capacitor", description = "+20% Aegis barrier absorption efficiency", rank = 0, baseCost = 40L, costCurrency = "FAITH"),
         DisciplineUpgrade(id = "smite_overdrive", name = "Solar Lance", description = "+30% Smite burst damage per rank", rank = 0, baseCost = 50L, costCurrency = "FAITH"),

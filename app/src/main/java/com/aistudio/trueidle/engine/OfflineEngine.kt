@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.engine
 
+import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Derived
@@ -173,15 +174,15 @@ object OfflineEngine {
             goldPerHour = gPerHour,
             xpPerHour = xPerHour,
             items = listOfNotNull(
-                LootItem("Copper Ore", ore).takeIf { ore > 0 },
-                LootItem("Felweed", herb).takeIf { herb > 0 }
+                LootItem(ItemCatalog.COPPER_ORE, ore).takeIf { ore > 0 },
+                LootItem(ItemCatalog.FELWEED, herb).takeIf { herb > 0 }
             ),
             beastsTamed = tamed.coerceAtLeast(0),
-            farmingGainsSummary = if (herb > 0) "$herb Felweed gathered" else "No herbs gathered",
-            miningGainsSummary = if (ore > 0) "$ore Copper Ore mined" else "No ore mined",
+            farmingGainsSummary = if (herb > 0) "$herb ${ItemCatalog.FELWEED} gathered" else "No herbs gathered",
+            miningGainsSummary = if (ore > 0) "$ore ${ItemCatalog.COPPER_ORE} mined" else "No ore mined",
             dropsSummary = listOfNotNull(
-                "$ore Copper Ore".takeIf { ore > 0 },
-                "$herb Felweed".takeIf { herb > 0 }
+                "$ore ${ItemCatalog.COPPER_ORE}".takeIf { ore > 0 },
+                "$herb ${ItemCatalog.FELWEED}".takeIf { herb > 0 }
             ),
             timelineLog = timeline
         )

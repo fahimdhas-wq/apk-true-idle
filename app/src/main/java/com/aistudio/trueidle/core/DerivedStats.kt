@@ -56,12 +56,18 @@ object DerivedStats {
         // Struggle passives scale with damage endured.
         val struggleDamage = s.talent.struggleDamageTaken
         fun struggleRank(id: String) = (s.talent.struggleTalents.firstOrNull { it.id == id }?.rank ?: 0).toDouble()
+        // The per-increment thresholds come from the talent state so the talent description, the
+        // model and this maths cannot disagree. Each is floored at 1 to survive a corrupt save.
         // Whole increments only: the description promises "+3 Max Mana per 150 DMG taken", so 1000
         // damage taken is 6 increments (18 mana), not 6.67 increments (20 mana).
-        val struggleHp = (struggleDamage / 100L).toDouble() * 5.0 * struggleRank("struggle_hp")
-        val struggleDef = (struggleDamage / 500L).toDouble() * 1.0 * struggleRank("struggle_def")
-        val struggleMana = (struggleDamage / 150L).toDouble() * 3.0 * struggleRank("struggle_mana")
-        val struggleAtk = (struggleDamage / 250L).toDouble() * 2.0 * struggleRank("struggle_atk")
+        val hpStep = s.talent.struggleHpThreshold.coerceAtLeast(1L)
+        val defStep = s.talent.struggleArmorThreshold.coerceAtLeast(1L)
+        val manaStep = s.talent.struggleManaThreshold.coerceAtLeast(1L)
+        val atkStep = s.talent.struggleAtkThreshold.coerceAtLeast(1L)
+        val struggleHp = (struggleDamage / hpStep).toDouble() * 5.0 * struggleRank("struggle_hp")
+        val struggleDef = (struggleDamage / defStep).toDouble() * 1.0 * struggleRank("struggle_def")
+        val struggleMana = (struggleDamage / manaStep).toDouble() * 3.0 * struggleRank("struggle_mana")
+        val struggleAtk = (struggleDamage / atkStep).toDouble() * 2.0 * struggleRank("struggle_atk")
 
         // Active talent buffs.
         val berserk = s.talent.activeTalents.firstOrNull { it.id == "berserk" }
@@ -76,10 +82,10 @@ object DerivedStats {
         val extraCrit = if (isEnchant) 0.25 * (1.0 + 0.1 * (enchantRank - 1)) else 0.0
         val extraCritDmg = if (isEnchant) 0.50 * (1.0 + 0.1 * (enchantRank - 1)) else 0.0
 
-        val weapon = s.inventory.firstOrNull { it.isEquipped && it.slot == "Weapon" }
-        val armor = s.inventory.firstOrNull { it.isEquipped && it.slot == "Armor" }
-        val ring = s.inventory.firstOrNull { it.isEquipped && it.slot == "Ring" }
-        val amulet = s.inventory.firstOrNull { it.isEquipped && it.slot == "Amulet" }
+        val weapon = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_WEAPON }
+        val armor = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_ARMOR }
+        val ring = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_RING }
+        val amulet = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_AMULET }
 
         // forge_quality is applied here and nowhere else (craftEquipment bakes in no multiplier).
         val forgeQualityRank = s.armory.upgrades.firstOrNull { it.id == "forge_quality" }?.rank ?: 0

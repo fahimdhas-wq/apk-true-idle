@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.ItemCatalog
+import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.core.XpCurves
@@ -39,19 +41,18 @@ fun ArmoryScreen(
     val scrollState = rememberScrollState()
 
     val forgeRecipes = listOf(
-        ForgeRecipe("Bronze Glaive", 1, "Weapon", "Copper Ore", 6, "+12 ATK"),
-        ForgeRecipe("Heavy Plate", 1, "Armor", "Copper Ore", 8, "+8 DEF"),
-        ForgeRecipe("Titan Edge", 2, "Weapon", "Tin Ore", 10, "+24 ATK"),
-        ForgeRecipe("Cobalt Cuirass", 2, "Armor", "Tin Ore", 12, "+16 DEF"),
-        ForgeRecipe("Plasma Cleaver", 3, "Weapon", "Iron Ore", 15, "+36 ATK"),
-        ForgeRecipe("Aegis Carapace", 3, "Armor", "Iron Ore", 18, "+24 DEF")
+        ForgeRecipe("Bronze Glaive", 1, Equipment.SLOT_WEAPON, ItemCatalog.COPPER_ORE, 6, "+12 ATK"),
+        ForgeRecipe("Heavy Plate", 1, Equipment.SLOT_ARMOR, ItemCatalog.COPPER_ORE, 8, "+8 DEF"),
+        ForgeRecipe("Titan Edge", 2, Equipment.SLOT_WEAPON, ItemCatalog.TIN_ORE, 10, "+24 ATK"),
+        ForgeRecipe("Cobalt Cuirass", 2, Equipment.SLOT_ARMOR, ItemCatalog.TIN_ORE, 12, "+16 DEF"),
+        ForgeRecipe("Plasma Cleaver", 3, Equipment.SLOT_WEAPON, ItemCatalog.IRON_ORE, 15, "+36 ATK"),
+        ForgeRecipe("Aegis Carapace", 3, Equipment.SLOT_ARMOR, ItemCatalog.IRON_ORE, 18, "+24 DEF")
     )
 
-    val alchemyRecipes = listOf(
-        AlchemyRecipe("Minor Health Flask", "Felweed", 4, "Restores 50 HP"),
-        AlchemyRecipe("Bloodroot Tonic", "Bloodroot", 6, "Restores 80 HP"),
-        AlchemyRecipe("Moonlight Philter", "Moonflower", 8, "Restores 150 HP")
-    )
+    // Rendered from the catalog the engine charges against, so the two cannot drift.
+    val alchemyRecipes = ItemCatalog.POTIONS.map { potion ->
+        AlchemyRecipe(potion.name, potion.herb, potion.herbCost, "Restores ${potion.heal.toInt()} HP")
+    }
 
     Column(
         modifier = modifier

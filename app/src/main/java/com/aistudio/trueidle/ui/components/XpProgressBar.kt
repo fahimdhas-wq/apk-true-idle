@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.theme.BorderDark
@@ -49,7 +50,8 @@ fun XpProgressBar(
                     text = "◈ ${skillName.uppercase()}",
                     style = TrueIdleType.tag,
                     color = TextLight,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -73,13 +75,17 @@ fun XpProgressBar(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Right: XP Telemetry with fixed minimum width and right alignment
+            // Right: XP telemetry. The width is bounded rather than merely minimum-bounded: the
+            // label row is the weighted child, so an over-long readout can no longer push the
+            // discipline name off a 360dp screen.
             Text(
                 text = "${NumberFormatter.short(currentXp)} / ${NumberFormatter.short(requiredXp)} (${(progress * 100).toInt()}%)",
                 style = TrueIdleType.meta,
                 color = TextMuted,
                 textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 100.dp)
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(min = 96.dp, max = 136.dp)
             )
         }
 
