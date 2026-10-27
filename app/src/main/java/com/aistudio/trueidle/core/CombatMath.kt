@@ -1,6 +1,7 @@
 package com.aistudio.trueidle.core
 
 import com.aistudio.trueidle.model.BeastTamingState
+import com.aistudio.trueidle.model.EssenceState
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.Monster
 import com.aistudio.trueidle.model.NecromancyState
@@ -68,9 +69,23 @@ object CombatMath {
         return heroDps(d) + (beastDps(s.beasts, ferocity) + armyDps(s.necro)) * minionMultiplier
     }
 
-    /** Damage per second the hero takes after armor, before shield. Floored at 1/s as today. */
-    fun incomingPerSec(m: Monster, d: Derived, aegis: Boolean): Double {
-        val raw = m.damage * if (aegis) 0.8 else 1.0
+    /**
+     * Effective Aegis damage reduction for this essence state: the base barrier value scaled by the
+     * Radiant Capacitor upgrade and capped short of total immunity. Zero while the barrier is down.
+     */
+    fun aegisReduction(essence: EssenceState): Double {
+        if (!essence.aegisActive) return 0.0
+        val rank = essence.upgrades.firstOrNull { it.id == "essence_shield" }?.rank ?: 0
+        return (GameCaps.AEGIS_DAMAGE_REDUCTION * (1.0 + 0.20 * rank)).coerceIn(0.0, 0.80)
+    }
+
+    /**
+     * Damage per second the hero takes after armor and the Aegis barrier. The reduction is passed in
+     * rather than assumed, so the barrier upgrade cannot be honoured in the engine and forgotten in
+     * the UI, and the barrier maths lives in exactly one place.
+     */
+    fun incomingPerSec(m: Monster, d: Derived, aegisReduction: Double = 0.0): Double {
+        val raw = m.damage * (1.0 - aegisReduction.coerceIn(0.0, 0.9))
         return (raw - d.armorDef * 0.3).coerceAtLeast(1.0)
     }
 }

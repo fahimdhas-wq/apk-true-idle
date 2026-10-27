@@ -41,7 +41,7 @@ class GameEngine(
     var state: GameState = sanitize(initialState)
         private set
 
-    val ids = Ids(nextIdFrom(initialState))
+    private val ids = Ids(nextIdFrom(initialState))
 
     private var respawnLeft = 0.0
     private var eightHourIdleAlertPending = false
@@ -410,8 +410,8 @@ class GameEngine(
         val soakReduction = if (soak > 0.0) {
             ((soak / (soak + 100.0)) * (1.0 + 0.2 * soakRank)).coerceAtMost(0.5)
         } else 0.0
-        val aegisMult = if (frame.essence.aegisActive) 1.0 - Balance.AEGIS_DAMAGE_REDUCTION else 1.0
-        val incomingRate = CombatMath.incomingPerSec(monster, d, false) * aegisMult
+        val aegisMult = 1.0 - CombatMath.aegisReduction(frame.essence)
+        val incomingRate = CombatMath.incomingPerSec(monster, d, 0.0) * aegisMult
         val monsterDamage = incomingRate * dt * (1.0 - soakReduction)
 
         val hpBefore = frame.player.hp
@@ -1587,6 +1587,12 @@ class GameEngine(
      * longer rebuilds the whole list (and the whole state object) on every frame.
      */
     private fun evaluateAchievements(force: Boolean = false) {
+        // Called every tick: bail out before allocating a new list when nothing moved.
+        if (!force && state.achievements.all { a ->
+                a.isUnlocked ||
+                    (minOf(progressFor(a.id), a.target) == a.progress && a.progress < a.target)
+            }
+        ) return
         var changed = false
         val updated = state.achievements.map { achievement ->
             if (achievement.isUnlocked) {

@@ -46,8 +46,8 @@ fun GenesisScreen(
     modifier: Modifier = Modifier
 ) {
     var activeSubTab by rememberSaveable { mutableStateOf(GenesisTab.BEASTS) }
-    var selectedBeast1 by remember { mutableStateOf<String?>(null) }
-    var selectedBeast2 by remember { mutableStateOf<String?>(null) }
+    var selectedBeast1 by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedBeast2 by rememberSaveable { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
 
     val beasts = state.beasts

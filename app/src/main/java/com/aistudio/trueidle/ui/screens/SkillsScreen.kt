@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -102,7 +104,8 @@ fun SkillsScreen(
                 }
                 Row(
                     Modifier
-                        .clickable { onSectionChange(section) }
+                        .clickable(role = Role.Tab) { onSectionChange(section) }
+                        .heightIn(min = 48.dp)
                         .background(if (selected) section.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                         .border(1.dp, if (selected) section.color else MaterialTheme.colorScheme.outline, RectangleShape)
                         .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -110,7 +113,13 @@ fun SkillsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
-                    Text(section.icon, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
+                    // Decorative: the bracket glyph must not be announced alongside the label.
+                    Text(
+                        text = section.icon,
+                        style = TrueIdleType.tag,
+                        color = if (selected) section.color else TextMuted,
+                        modifier = Modifier.clearAndSetSemantics { }
+                    )
                     Text(section.label, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
                     if (level.isNotEmpty()) {
                         Box(
@@ -229,7 +238,7 @@ fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
 @Composable
 fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) {
     val scrollState = rememberScrollState()
-    val derived = DerivedStats.of(state)
+    val derived = remember(state) { DerivedStats.of(state) }
     val totalLevel = state.player.lvl + state.harvest.farmingLvl + state.harvest.miningLvl +
         state.armory.smithingLvl + state.armory.herbloreLvl + state.beasts.lvl + state.necro.lvl +
         state.training.lvl + state.essence.lvl + state.slayer.lvl

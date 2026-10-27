@@ -50,7 +50,7 @@ fun SettingsScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val d = DerivedStats.of(state)
+    val d = remember(state) { DerivedStats.of(state) }
     val promo = state.promotion
     val auto = state.automation
 
@@ -312,7 +312,7 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 48.dp)
                         .testTag("fight_promotion_boss_btn")
                 ) {
                     Text(

@@ -90,6 +90,6 @@ class CombatMathTest {
             lootChance = 0.35, tameChance = 0.15, smiteBonus = 0.0
         )
         // raw - armorDef * 0.3 = 1.0 - 30.0 = -29.0 -> coerced to 1.0
-        assertEquals(1.0, CombatMath.incomingPerSec(m, derived, aegis = false), 1e-6)
+        assertEquals(1.0, CombatMath.incomingPerSec(m, derived, aegisReduction = 0.0), 1e-6)
     }
 }

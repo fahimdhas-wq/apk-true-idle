@@ -167,7 +167,7 @@ fun SlayerScreen(
                 enabled = canReroll,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 40.dp)
+                    .heightIn(min = 48.dp)
                     .testTag("reroll_task_button"),
                 shape = RectangleShape,
                 colors = ButtonDefaults.buttonColors(

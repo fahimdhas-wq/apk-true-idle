@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.ui.components
 
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +26,7 @@ fun CombatTelemetryCard(
     state: GameState,
     modifier: Modifier = Modifier
 ) {
-    val d = DerivedStats.of(state)
+    val d = remember(state) { DerivedStats.of(state) }
     val playerDps = CombatMath.heroDps(d)
     val beastDps = CombatMath.beastDps(state.beasts)
     val armyDps = CombatMath.armyDps(state.necro)

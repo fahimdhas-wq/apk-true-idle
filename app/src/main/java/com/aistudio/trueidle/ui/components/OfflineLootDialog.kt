@@ -288,7 +288,7 @@ fun OfflineLootDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 48.dp)
                         .testTag("claim_offline_btn"),
                     shape = RectangleShape,
                     border = BorderStroke(1.5.dp, PrimaryNeon),

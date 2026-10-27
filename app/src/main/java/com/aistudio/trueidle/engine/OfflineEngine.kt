@@ -49,8 +49,9 @@ object OfflineEngine {
         val effDps = dps * CombatMath.mitigation(m.armor)
         val ttk = (m.maxHp + m.maxShield) / maxOf(effDps, 1e-6)
         // Aegis is only counted for the share of the window the faith actually pays for.
-        val incoming = CombatMath.incomingPerSec(m, d, true) * aegisFraction +
-            CombatMath.incomingPerSec(m, d, false) * (1.0 - aegisFraction)
+        val reduction = CombatMath.aegisReduction(s.essence)
+        val incoming = CombatMath.incomingPerSec(m, d, reduction) * aegisFraction +
+            CombatMath.incomingPerSec(m, d, 0.0) * (1.0 - aegisFraction)
         val ehp = d.maxHp + d.maxShield
         val regen = d.healthRegen + d.shieldRegen
         val killsRequired = m.killsRequired
@@ -139,6 +140,16 @@ object OfflineEngine {
         val gPerHour = (gold / effectiveHours).toLong()
         val xPerHour = (xp / effectiveHours).toLong()
 
+        // The level ups the claim will actually apply, so the report can show them instead of 0.
+        var levelsGained = 0
+        var levelCursor = s.player.lvl
+        var bankedXp = s.player.xp + xp
+        while (bankedXp >= Balance.playerXpReq(levelCursor)) {
+            bankedXp -= Balance.playerXpReq(levelCursor)
+            levelCursor++
+            levelsGained++
+        }
+
         // Real per-floor data instead of a fabricated two-hour narrative.
         val timeline = buildList {
             add(
@@ -163,7 +174,7 @@ object OfflineEngine {
             goldEarned = gold,
             xpEarned = xp,
             bonesEarned = bones,
-            playerLevelsGained = 0,
+            playerLevelsGained = levelsGained,
             floorsGained = gained,
             startFloor = startFloor,
             finalFloor = floor,

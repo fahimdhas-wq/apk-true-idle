@@ -44,8 +44,8 @@ object Balance {
     /** Faith drained per second while Aegis is deployed (offline uses the same constant). */
     const val AEGIS_DRAIN_PER_SEC = 0.5
 
-    /** Damage reduction the Aegis barrier provides. */
-    const val AEGIS_DAMAGE_REDUCTION = 0.2
+    /** Damage reduction the Aegis barrier provides (base value, scaled by Radiant Capacitor). */
+    const val AEGIS_DAMAGE_REDUCTION = GameCaps.AEGIS_DAMAGE_REDUCTION
 
     // ---- Caps ----
 

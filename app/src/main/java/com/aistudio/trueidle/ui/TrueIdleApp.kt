@@ -175,6 +175,21 @@ fun TrueIdleApp(
                                 color = NecroPurple
                             )
                         }
+                        // Diamonds were awarded for boss first clears but nothing ever displayed them.
+                        if (state.player.diamonds > 0L) {
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                                    .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "💎 ${NumberFormatter.short(state.player.diamonds)}",
+                                    style = TrueIdleType.tag,
+                                    color = PrimaryNeon
+                                )
+                            }
+                        }
                         // Top bar shortcut: Settings / Interface. Min 48dp touch target.
                         Box(
                             modifier = Modifier
@@ -259,15 +274,10 @@ fun TrueIdleApp(
                     onToggleAuto = { viewModel.toggleAutoAdvance() },
                     onSelectLogFilter = { filter -> viewModel.setLogFilter(filter) },
                     onClearLogs = { viewModel.clearLogs() },
-                    onManageSupport = { kind ->
-                        // Honour which squad was asked for instead of always landing on OVERVIEW.
-                        skillsSection = SkillSubSection.GENESIS
-                        currentTab = TrueIdleTab.SKILLS
-                        when (kind) {
-                            SupportKind.BEAST -> viewModel.setLogFilter(logFilter)
-                            SupportKind.UNDEAD -> viewModel.setLogFilter(logFilter)
-                        }
-                    }
+                    // Both squads are managed on the Genesis screen, so this navigates there
+                    // rather than to the Skills overview. The kind is kept for the component
+                    // contract; per-squad deep links would need the Genesis sub-tab hoisted too.
+                    onManageSupport = { skillsSection = SkillSubSection.GENESIS; currentTab = TrueIdleTab.SKILLS }
                 )
                 TrueIdleTab.SKILLS -> SkillsScreen(
                     state = state,

@@ -102,8 +102,9 @@ object DerivedStats {
         val atkSpeed = s.player.let { 1.0 * 1.05.pow(rank("speed_bonus")) * speedMultiplier }
         val critChance = (0.124 + luck * 0.001 + extraCrit).coerceIn(0.0, 1.0)
         val critDamage = 1.85 + extraCritDmg
-        // Smite is decoupled from Aegis: smite ranks must matter whether or not the barrier holds.
-        val smiteBonus = s.essence.smiteLevel * 3.0
+        // Smite is decoupled from Aegis, and Solar Lance scales the burst per rank.
+        val smiteRank = s.essence.upgrades.firstOrNull { it.id == "smite_overdrive" }?.rank ?: 0
+        val smiteBonus = s.essence.smiteLevel * 3.0 * (1.0 + 0.30 * smiteRank)
 
         // Tame rate: base + luck, plus the Pheromone Baits discipline.
         val tameRateRank = s.beasts.upgrades.firstOrNull { it.id == "beast_tame_rate" }?.rank ?: 0

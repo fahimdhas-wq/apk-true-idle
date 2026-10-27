@@ -82,7 +82,7 @@ fun SupportModule(
             onClick = { onManage(kind) },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 40.dp)
+                .heightIn(min = 48.dp)
         ) {
             Text("MANAGE SQUAD", style = TrueIdleType.tag, color = PrimaryNeon)
         }

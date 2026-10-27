@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,11 +43,11 @@ fun CombatScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val m = state.monster
-    val derived = DerivedStats.of(state)
+    val derived = remember(state) { DerivedStats.of(state) }
     val totalDps = CombatMath.totalDps(state, derived)
     val mitigation = CombatMath.mitigation(m.armor)
     val effDps = totalDps * mitigation
-    val incomingRate = CombatMath.incomingPerSec(m, derived, state.essence.aegisActive)
+    val incomingRate = CombatMath.incomingPerSec(m, derived, CombatMath.aegisReduction(state.essence))
     val reqXp = XpCurves.player(p.lvl)
 
     // Support module data mappings

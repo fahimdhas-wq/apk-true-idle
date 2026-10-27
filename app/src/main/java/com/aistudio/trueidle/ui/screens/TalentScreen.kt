@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,7 +30,7 @@ fun TalentScreen(
     modifier: Modifier = Modifier
 ) {
     val talent = state.talent
-    val derived = DerivedStats.of(state)
+    val derived = remember(state) { DerivedStats.of(state) }
     val scrollState = rememberScrollState()
 
     Column(

@@ -96,7 +96,7 @@ fun FloorControls(
                 OutlinedButton(
                     onClick = { onToggleAuto() },
                     modifier = Modifier
-                        .heightIn(min = 40.dp)
+                        .heightIn(min = 48.dp)
                         .testTag("auto_advance_switch"),
                     shape = RectangleShape,
                     border = BorderStroke(1.dp, if (autoAdvance) GreenSuccess else BorderDark),
