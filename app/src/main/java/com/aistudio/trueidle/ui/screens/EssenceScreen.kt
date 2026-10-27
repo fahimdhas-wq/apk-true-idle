@@ -17,13 +17,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
-import kotlin.math.floor
-import kotlin.math.pow
 
 @Composable
 fun EssenceScreen(
@@ -35,7 +34,7 @@ fun EssenceScreen(
 ) {
     val essence = state.essence
     val scrollState = rememberScrollState()
-    val smiteCost = floor(25.0 * 1.5.pow(essence.smiteLevel.toDouble())).toLong()
+    val smiteCost = UpgradeCosts.smite(essence.smiteLevel)
     val canAffordSmite = essence.faith >= smiteCost
 
     Column(
@@ -154,7 +153,7 @@ fun EssenceScreen(
             tag = "CONDUITS"
         ) {
             essence.upgrades.forEach { upg ->
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                val cost = UpgradeCosts.nextRank(upg.baseCost, upg.rank, upg.costMultiplier)
                 val canAfford = essence.faith >= cost
                 val isMax = upg.rank >= upg.maxRank
 

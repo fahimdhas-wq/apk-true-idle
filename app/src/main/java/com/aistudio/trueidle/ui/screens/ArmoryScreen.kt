@@ -19,12 +19,12 @@ import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
-import kotlin.math.pow
 
 private data class ForgeRecipe(val name: String, val tier: Int, val slot: String, val reqOre: String, val reqQty: Int, val statPreview: String)
 private data class AlchemyRecipe(val name: String, val reqHerb: String, val reqQty: Int, val effectDesc: String)
@@ -206,7 +206,7 @@ fun ArmoryScreen(
             tag = "MODIFICATIONS"
         ) {
             armory.upgrades.forEach { upg ->
-                val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                val cost = UpgradeCosts.nextRank(upg.baseCost, upg.rank, upg.costMultiplier)
                 val canAfford = state.player.gold >= cost
                 val isMax = upg.rank >= upg.maxRank
 

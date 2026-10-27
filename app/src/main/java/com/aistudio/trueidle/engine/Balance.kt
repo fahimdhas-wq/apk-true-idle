@@ -2,6 +2,7 @@ package com.aistudio.trueidle.engine
 
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.MinionCatalog
+import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.DisciplineUpgrade
 import com.aistudio.trueidle.model.Monster
@@ -72,9 +73,9 @@ object Balance {
     // ---- Shared cost formulas ----
 
     fun upgradeCost(upgrade: DisciplineUpgrade): Long =
-        (upgrade.baseCost * upgrade.costMultiplier.pow(upgrade.rank.toDouble())).toLong()
+        UpgradeCosts.nextRank(upgrade.baseCost, upgrade.rank, upgrade.costMultiplier)
 
-    fun smiteUpgradeCost(smiteLevel: Int): Long = (25.0 * 1.5.pow(smiteLevel.toDouble())).toLong()
+    fun smiteUpgradeCost(smiteLevel: Int): Long = UpgradeCosts.smite(smiteLevel)
 
     fun talentManaCost(talentId: String): Double = when (talentId) {
         "berserk" -> 20.0

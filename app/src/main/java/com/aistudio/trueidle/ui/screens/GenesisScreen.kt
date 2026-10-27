@@ -22,6 +22,7 @@ import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.MinionCatalog
+import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.Beast
 import com.aistudio.trueidle.model.GameState
@@ -29,7 +30,6 @@ import com.aistudio.trueidle.ui.components.RosterRow
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
-import kotlin.math.pow
 
 private enum class GenesisTab(val label: String, val icon: String, val color: Color) {
     BEASTS("BEASTS", "🐾", GreenSuccess),
@@ -303,7 +303,7 @@ fun GenesisScreen(
                 ) {
                     Text("COMPANION BEAST ENHANCEMENTS", style = TrueIdleType.label, color = GreenSuccess)
                     beasts.upgrades.forEach { upg ->
-                        val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                        val cost = UpgradeCosts.nextRank(upg.baseCost, upg.rank, upg.costMultiplier)
                         val canAfford = state.player.gold >= cost
                         val isMax = upg.rank >= upg.maxRank
 
@@ -354,7 +354,7 @@ fun GenesisScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     Text("NECROMANTIC SOUL UPGRADES", style = TrueIdleType.label, color = NecroPurple)
                     necro.upgrades.forEach { upg ->
-                        val cost = (upg.baseCost * upg.costMultiplier.pow(upg.rank.toDouble())).toLong()
+                        val cost = UpgradeCosts.nextRank(upg.baseCost, upg.rank, upg.costMultiplier)
                         val canAfford = state.necro.boneEssence >= cost
                         val isMax = upg.rank >= upg.maxRank
 
