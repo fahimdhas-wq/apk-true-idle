@@ -262,6 +262,33 @@ class TierConfigTest {
         assertTrue("expected IllegalArgumentException for a missing '#'", threw)
     }
 
+    @Test
+    fun ordinalsMapOntoTheCanonicalOrder() {
+        assertEquals("F-", TierConfig.forOrdinal(1).id)
+        assertEquals("F", TierConfig.forOrdinal(2).id)
+        assertEquals("F+", TierConfig.forOrdinal(3).id)
+        assertEquals(TierConfig.rankOf("F-"), TierConfig.forOrdinal(1).rank)
+        assertEquals(TierConfig.colorOf("F-"), TierConfig.colorForOrdinal(1))
+        // 0-based rank 6 is the 7th tier, i.e. "D-" (F-, F, F+, E-, E, E+ come first).
+        assertEquals("D-", TierConfig.forOrdinal(7).id)
+        assertEquals(TierConfig.colorOf("D-"), TierConfig.forOrdinal(7).color)
+        assertEquals(TierConfig.colorOf("Infinite EX"), TierConfig.forOrdinal(TierConfig.size).color)
+
+        // Clamped and safe, never throwing for a value a save could contain.
+        assertEquals("F-", TierConfig.forOrdinal(0).id)
+        assertEquals("F-", TierConfig.forOrdinal(-7).id)
+        assertEquals("Infinite EX", TierConfig.forOrdinal(9_999).id)
+        assertEquals(TierConfig.UNKNOWN_COLOR, TierConfig.colorForOrdinal(0))
+        assertEquals(TierConfig.UNKNOWN_COLOR, TierConfig.colorForOrdinal(-5))
+    }
+
+    @Test
+    fun displayNamesFallBackForUnknownTiers() {
+        assertEquals("SSR+", TierConfig.displayName("SSR+"))
+        assertEquals("Transcendent EX", TierConfig.displayName("Transcendent EX"))
+        assertEquals(TierConfig.UNKNOWN_DISPLAY_NAME, TierConfig.displayName("nope"))
+    }
+
     private fun expectedArgb(hex: String): Int {
         val body = hex.substring(1)
         return if (body.length == 3) {

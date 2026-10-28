@@ -181,7 +181,13 @@ fun GenesisScreen(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(beast.name.uppercase(), style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("★".repeat(beast.stars), style = TrueIdleType.tag, color = SecondaryGold)
+                                            // Beast rank uses the global tier palette, so a rank
+                                            // looks the same on every screen it appears.
+                                            Text(
+                                                text = "★".repeat(beast.stars),
+                                                style = TrueIdleType.tag,
+                                                color = com.aistudio.trueidle.ui.TierColors.colorForOrdinal(beast.rank)
+                                            )
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(

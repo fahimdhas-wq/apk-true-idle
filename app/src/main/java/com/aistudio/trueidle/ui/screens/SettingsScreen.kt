@@ -27,11 +27,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.R
+import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.ui.rememberTierColorForOrdinal
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.theme.*
+
+/** Selectable notation modes: settings key -> compact label. */
+private val NOTATION_OPTIONS = listOf(
+    "ALPHABETIC" to "ALPHA",
+    "COMPACT" to "K/M/B",
+    "GROUPED" to "FULL",
+    "SCIENTIFIC" to "SCI"
+)
+
+/** Explains the active convention using the engine's own configuration, so the copy cannot drift. */
+private fun notationSummary(notation: String): String {
+    val cfg = BigNumberFormatter.Config.byName(notation)
+    return when (cfg.mode) {
+        BigNumberFormatter.Mode.ALPHABETIC ->
+            "Grouped digits, then A = 10^${cfg.firstSuffixExponent} and each letter x10^${cfg.exponentStep}."
+        BigNumberFormatter.Mode.COMPACT ->
+            "K/M/B/T suffixes, then scientific notation from 10^15."
+        BigNumberFormatter.Mode.GROUPED ->
+            "Full digits with a separator every ${cfg.groupSize} digits."
+        BigNumberFormatter.Mode.SCIENTIFIC ->
+            "Grouped digits below 10^6, then scientific with ${cfg.scientificDigits} decimals."
+    }
+}
 
 @Composable
 fun SettingsScreen(
@@ -40,6 +65,7 @@ fun SettingsScreen(
     onImportSave: (String) -> Boolean,
     onResetGame: () -> Unit,
     onClaimAchievement: ((String) -> Unit)? = null,
+    onSetNotation: (String) -> Unit = {},
     onToggleAutoEquip: () -> Unit = {},
     onToggleAutoMerge: () -> Unit = {},
     onSetCraftUsage: (Int) -> Unit = {},
@@ -224,7 +250,8 @@ fun SettingsScreen(
                 Text(
                     text = promo.tierName.uppercase(),
                     style = TrueIdleType.titleLarge,
-                    color = SecondaryGold
+                    // Promotion tier is coloured from the one global tier table.
+                    color = rememberTierColorForOrdinal(promo.tier)
                 )
                 Text(
                     text = "CURRENT PROMOTION TIER (+${promo.bonusPercent}% ALL STATS BONUS)",
@@ -323,7 +350,60 @@ fun SettingsScreen(
             }
         }
 
-        // 6. AUTOMATION PROTOCOLS
+        // 6. NUMBER NOTATION (drives the single large-number engine)
+        SciFiPanel(
+            title = "NUMBER NOTATION",
+            accent = PrimaryNeon,
+            tag = "DISPLAY"
+        ) {
+            Text(
+                text = "How every large value is rendered across the game.",
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                NOTATION_OPTIONS.forEach { option ->
+                    val selected = state.display.notation == option.first
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onSetNotation(option.first) }
+                            .background(
+                                if (selected) PrimaryNeon.copy(alpha = 0.16f) else Color(0xFF000000),
+                                RectangleShape
+                            )
+                            .border(1.dp, if (selected) PrimaryNeon else BorderDark, RectangleShape)
+                            .padding(vertical = 5.dp)
+                            .testTag("notation_${option.first.lowercase()}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = option.second,
+                            style = TrueIdleType.tag,
+                            color = if (selected) PrimaryNeon else TextMuted,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = notationSummary(state.display.notation),
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+            Text(
+                text = "Switching notation never changes stored values.",
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+        }
+
+        // 7. AUTOMATION PROTOCOLS
         SciFiPanel(
             title = "AUTOMATION PROTOCOLS",
             accent = PrimaryNeon,

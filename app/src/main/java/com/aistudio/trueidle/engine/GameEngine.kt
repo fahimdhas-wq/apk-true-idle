@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.engine
 
+import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Derived
@@ -68,6 +69,10 @@ class GameEngine(
 
     fun restore(newState: GameState) {
         state = sanitize(newState)
+        // The saved notation preference drives the shared formatter, and the stored name is
+        // normalised so an unknown/legacy value cannot leave the UI in a state the engine does not
+        // recognise.
+        state = state.copy(display = state.display.copy(notation = applyNotation(state.display.notation).mode.name))
         reseedIds(state)
         respawnLeft = 0.0
         playTimeSubSec = 0.0
@@ -1594,6 +1599,23 @@ class GameEngine(
     fun setCraftMaterialUsage(pct: Int): GameState {
         state = state.copy(automation = state.automation.copy(craftMaterialUsagePct = pct.coerceIn(0, 100)))
         return state
+    }
+
+    /**
+     * Switches the large-number notation for the whole game and persists the choice in the save.
+     *
+     * Only the display changes: stored values, offline rewards and combat maths are untouched.
+     */
+    fun setNotation(notation: String): GameState {
+        val applied = applyNotation(notation)
+        state = state.copy(display = state.display.copy(notation = applied.mode.name))
+        return state
+    }
+
+    private fun applyNotation(notation: String): BigNumberFormatter.Config {
+        val config = BigNumberFormatter.Config.byName(notation)
+        BigNumberFormatter.setConfig(config)
+        return config
     }
 
     fun fightPromotionBoss(): GameState {

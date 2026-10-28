@@ -129,7 +129,16 @@ fun ArmoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("${recipe.name} [T${recipe.tier}]", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(recipe.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                // Forge grade shown with the canonical tier colour and name.
+                                Text(
+                                    text = "[T${recipe.tier} ${com.aistudio.trueidle.core.TierConfig.forOrdinal(recipe.tier).id}]",
+                                    style = TrueIdleType.tag,
+                                    color = com.aistudio.trueidle.ui.TierColors.colorForOrdinal(recipe.tier)
+                                )
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "${recipe.statPreview} · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have ${NumberFormatter.short(have)})",

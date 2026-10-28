@@ -15,40 +15,40 @@ class StableNumberTextTest {
         val holder = StableNumberText()
         assertEquals(0L, holder.formatCalls)
         val first = holder.text(12_345L)
-        assertEquals("12.3K", first)
+        assertEquals("12,345", first)
         assertEquals(1L, holder.formatCalls)
-        repeat(10_000) { assertEquals("12.3K", holder.text(12_345L)) }
+        repeat(10_000) { assertEquals("12,345", holder.text(12_345L)) }
         assertEquals("formatter was called for an unchanged value", 1L, holder.formatCalls)
     }
 
     @Test
     fun changedValueIsReformattedImmediately() {
         val holder = StableNumberText()
-        assertEquals("1.00K", holder.text(1_000L))
-        assertEquals("1.23K", holder.text(1_234L))
+        assertEquals("1,000", holder.text(1_000L))
+        assertEquals("1,234", holder.text(1_234L))
         assertEquals(2L, holder.formatCalls)
-        assertEquals("1.00K", holder.text(1_000L))
+        assertEquals("1,000", holder.text(1_000L))
         assertEquals(3L, holder.formatCalls)
     }
 
     @Test
     fun doublesAreKeyedOnTheirExactBits() {
         val holder = StableNumberText()
-        assertEquals("1.23K", holder.text(1_234.5))
+        assertEquals("1,235", holder.text(1_234.5))
         assertEquals(1L, holder.formatCalls)
-        assertEquals("1.23K", holder.text(1_234.5))
+        assertEquals("1,235", holder.text(1_234.5))
         assertEquals(1L, holder.formatCalls)
 
         // Two values that format identically are still distinct inputs: 1,234.5 vs 1,234.50001.
         val identicalText = holder.text(1_234.50001)
-        assertEquals("1.23K", identicalText)
+        assertEquals("1,235", identicalText)
         assertEquals(2L, holder.formatCalls)
 
         // +0.0 and -0.0 have different bit patterns but the same rendering; either behaviour is
         // correct as long as the text is right and no stale value leaks through.
         assertEquals("0", holder.text(0.0))
         assertEquals("0", holder.text(-0.0))
-        assertNotEquals("1.23K", holder.text(Double.NaN))
+        assertNotEquals("1,235", holder.text(Double.NaN))
         assertEquals("—", holder.text(Double.NaN))
     }
 

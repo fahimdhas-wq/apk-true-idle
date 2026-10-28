@@ -246,6 +246,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleAutoEquipBestGear() = mutate { engine.toggleAutoEquipBestGear() }
     fun toggleAutoMergeBeasts() = mutate { engine.toggleAutoMergeBeasts() }
     fun setCraftMaterialUsage(pct: Int) = mutate { engine.setCraftMaterialUsage(pct) }
+    fun setNotation(notation: String) = mutate { engine.setNotation(notation) }
     fun fightPromotionBoss() = mutate { engine.fightPromotionBoss() }
     fun clearLogs() = mutate { engine.clearLogs() }
 

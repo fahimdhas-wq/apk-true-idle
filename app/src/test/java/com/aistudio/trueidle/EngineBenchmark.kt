@@ -1,5 +1,6 @@
 package com.aistudio.trueidle
 
+import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.StableNumberText
 import com.aistudio.trueidle.core.TierConfig
@@ -157,7 +158,7 @@ object EngineBenchmarkReport {
         results += bench("Alphabetic suffix conversion (1..10 characters)", 100_000) { ops ->
             var sink = 0
             for (i in 0 until ops) {
-                sink += NumberFormatter.suffixLabel(SUFFIX_INDICES[i % SUFFIX_INDICES.size])!!.length
+                sink += BigNumberFormatter.suffix(SUFFIX_INDICES[i % SUFFIX_INDICES.size])!!.length
             }
             sink.toLong()
         }
@@ -165,7 +166,7 @@ object EngineBenchmarkReport {
             var sink = 0L
             for (i in 0 until ops) {
                 val value = 1_000.0 * Math.pow(10.0, (i % 13).toDouble())
-                sink += NumberFormatter.alphabeticShort(value).length
+                sink += BigNumberFormatter.format(value).length
             }
             sink
         }
@@ -481,7 +482,7 @@ object EngineBenchmarkReport {
                 else -> 1_234.5678
             }
             checksum += NumberFormatter.short(value).length
-            if (i % 3 == 0) checksum += NumberFormatter.suffixLabel((i % 702).toLong())!!.length
+            if (i % 3 == 0) checksum += BigNumberFormatter.suffix((i % 702).toLong())!!.length
         }
         val elapsedMs = (System.nanoTime() - start) / 1_000_000.0
         val stats = NumberFormatter.cacheStats()
@@ -491,7 +492,7 @@ object EngineBenchmarkReport {
         return SustainedResult(ops, elapsedMs, checksum, stats.entries, estimated)
     }
 
-    private fun printReport(rows: List<Stat>, sustained: SustainedResult, cache: NumberFormatter.CacheStats) {
+    private fun printReport(rows: List<Stat>, sustained: SustainedResult, cache: BigNumberFormatter.CacheStats) {
         println()
         println("=================== TRUE IDLE performance report ===================")
         println("runtime          : ${System.getProperty("java.vm.name")} ${System.getProperty("java.runtime.version")}")

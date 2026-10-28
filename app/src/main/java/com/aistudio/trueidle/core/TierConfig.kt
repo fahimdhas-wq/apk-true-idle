@@ -287,6 +287,31 @@ object TierConfig {
     fun of(id: String): TierInfo = TierInfo(id, rankOf(id), colorOf(id))
 
     /**
+     * Canonical tier for a 1-based ordinal used by numeric systems (equipment tier, promotion tier,
+     * beast rank): ordinal 1 -> rank 0 (`F-`), ordinal 2 -> rank 1 (`F`), and so on, clamped to the
+     * table.
+     *
+     * This maps an ordinal that already exists in the game onto the canonical order; it does not
+     * invent a second ranking scheme. Systems without a meaningful grade (durations, floors, levels)
+     * must not use it.
+     */
+    fun forOrdinal(ordinal: Int): TierInfo {
+        val rank = (ordinal - 1).coerceIn(0, TIER_IDS.size - 1)
+        return TierInfo(TIER_IDS[rank], rank, COLORS_BY_RANK[rank])
+    }
+
+    /** ARGB colour for a 1-based tier ordinal, or [UNKNOWN_COLOR] when the ordinal is not positive. */
+    fun colorForOrdinal(ordinal: Int): Int =
+        if (ordinal <= 0) UNKNOWN_COLOR
+        else COLORS_BY_RANK[(ordinal - 1).coerceAtMost(TIER_IDS.size - 1)]
+
+    /** Display label for [id]; identifiers are already human readable, unknown ids get a neutral one. */
+    fun displayName(id: String): String = if (contains(id)) id else UNKNOWN_DISPLAY_NAME
+
+    /** Label used by [displayName] for an identifier that is not in the table. */
+    const val UNKNOWN_DISPLAY_NAME: String = "UNRANKED"
+
+    /**
      * Parses `#rgb` or `#rrggbb` into `0xFFRRGGBB`. Only called during initialisation, never from a
      * lookup path. Throws [IllegalArgumentException] on malformed input so a bad table fails loudly
      * at startup instead of silently rendering an invisible colour.

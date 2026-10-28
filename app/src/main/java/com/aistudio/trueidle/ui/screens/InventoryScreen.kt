@@ -155,7 +155,14 @@ fun InventoryScreen(
                         shape = RectangleShape,
                         border = BorderStroke(
                             1.dp,
-                            if (item.isEquipped) PrimaryNeon else BorderDark
+                            // Equipment grades itself with the canonical tier colour; resources and
+                            // potions keep the neutral border so the palette keeps meaning something.
+                            when {
+                                item.isEquipped -> PrimaryNeon
+                                item.category == "Equipment" ->
+                                    com.aistudio.trueidle.ui.TierColors.colorForOrdinal(item.tier).copy(alpha = 0.7f)
+                                else -> BorderDark
+                            }
                         )
                     ) {
                         Row(
@@ -171,6 +178,23 @@ fun InventoryScreen(
                                         color = if (item.isEquipped) PrimaryNeon else TextLight
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
+                                    if (item.category == "Equipment") {
+                                        val tierColor = com.aistudio.trueidle.ui.TierColors.colorForOrdinal(item.tier)
+                                        Box(
+                                            modifier = Modifier
+                                                .background(tierColor.copy(alpha = 0.16f), RectangleShape)
+                                                .border(1.dp, tierColor, RectangleShape)
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                                .testTag("item_tier_${item.id}")
+                                        ) {
+                                            Text(
+                                                text = com.aistudio.trueidle.core.TierConfig.forOrdinal(item.tier).id,
+                                                style = TrueIdleType.meta,
+                                                color = tierColor
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
                                     if (item.count > 1) {
                                         Text("[x${item.count}]", style = TrueIdleType.tag, color = SecondaryGold)
                                     }

@@ -355,6 +355,18 @@ data class Achievement(
     val rewardGold: Long = 100L
 )
 
+/**
+ * Presentation preferences that must survive a restart.
+ *
+ * These never change stored gameplay values: [notation] only selects how numbers are rendered, and
+ * an unknown/missing value decodes to the default (old saves load unchanged).
+ */
+@Serializable
+data class DisplaySettings(
+    /** `ALPHABETIC` (default), `COMPACT`, `GROUPED` or `SCIENTIFIC`; see BigNumberFormatter. */
+    val notation: String = "ALPHABETIC"
+)
+
 @Serializable
 data class AutomationSettings(
     val autoEquipBestGear: Boolean = true,
@@ -407,6 +419,7 @@ data class GameState(
     val slayer: SlayerState = SlayerState(),
     val talent: TalentState = TalentState(),
     val automation: AutomationSettings = AutomationSettings(),
+    val display: DisplaySettings = DisplaySettings(),
     val promotion: PromotionState = PromotionState(),
     val inventory: List<InventoryItem> = listOf(
         InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, atk = 18.0),

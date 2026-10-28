@@ -329,6 +329,7 @@ fun TrueIdleApp(
                     onToggleAutoEquip = { viewModel.toggleAutoEquipBestGear() },
                     onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
+                    onSetNotation = { viewModel.setNotation(it) },
                     onFightPromotionBoss = { viewModel.fightPromotionBoss() },
                     onExportTelemetryLog = { viewModel.buildTelemetryReport() }
                 )
