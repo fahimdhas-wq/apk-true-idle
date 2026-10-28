@@ -22,6 +22,8 @@ import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
@@ -112,7 +114,7 @@ fun ArmoryScreen(
             tag = "TIER 1-3"
         ) {
             forgeRecipes.forEach { recipe ->
-                val have = state.inventory.find { it.name == recipe.reqOre }?.count ?: 0
+                val have = state.inventory.find { it.name == recipe.reqOre }?.count ?: 0.0
                 val canCraft = have >= recipe.reqQty
 
                 Card(
@@ -130,7 +132,7 @@ fun ArmoryScreen(
                             Text("${recipe.name} [T${recipe.tier}]", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${recipe.statPreview} · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have $have)",
+                                text = "${recipe.statPreview} · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have ${NumberFormatter.short(have)})",
                                 style = TrueIdleType.meta,
                                 color = if (canCraft) GreenSuccess else TextMuted
                             )
@@ -159,7 +161,7 @@ fun ArmoryScreen(
             tag = "POTIONS"
         ) {
             alchemyRecipes.forEach { recipe ->
-                val have = state.inventory.find { it.name == recipe.reqHerb }?.count ?: 0
+                val have = state.inventory.find { it.name == recipe.reqHerb }?.count ?: 0.0
                 val canBrew = have >= recipe.reqQty
 
                 Card(
@@ -177,7 +179,7 @@ fun ArmoryScreen(
                             Text(recipe.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "${recipe.effectDesc} · Requires: ${recipe.reqQty}x ${recipe.reqHerb} (Have $have)",
+                                text = "${recipe.effectDesc} · Requires: ${recipe.reqQty}x ${recipe.reqHerb} (Have ${NumberFormatter.short(have)})",
                                 style = TrueIdleType.meta,
                                 color = if (canBrew) GreenSuccess else TextMuted
                             )
@@ -249,11 +251,16 @@ fun ArmoryScreen(
                             border = BorderStroke(1.dp, if (canAfford) PrimaryNeon else MaterialTheme.colorScheme.outline),
                             modifier = Modifier.testTag("upgrade_armory_${upg.id}")
                         ) {
-                            Text(
-                                text = if (isMax) "MAX" else "🪙 ${NumberFormatter.short(cost)}",
-                                style = TrueIdleType.tag,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (isMax) {
+                                Text("MAX", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            } else {
+                                SciFiBadge(
+                                    type = SciFiIconType.CREDIT,
+                                    label = NumberFormatter.short(cost),
+                                    iconTint = if (canAfford) Color.Black else TextMuted,
+                                    textColor = if (canAfford) Color.Black else TextMuted
+                                )
+                            }
                         }
                     }
                 }

@@ -222,7 +222,7 @@ fun InventoryScreen(
                                     }
 
                                     Text(
-                                        text = "• VALUE: ${NumberFormatter.short(item.sellValue)} 🪙",
+                                        text = "• VALUE: ${NumberFormatter.short(item.sellValue)} CR",
                                         style = TrueIdleType.meta,
                                         color = TextMuted
                                     )

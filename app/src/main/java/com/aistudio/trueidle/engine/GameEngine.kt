@@ -10,6 +10,8 @@ import com.aistudio.trueidle.core.GameClock
 import com.aistudio.trueidle.core.Ids
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.LogType
+import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.data.NoOpSaveStore
 import com.aistudio.trueidle.data.SaveRepository
 import com.aistudio.trueidle.model.Beast
@@ -454,7 +456,15 @@ class GameEngine(
 
         val killedThisTick = frame.monster.hp <= 0.0
         if (killedThisTick) {
-            resolveKill(frame, d)
+            val monsterEhp = (monster.maxHp + monster.maxShield).coerceAtLeast(1.0)
+            val overkillRatio = dealt / monsterEhp
+            val hitsPerSec = d.atkSpeed
+            // When attack speed > 10/s or overkill ratio >= 2, batch kills into an analytical pass to prevent lag
+            val batchCount = if ((hitsPerSec > 10.0 || overkillRatio >= 2.0) && !monster.isBoss) {
+                overkillRatio.toInt().coerceIn(1, 200)
+            } else 1
+
+            resolveKill(frame, d, batchCount)
         }
         // A kill and a defeat can land in the same tick; the kill wins, so the death path is
         // skipped rather than resetting the floor the reward just advanced.
@@ -463,16 +473,24 @@ class GameEngine(
         }
     }
 
-    private fun resolveKill(frame: Frame, d: Derived) {
+    private fun resolveKill(frame: Frame, d: Derived, batchCount: Int = 1) {
         val monster = frame.monster
         var player = frame.player
-        val xpGained = maxOf(1L, (monster.xpReward * d.xpGain).toLong())
-        val goldGained = monster.goldReward
-        frame.lifetime = frame.lifetime.copy(totalKills = frame.lifetime.totalKills + 1)
-        frame.logs += log(
-            LogType.GAIN,
-            "HOSTILE NEUTRALIZED: ${monster.name.uppercase()} (+$goldGained CREDITS, +$xpGained XP)"
-        )
+        val count = batchCount.coerceAtLeast(1)
+        val xpGained = maxOf(1L, (monster.xpReward * d.xpGain).toLong()) * count
+        val goldGained = monster.goldReward * count
+        frame.lifetime = frame.lifetime.copy(totalKills = frame.lifetime.totalKills + count)
+        if (count > 1) {
+            frame.logs += log(
+                LogType.GAIN,
+                "HIGH-SPEED ENGAGEMENT: x$count ${monster.name.uppercase()} NEUTRALIZED (+$goldGained CREDITS, +$xpGained XP)"
+            )
+        } else {
+            frame.logs += log(
+                LogType.GAIN,
+                "HOSTILE NEUTRALIZED: ${monster.name.uppercase()} (+$goldGained CREDITS, +$xpGained XP)"
+            )
+        }
 
         var xp = player.xp + xpGained
         var lvl = player.lvl
@@ -486,7 +504,7 @@ class GameEngine(
             gold = player.gold + goldGained,
             xp = xp,
             lvl = lvl,
-            killsOnFloor = player.killsOnFloor + 1
+            killsOnFloor = player.killsOnFloor + count
         )
         if (levels > 0) {
             val after = DerivedStats.of(frame.view().copy(player = player))
@@ -495,19 +513,19 @@ class GameEngine(
             frame.logs += log(LogType.SKILL, "PLAYER LEVEL UP: Advanced to Level $lvl!")
         }
         if (monster.isBoss) {
-            frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + 2)
+            frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + 2 * count)
         }
         frame.player = player
 
         // Bone essence honours Soul Siphon offline and live.
         val boneMult = 1.0 + 0.25 * (frame.necro.upgrades.firstOrNull { it.id == "necro_harvest" }?.rank ?: 0)
-        val bones = (random.nextLong(1L, 4L) * boneMult).toLong().coerceAtLeast(1L)
+        val bones = (random.nextLong(1L, 4L) * boneMult).toLong().coerceAtLeast(1L) * count
         frame.necro = frame.necro.copy(boneEssence = frame.necro.boneEssence + bones)
 
-        frame.essence = grantFaith(frame.essence, if (monster.isBoss) 5L else 1L)
-        frame.essence = grantEssenceXp(frame.essence, if (monster.isBoss) 25L else 5L, frame)
+        frame.essence = grantFaith(frame.essence, (if (monster.isBoss) 5L else 1L) * count)
+        frame.essence = grantEssenceXp(frame.essence, (if (monster.isBoss) 25L else 5L) * count, frame)
 
-        grantSlayerProgress(frame, monster)
+        grantSlayerProgress(frame, monster, count)
         rollTame(frame, monster, d)
         rollLoot(frame, d)
         if (monster.isBoss) grantTrophy(frame)
@@ -590,11 +608,11 @@ class GameEngine(
         return essence.copy(xp = xp, lvl = lvl)
     }
 
-    private fun grantSlayerProgress(frame: Frame, monster: Monster) {
+    private fun grantSlayerProgress(frame: Frame, monster: Monster, count: Int = 1) {
         val task = frame.slayer.currentTask
         if (task.isCompleted) return
         if (!task.targetName.equals(monster.name, ignoreCase = true)) return
-        val kills = task.currentKills + 1
+        val kills = task.currentKills + count
         if (kills < task.requiredKills) {
             frame.slayer = frame.slayer.copy(currentTask = task.copy(currentKills = kills))
             return
@@ -671,7 +689,7 @@ class GameEngine(
         frame.logs += log(LogType.LOOT, "TROPHY CLAIMED: ${ItemCatalog.BOSS_TROPHY}")
     }
 
-    private fun addToInventory(inventory: MutableList<InventoryItem>, name: String, qty: Int) {
+    private fun addToInventory(inventory: MutableList<InventoryItem>, name: String, qty: Double) {
         val idx = inventory.indexOfFirst {
             it.name == name && it.category != ItemCatalog.CATEGORY_EQUIPMENT
         }
@@ -680,6 +698,20 @@ class GameEngine(
         } else {
             inventory.add(ItemCatalog.newResource("item_${ids.next()}", name, qty))
         }
+    }
+
+    private fun addToInventory(inventory: MutableList<InventoryItem>, name: String, qty: Int) {
+        addToInventory(inventory, name, qty.toDouble())
+    }
+
+    private fun advanceProficiency(currentLvl: Int, currentXp: Long, gain: Long): Pair<Int, Long> {
+        var lvl = currentLvl.coerceIn(1, 100)
+        var xp = currentXp + gain
+        while (lvl < 100 && xp >= XpCurves.proficiency(lvl)) {
+            xp -= XpCurves.proficiency(lvl)
+            lvl++
+        }
+        return Pair(lvl.coerceIn(1, 100), xp)
     }
 
     // ------------------------------------------------------------------ harvest
@@ -694,22 +726,27 @@ class GameEngine(
             .coerceAtLeast(0.20).toFloat()
         val autoCollect = frame.harvest.autoCollectUnlocked && frame.harvest.autoCollectEnabled
 
-        val herbGains = mutableMapOf<String, Int>()
-        val oreGains = mutableMapOf<String, Int>()
+        val herbGains = mutableMapOf<String, Double>()
+        val oreGains = mutableMapOf<String, Double>()
 
         val plots = frame.harvest.plots.map { plot ->
             val duration = (plot.durationSeconds * farmMult).coerceAtLeast(0.1f)
+            val shouldAuto = plot.autoQueue || autoCollect
+            val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
+            val baseYield = (2.0 + extraYield) * profMult
             if (plot.isReady) {
-                if (autoCollect) {
-                    herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0) + 2 + extraYield
-                    plot.copy(growthProgress = 0f, isReady = false)
+                if (shouldAuto) {
+                    herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
+                    val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 25L)
+                    plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                 } else plot
             } else {
                 val progress = plot.growthProgress + dt / duration
                 if (progress >= 1f) {
-                    if (autoCollect) {
-                        herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0) + 2 + extraYield
-                        plot.copy(growthProgress = 0f, isReady = false)
+                    if (shouldAuto) {
+                        herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
+                        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 25L)
+                        plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else {
                         plot.copy(growthProgress = 1f, isReady = true)
                     }
@@ -725,17 +762,22 @@ class GameEngine(
                 vein.copy(miningProgress = 0f, isReady = false)
             } else {
                 val duration = (vein.durationSeconds * mineMult).coerceAtLeast(0.1f)
+                val shouldAuto = vein.autoQueue || autoCollect
+                val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
+                val baseYield = (3.0 + extraYield) * profMult
                 if (vein.isReady) {
-                    if (autoCollect) {
-                        oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0) + 3 + extraYield
-                        vein.copy(miningProgress = 0f, isReady = false)
+                    if (shouldAuto) {
+                        oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
+                        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 30L)
+                        vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else vein
                 } else {
                     val progress = vein.miningProgress + dt / duration
                     if (progress >= 1f) {
-                        if (autoCollect) {
-                            oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0) + 3 + extraYield
-                            vein.copy(miningProgress = 0f, isReady = false)
+                        if (shouldAuto) {
+                            oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
+                            val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 30L)
+                            vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                         } else {
                             vein.copy(miningProgress = 1f, isReady = true)
                         }
@@ -752,17 +794,16 @@ class GameEngine(
         var miningLvl = frame.harvest.miningLvl
 
         if (herbGains.isNotEmpty()) {
-            val total = herbGains.values.sum()
+            val countItems = herbGains.size.toLong()
             herbGains.forEach { (name, qty) -> addToInventory(frame.inventory, name, qty) }
-            frame.lifetime = frame.lifetime.copy(herbsHarvested = frame.lifetime.herbsHarvested + total)
-            // Auto-collect grants XP too, otherwise the level-10 unlock could never be reached.
-            farmingXp += total * 25L
+            frame.lifetime = frame.lifetime.copy(herbsHarvested = frame.lifetime.herbsHarvested + countItems)
+            farmingXp += countItems * 25L
         }
         if (oreGains.isNotEmpty()) {
-            val total = oreGains.values.sum()
+            val countItems = oreGains.size.toLong()
             oreGains.forEach { (name, qty) -> addToInventory(frame.inventory, name, qty) }
-            frame.lifetime = frame.lifetime.copy(oresMined = frame.lifetime.oresMined + total)
-            miningXp += total * 30L
+            frame.lifetime = frame.lifetime.copy(oresMined = frame.lifetime.oresMined + countItems)
+            miningXp += countItems * 30L
         }
         while (farmingXp >= Balance.skillXpReq(farmingLvl)) {
             farmingXp -= Balance.skillXpReq(farmingLvl)
@@ -791,24 +832,28 @@ class GameEngine(
         val idx = plots.indexOfFirst { it.id == plotId }
         if (idx < 0 || !plots[idx].isReady) return state
 
-        val herbName = plots[idx].herbName
+        val plot = plots[idx]
+        val herbName = plot.herbName
         val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
-        val yield = 2 + extraYield
+        val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
+        val yield = (2.0 + extraYield) * profMult
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, herbName, yield)
-        plots[idx] = plots[idx].copy(growthProgress = 0f, isReady = false)
+        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 25L)
+        plots[idx] = plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
+        val yieldStr = NumberFormatter.short(yield)
         val (xp, lvl, logs) = grantSkillXp(
             state.harvest.farmingXp,
             state.harvest.farmingLvl,
             25L,
             "Farming",
-            "BIO-HARVEST: Collected ${yield}x $herbName (+25 Farming XP)"
+            "BIO-HARVEST: Collected ${yieldStr}x $herbName (+25 Farming XP)"
         )
         state = state.copy(
             harvest = state.harvest.copy(plots = plots, farmingXp = xp, farmingLvl = lvl),
             inventory = inventory,
-            lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + yield),
+            lifetime = state.lifetime.copy(herbsHarvested = state.lifetime.herbsHarvested + 1L),
             logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
         )
         evaluateAchievements(force = true)
@@ -832,25 +877,50 @@ class GameEngine(
         if (!vein.isReady) return state
 
         val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
-        val yield = 3 + extraYield
+        val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
+        val yield = (3.0 + extraYield) * profMult
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, vein.oreName, yield)
-        veins[idx] = vein.copy(miningProgress = 0f, isReady = false)
+        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 30L)
+        veins[idx] = vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
+        val yieldStr = NumberFormatter.short(yield)
         val (xp, lvl, logs) = grantSkillXp(
             state.harvest.miningXp,
             state.harvest.miningLvl,
             30L,
             "Mining",
-            "ORE EXTRACTED: Excavated ${yield}x ${vein.oreName} (+30 Mining XP)"
+            "ORE EXTRACTED: Excavated ${yieldStr}x ${vein.oreName} (+30 Mining XP)"
         )
         state = state.copy(
             harvest = state.harvest.copy(veins = veins, miningXp = xp, miningLvl = lvl),
             inventory = inventory,
-            lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + yield),
+            lifetime = state.lifetime.copy(oresMined = state.lifetime.oresMined + 1L),
             logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
         )
         evaluateAchievements(force = true)
+        return state
+    }
+
+    fun togglePlotAutoQueue(plotId: Int): GameState {
+        val current = state.harvest.plots.find { it.id == plotId }?.autoQueue ?: false
+        val newTarget = !current
+        val plots = state.harvest.plots.map {
+            if (it.id == plotId) it.copy(autoQueue = newTarget)
+            else it.copy(autoQueue = false)
+        }
+        state = state.copy(harvest = state.harvest.copy(plots = plots))
+        return state
+    }
+
+    fun toggleVeinAutoQueue(veinId: Int): GameState {
+        val current = state.harvest.veins.find { it.id == veinId }?.autoQueue ?: false
+        val newTarget = !current
+        val veins = state.harvest.veins.map {
+            if (it.id == veinId) it.copy(autoQueue = newTarget)
+            else it.copy(autoQueue = false)
+        }
+        state = state.copy(harvest = state.harvest.copy(veins = veins))
         return state
     }
 
@@ -878,12 +948,12 @@ class GameEngine(
     fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int): GameState {
         val inventory = state.inventory.toMutableList()
         val oreIdx = inventory.indexOfFirst { it.name == reqOre }
-        val owned = inventory.getOrNull(oreIdx)?.count ?: 0
+        val owned = inventory.getOrNull(oreIdx)?.count ?: 0.0
         if (oreIdx < 0 || owned < reqQty) {
             state = state.copy(
                 logs = (state.logs + log(
                     LogType.SYSTEM,
-                    "FORGE FAILED: requires ${reqQty}x $reqOre (have $owned)."
+                    "FORGE FAILED: requires ${reqQty}x $reqOre (have ${NumberFormatter.short(owned)})."
                 )).takeLast(Balance.LOG_CAP)
             )
             return state
@@ -957,12 +1027,12 @@ class GameEngine(
         val herbCost = recipe?.herbCost ?: reqQty
         val inventory = state.inventory.toMutableList()
         val herbIdx = inventory.indexOfFirst { it.name == herbName }
-        val owned = inventory.getOrNull(herbIdx)?.count ?: 0
+        val owned = inventory.getOrNull(herbIdx)?.count ?: 0.0
         if (herbIdx < 0 || owned < herbCost) {
             state = state.copy(
                 logs = (state.logs + log(
                     LogType.SYSTEM,
-                    "ALCHEMY FAILED: requires ${herbCost}x $herbName (have $owned)."
+                    "ALCHEMY FAILED: requires ${herbCost}x $herbName (have ${NumberFormatter.short(owned)})."
                 )).takeLast(Balance.LOG_CAP)
             )
             return state
@@ -1020,15 +1090,15 @@ class GameEngine(
             )
             return state
         }
-        val actual = count.coerceIn(1, item.count)
-        val gold = actual * item.sellValue
+        val actual = count.toDouble().coerceIn(1.0, item.count)
+        val gold = (actual * item.sellValue).toLong()
         if (item.count > actual) inventory[idx] = item.copy(count = item.count - actual)
         else inventory.removeAt(idx)
 
         state = state.copy(
             player = state.player.copy(gold = state.player.gold + gold),
             inventory = inventory,
-            logs = (state.logs + log(LogType.GAIN, "ITEM SOLD: $actual x ${item.name} for +$gold CREDITS."))
+            logs = (state.logs + log(LogType.GAIN, "ITEM SOLD: ${NumberFormatter.short(actual)} x ${item.name} for +$gold CREDITS."))
                 .takeLast(Balance.LOG_CAP)
         )
         return state
@@ -1706,11 +1776,28 @@ class GameEngine(
                     farmingXp = input.harvest.farmingXp.coerceAtLeast(0L),
                     miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
                     miningXp = input.harvest.miningXp.coerceAtLeast(0L),
-                    plots = input.harvest.plots.map {
-                        it.copy(growthProgress = it.growthProgress.coerceIn(0f, 1f))
+                    plots = run {
+                        val firstAuto = input.harvest.plots.indexOfFirst { it.autoQueue }
+                        input.harvest.plots.mapIndexed { idx, p ->
+                            p.copy(
+                                growthProgress = p.growthProgress.coerceIn(0f, 1f),
+                                autoQueue = idx == firstAuto,
+                                proficiencyLevel = p.proficiencyLevel.coerceIn(1, 100),
+                                proficiencyXp = p.proficiencyXp.coerceAtLeast(0L)
+                            )
+                        }
                     },
-                    veins = input.harvest.veins.map {
-                        it.copy(miningProgress = it.miningProgress.coerceIn(0f, 1f), reqLvl = 1)
+                    veins = run {
+                        val firstAuto = input.harvest.veins.indexOfFirst { it.autoQueue }
+                        input.harvest.veins.mapIndexed { idx, v ->
+                            v.copy(
+                                miningProgress = v.miningProgress.coerceIn(0f, 1f),
+                                reqLvl = 1,
+                                autoQueue = idx == firstAuto,
+                                proficiencyLevel = v.proficiencyLevel.coerceIn(1, 100),
+                                proficiencyXp = v.proficiencyXp.coerceAtLeast(0L)
+                            )
+                        }
                     },
                     upgrades = clampUpgrades(input.harvest.upgrades)
                 ),

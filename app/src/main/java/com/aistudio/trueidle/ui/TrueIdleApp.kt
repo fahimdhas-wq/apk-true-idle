@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.Derived
@@ -164,38 +166,38 @@ fun TrueIdleApp(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, SecondaryGold.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
-                            Text(
-                                text = "🪙 ${NumberFormatter.short(state.player.gold)}",
-                                style = TrueIdleType.tag,
-                                color = SecondaryGold
+                            SciFiBadge(
+                                type = SciFiIconType.CREDIT,
+                                label = NumberFormatter.short(state.player.gold),
+                                textColor = SecondaryGold
                             )
                         }
                         Box(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                                 .border(1.dp, NecroPurple.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
-                            Text(
-                                text = "💀 ${NumberFormatter.short(state.necro.boneEssence)}",
-                                style = TrueIdleType.tag,
-                                color = NecroPurple
+                            SciFiBadge(
+                                type = SciFiIconType.ESSENCE,
+                                label = NumberFormatter.short(state.necro.boneEssence),
+                                textColor = NecroPurple
                             )
                         }
                         // Diamonds were awarded for boss first clears but nothing ever displayed them.
                         if (state.player.diamonds > 0L) {
                             Box(
                                 modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                                    .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                                .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                             ) {
-                                Text(
-                                    text = "💎 ${NumberFormatter.short(state.player.diamonds)}",
-                                    style = TrueIdleType.tag,
-                                    color = PrimaryNeon
+                                SciFiBadge(
+                                    type = SciFiIconType.DIAMOND,
+                                    label = NumberFormatter.short(state.player.diamonds),
+                                    textColor = PrimaryNeon
                                 )
                             }
                         }
@@ -209,7 +211,7 @@ fun TrueIdleApp(
                                 .testTag("topbar_settings_shortcut"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("⚙", style = TrueIdleType.title, color = PrimaryNeon)
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = PrimaryNeon, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -294,6 +296,8 @@ fun TrueIdleApp(
                     onSectionChange = { skillsSection = it },
                     onHarvestPlot = { id -> viewModel.harvestPlot(id) },
                     onMineVein = { id -> viewModel.mineVein(id) },
+                    onTogglePlotAutoQueue = { id -> viewModel.togglePlotAutoQueue(id) },
+                    onToggleVeinAutoQueue = { id -> viewModel.toggleVeinAutoQueue(id) },
                     onCraftEquipment = { name, tier, slot, ore, qty -> viewModel.craftEquipment(name, tier, slot, ore, qty) },
                     onBrewPotion = { name, herb, qty -> viewModel.brewPotion(name, herb, qty) },
                     onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) },

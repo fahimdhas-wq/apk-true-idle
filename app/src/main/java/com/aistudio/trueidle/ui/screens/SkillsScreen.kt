@@ -48,6 +48,8 @@ fun SkillsScreen(
     onSectionChange: (SkillSubSection) -> Unit,
     onHarvestPlot: (Int) -> Unit,
     onMineVein: (Int) -> Unit,
+    onTogglePlotAutoQueue: (Int) -> Unit = {},
+    onToggleVeinAutoQueue: (Int) -> Unit = {},
     onCraftEquipment: (String, Int, String, String, Int) -> Unit,
     onBrewPotion: (String, String, Int) -> Unit,
     onMergeBeasts: (String, String) -> Unit,
@@ -142,6 +144,8 @@ fun SkillsScreen(
                     state = state,
                     onHarvestPlot = onHarvestPlot,
                     onMineVein = onMineVein,
+                    onTogglePlotAutoQueue = onTogglePlotAutoQueue,
+                    onToggleVeinAutoQueue = onToggleVeinAutoQueue,
                     onUpgradeDiscipline = onUpgradeDiscipline
                 )
             }
@@ -335,7 +339,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "04 // GENESIS",
             icon = "[G]",
             accentColor = NecroPurple,
-            quickSummary = "${state.beasts.beasts.size}/${GameCaps.BEAST} BEASTS · ${state.necro.boneEssence} 💀 · ${(beastDps + armyDps).toInt()} TOTAL DPS",
+            quickSummary = "${state.beasts.beasts.size}/${GameCaps.BEAST} BEASTS · ${state.necro.boneEssence} ESSENCE · ${(beastDps + armyDps).toInt()} TOTAL DPS",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.GENESIS) },
             level = max(state.beasts.lvl, state.necro.lvl),

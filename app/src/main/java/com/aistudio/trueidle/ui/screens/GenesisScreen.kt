@@ -27,14 +27,16 @@ import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.Beast
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.RosterRow
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
 private enum class GenesisTab(val label: String, val icon: String, val color: Color) {
-    BEASTS("BEASTS", "🐾", GreenSuccess),
-    NECROMANCY("UNDEAD", "💀", NecroPurple),
-    UPGRADES("UPGRADES", "⚡", PrimaryNeon)
+    BEASTS("BEASTS", "[B]", GreenSuccess),
+    NECROMANCY("UNDEAD", "[N]", NecroPurple),
+    UPGRADES("UPGRADES", "[U]", PrimaryNeon)
 }
 
 @Composable
@@ -226,7 +228,7 @@ fun GenesisScreen(
                 SciFiPanel(
                     title = "UNDEAD REANIMATION CORPS",
                     accent = NecroPurple,
-                    tag = "💀 ${NumberFormatter.short(necro.boneEssence)} ESSENCE"
+                    tag = "${NumberFormatter.short(necro.boneEssence)} ESSENCE"
                 ) {
                     // Read straight from the engine's minion table: the advertised DPS used to
                     // disagree with what summonMinion actually created.
@@ -286,7 +288,12 @@ fun GenesisScreen(
                                     ),
                                     border = BorderStroke(1.dp, if (canSummon) NecroPurple else MaterialTheme.colorScheme.outline)
                                 ) {
-                                    Text("💀 $cost", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                    SciFiBadge(
+                                        type = SciFiIconType.ESSENCE,
+                                        label = "$cost",
+                                        iconTint = if (canSummon) Color.Black else TextMuted,
+                                        textColor = if (canSummon) Color.Black else TextMuted
+                                    )
                                 }
                             }
                         }
@@ -345,7 +352,16 @@ fun GenesisScreen(
                                     ),
                                     border = BorderStroke(1.dp, if (canAfford) GreenSuccess else MaterialTheme.colorScheme.outline)
                                 ) {
-                                    Text(if (isMax) "MAX" else "🪙 ${NumberFormatter.short(cost)}", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                    if (isMax) {
+                                        Text("MAX", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                    } else {
+                                        SciFiBadge(
+                                            type = SciFiIconType.CREDIT,
+                                            label = NumberFormatter.short(cost),
+                                            iconTint = if (canAfford) Color.Black else TextMuted,
+                                            textColor = if (canAfford) Color.Black else TextMuted
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -396,7 +412,16 @@ fun GenesisScreen(
                                     ),
                                     border = BorderStroke(1.dp, if (canAfford) NecroPurple else MaterialTheme.colorScheme.outline)
                                 ) {
-                                    Text(if (isMax) "MAX" else "💀 $cost", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                    if (isMax) {
+                                        Text("MAX", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                    } else {
+                                        SciFiBadge(
+                                            type = SciFiIconType.ESSENCE,
+                                            label = "$cost",
+                                            iconTint = if (canAfford) Color.Black else TextMuted,
+                                            textColor = if (canAfford) Color.Black else TextMuted
+                                        )
+                                    }
                                 }
                             }
                         }

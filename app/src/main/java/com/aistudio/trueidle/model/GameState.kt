@@ -117,7 +117,10 @@ data class Plot(
     val herbName: String = "Felweed",
     val growthProgress: Float = 0f,
     val durationSeconds: Float = 10f,
-    val isReady: Boolean = false
+    val isReady: Boolean = false,
+    val autoQueue: Boolean = false,
+    val proficiencyLevel: Int = 1,
+    val proficiencyXp: Long = 0L
 )
 
 @Serializable
@@ -127,7 +130,10 @@ data class MiningVein(
     val reqLvl: Int = 1,
     val miningProgress: Float = 0f,
     val durationSeconds: Float = 5f,
-    val isReady: Boolean = false
+    val isReady: Boolean = false,
+    val autoQueue: Boolean = false,
+    val proficiencyLevel: Int = 1,
+    val proficiencyXp: Long = 0L
 )
 
 @Serializable
@@ -272,7 +278,7 @@ data class InventoryItem(
     val id: String = "",
     val name: String = "",
     val category: String = "Resource", // "Equipment", "Potion", "Resource", "Trophy"
-    val count: Int = 1,
+    val count: Double = 1.0,
     val tier: Int = 1,
     val slot: String = "", // "Weapon", "Armor", "Ring", "Amulet"
     val statDesc: String = "",
@@ -280,7 +286,21 @@ data class InventoryItem(
     val isEquipped: Boolean = false,
     val atk: Double = 0.0,
     val def: Double = 0.0
-)
+) {
+    constructor(
+        id: String,
+        name: String,
+        category: String,
+        count: Int,
+        tier: Int = 1,
+        slot: String = "",
+        statDesc: String = "",
+        sellValue: Long = 10L,
+        isEquipped: Boolean = false,
+        atk: Double = 0.0,
+        def: Double = 0.0
+    ) : this(id, name, category, count.toDouble(), tier, slot, statDesc, sellValue, isEquipped, atk, def)
+}
 
 @Serializable
 data class LogEntry(

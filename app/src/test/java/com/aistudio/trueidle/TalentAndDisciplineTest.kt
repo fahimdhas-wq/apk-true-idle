@@ -2,6 +2,7 @@ package com.aistudio.trueidle
 
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.PlayerState
@@ -105,9 +106,66 @@ class TalentAndDisciplineTest {
         }
         val copper = engine.state.harvest.veins[0]
         assertTrue("Copper vein should be ready after 25 ticks (6.25s)", copper.isReady)
-        val initialOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0
+        val initialOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0.0
         engine.mineVein(0)
-        val afterOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0
+        val afterOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0.0
         assertTrue("Should have collected copper ore", afterOres > initialOres)
+    }
+
+    @Test
+    fun testHarvestAutoQueueMutualExclusion() {
+        val engine = GameEngine()
+        // Toggle plot 0 on
+        engine.togglePlotAutoQueue(0)
+        assertTrue(engine.state.harvest.plots[0].autoQueue)
+        assertFalse(engine.state.harvest.plots[1].autoQueue)
+
+        // Toggle plot 1 on -> plot 0 must be disabled (mutual exclusivity: 1 auto queue per category)
+        engine.togglePlotAutoQueue(1)
+        assertFalse(engine.state.harvest.plots[0].autoQueue)
+        assertTrue(engine.state.harvest.plots[1].autoQueue)
+
+        // Toggle vein 0 on
+        engine.toggleVeinAutoQueue(0)
+        assertTrue(engine.state.harvest.veins[0].autoQueue)
+
+        // Vein 1 on -> vein 0 turned off
+        engine.toggleVeinAutoQueue(1)
+        assertFalse(engine.state.harvest.veins[0].autoQueue)
+        assertTrue(engine.state.harvest.veins[1].autoQueue)
+    }
+
+    @Test
+    fun testProficiencyYieldScaling() {
+        // Level 1 multiplier = 1.0 (2^0)
+        assertEquals(1.0, XpCurves.proficiencyYieldMultiplier(1), 1e-6)
+        // Level 2 multiplier = 2.0 (2^1)
+        assertEquals(2.0, XpCurves.proficiencyYieldMultiplier(2), 1e-6)
+        // Level 3 multiplier = 4.0 (2^2)
+        assertEquals(4.0, XpCurves.proficiencyYieldMultiplier(3), 1e-6)
+        // Level 4 multiplier = 8.0 (2^3)
+        assertEquals(8.0, XpCurves.proficiencyYieldMultiplier(4), 1e-6)
+        // Level 100 multiplier = 2^99
+        val maxMult = XpCurves.proficiencyYieldMultiplier(100)
+        assertTrue("Max proficiency yield multiplier should exceed 1e29", maxMult > 6.0e29)
+    }
+
+    @Test
+    fun testCombatKillBatching() {
+        val engine = GameEngine()
+        // Give player immense damage to trigger overkill batching
+        val strongState = engine.state.copy(
+            player = engine.state.player.copy(hp = 1000.0),
+            training = engine.state.training.copy(
+                nodes = engine.state.training.nodes.map {
+                    if (it.id == "str_bonus") it.copy(rank = 100) else it
+                }
+            )
+        )
+        val testEngine = GameEngine(initialState = strongState)
+        val initialKills = testEngine.state.lifetime.totalKills
+        testEngine.tick(0.25f)
+        // Kill batching resolves multiple monster kills in a single analytical tick without lag
+        assertTrue("Kill batching should record kills", testEngine.state.lifetime.totalKills > initialKills)
     }
 }

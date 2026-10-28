@@ -22,4 +22,20 @@ object XpCurves {
         val level = lvl.coerceAtLeast(1)
         return floor(60.0 * level * level + 40.0 * level).toLong().coerceAtLeast(100L)
     }
+
+    /**
+     * Individual item proficiency curve for herbs and ores (Levels 1 to 100).
+     */
+    fun proficiency(lvl: Int): Long {
+        val level = lvl.coerceAtLeast(1)
+        return floor(30.0 * level.toDouble().pow(1.8) + 20.0 * level).toLong().coerceAtLeast(40L)
+    }
+
+    /**
+     * Yield multiplier doubling each level (1x at lvl 1, 2x at lvl 2, 4x at lvl 3 ... up to lvl 100).
+     */
+    fun proficiencyYieldMultiplier(lvl: Int): Double {
+        val cappedLvl = lvl.coerceIn(1, 100)
+        return 2.0.pow((cappedLvl - 1).toDouble())
+    }
 }

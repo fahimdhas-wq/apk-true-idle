@@ -230,7 +230,7 @@ fun CombatScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("⚔ WEAPON", style = TrueIdleType.tag, color = SecondaryGold)
+                            SciFiBadge(SciFiIconType.WEAPON, "WEAPON", textColor = SecondaryGold)
                             Text("+${derived.weaponDmg.toInt()} ATK", style = TrueIdleType.numberSmall, color = SecondaryGold)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
@@ -258,7 +258,7 @@ fun CombatScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("🛡 ARMOR", style = TrueIdleType.tag, color = ShieldBlue)
+                            SciFiBadge(SciFiIconType.SHIELD, "ARMOR", textColor = ShieldBlue)
                             Text("+${derived.armorDef.toInt()} DEF", style = TrueIdleType.numberSmall, color = ShieldBlue)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
@@ -319,7 +319,7 @@ fun CombatScreen(
                         color = TextLight
                     )
                     Text(
-                        text = "REWARD: +${task.rewardGold} 🪙 · +${task.rewardPoints} ⚔ PTS",
+                        text = "REWARD: +${task.rewardGold} CREDITS · +${task.rewardPoints} PTS",
                         style = TrueIdleType.meta,
                         color = TextMuted
                     )

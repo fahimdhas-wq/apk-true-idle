@@ -315,7 +315,7 @@ fun SettingsScreen(
                         .testTag("fight_promotion_boss_btn")
                 ) {
                     Text(
-                        text = if (canPromote) "⚔ FIGHT PROMOTION BOSS" else "LOCKED (REQUIREMENTS UNMET)",
+                        text = if (canPromote) "ENGAGE PROMOTION BOSS" else "LOCKED (REQUIREMENTS UNMET)",
                         style = TrueIdleType.tag,
                         fontWeight = FontWeight.Bold
                     )
@@ -471,7 +471,7 @@ fun SettingsScreen(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
                             modifier = Modifier.testTag("claim_ach_${ach.id}")
                         ) {
-                            Text("CLAIM (+${ach.rewardGold} 🪙)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            Text("CLAIM (+${ach.rewardGold} CR)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         Box(

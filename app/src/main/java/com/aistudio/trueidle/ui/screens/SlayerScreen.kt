@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiGauge
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
@@ -110,7 +112,12 @@ fun SlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("ACCREDITED SLAYER POINTS:", style = TrueIdleType.label, color = TextMuted)
-                Text("⚔ ${slayer.slayerPoints} PTS", style = TrueIdleType.value, color = SecondaryGold)
+                SciFiBadge(
+                    type = SciFiIconType.WEAPON,
+                    label = "${slayer.slayerPoints} PTS",
+                    iconTint = SecondaryGold,
+                    textColor = SecondaryGold
+                )
             }
         }
 
@@ -151,11 +158,23 @@ fun SlayerScreen(
             ) {
                 Column {
                     Text("BOUNTY (CREDITS):", style = TrueIdleType.meta, color = TextMuted)
-                    Text("+${task.rewardGold} 🪙", style = TrueIdleType.value, color = SecondaryGold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    SciFiBadge(
+                        type = SciFiIconType.CREDIT,
+                        label = "+${task.rewardGold}",
+                        iconTint = SecondaryGold,
+                        textColor = SecondaryGold
+                    )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("BOUNTY (POINTS):", style = TrueIdleType.meta, color = TextMuted)
-                    Text("+${task.rewardPoints} ⚔ PTS", style = TrueIdleType.value, color = HpRed)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    SciFiBadge(
+                        type = SciFiIconType.WEAPON,
+                        label = "+${task.rewardPoints} PTS",
+                        iconTint = HpRed,
+                        textColor = HpRed
+                    )
                 }
             }
 

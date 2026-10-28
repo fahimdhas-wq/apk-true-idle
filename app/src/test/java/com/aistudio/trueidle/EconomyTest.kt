@@ -40,7 +40,7 @@ class EconomyTest {
 
         engine.craftEquipment("Bronze Glaive", 1, Equipment.SLOT_WEAPON, ItemCatalog.COPPER_ORE, 6)
 
-        assertEquals(4, engine.state.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count)
+        assertEquals(4.0, engine.state.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-6)
         val forged = engine.state.inventory.first { it.name == "Bronze Glaive" }
         assertEquals(1, forged.tier)
         assertEquals(12.0, forged.atk, 1e-6)
@@ -53,7 +53,7 @@ class EconomyTest {
 
         engine.craftEquipment("Bronze Glaive", 1, Equipment.SLOT_WEAPON, ItemCatalog.COPPER_ORE, 6)
 
-        assertEquals(5, engine.state.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count)
+        assertEquals(5.0, engine.state.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-6)
         assertNull(engine.state.inventory.firstOrNull { it.name == "Bronze Glaive" })
     }
 
@@ -80,7 +80,7 @@ class EconomyTest {
         engine.brewPotion("Minor Health Flask", ItemCatalog.FELWEED, 1)
 
         assertNull(engine.state.inventory.firstOrNull { it.category == ItemCatalog.CATEGORY_POTION })
-        assertEquals(3, engine.state.inventory.first { it.name == ItemCatalog.FELWEED }.count)
+        assertEquals(3.0, engine.state.inventory.first { it.name == ItemCatalog.FELWEED }.count, 1e-6)
     }
 
     @Test
@@ -104,7 +104,7 @@ class EconomyTest {
         )
         hurt.usePotion("p1")
         assertTrue("a potion should heal a wounded hero", hurt.state.player.hp > 10.0)
-        assertEquals(1, hurt.state.inventory.first { it.id == "p1" }.count)
+        assertEquals(1.0, hurt.state.inventory.first { it.id == "p1" }.count, 1e-6)
 
         val healthy = GameEngine(
             initialState = GameState(inventory = listOf(potion)),
@@ -112,7 +112,7 @@ class EconomyTest {
             random = Random(7)
         )
         healthy.usePotion("p1")
-        assertEquals("a potion must not be consumed at full health", 2, healthy.state.inventory.first { it.id == "p1" }.count)
+        assertEquals("a potion must not be consumed at full health", 2.0, healthy.state.inventory.first { it.id == "p1" }.count, 1e-6)
     }
 
     @Test
@@ -138,7 +138,7 @@ class EconomyTest {
         engine.sellItem("worn")
 
         assertEquals(1, engine.state.inventory.size)
-        assertEquals(1, engine.state.inventory.first { it.id == "worn" }.count)
+        assertEquals(1.0, engine.state.inventory.first { it.id == "worn" }.count, 1e-6)
     }
 
     @Test

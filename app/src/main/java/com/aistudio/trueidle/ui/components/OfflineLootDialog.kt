@@ -158,7 +158,12 @@ fun OfflineLootDialog(
                         ) {
                             Column {
                                 Text("CREDITS RECOVERED", style = TrueIdleType.meta, color = TextMuted)
-                                Text("+${NumberFormatter.short(loot.goldEarned)} 🪙", style = TrueIdleType.numberStat, color = SecondaryGold)
+                                SciFiBadge(
+                                    type = SciFiIconType.CREDIT,
+                                    label = "+${NumberFormatter.short(loot.goldEarned)}",
+                                    textColor = SecondaryGold,
+                                    textStyle = TrueIdleType.numberStat
+                                )
                                 if (loot.goldPerHour > 0) {
                                     Text("${NumberFormatter.short(loot.goldPerHour)}/hr rate", style = TrueIdleType.monoTimestamp, color = TextMuted)
                                 }
@@ -197,7 +202,12 @@ fun OfflineLootDialog(
                         ) {
                             Column {
                                 Text("BONE ESSENCE", style = TrueIdleType.meta, color = TextMuted)
-                                Text("+${loot.bonesEarned} 💀", style = TrueIdleType.numberStat, color = NecroPurple)
+                                SciFiBadge(
+                                    type = SciFiIconType.ESSENCE,
+                                    label = "+${loot.bonesEarned}",
+                                    textColor = NecroPurple,
+                                    textStyle = TrueIdleType.numberStat
+                                )
                                 Text("Reanimation salvage", style = TrueIdleType.monoTimestamp, color = TextMuted)
                             }
                         }

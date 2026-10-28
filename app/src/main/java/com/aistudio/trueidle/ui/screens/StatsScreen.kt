@@ -286,9 +286,9 @@ fun StatsScreen(
             listOf(
                 "TOTAL HOSTILES ELIMINATED" to "${state.lifetime.totalKills}",
                 "DEEPEST SECTOR UNLOCKED" to "SECTOR ${p.maxUnlockedFloor}",
-                "CREDITS IN TREASURY" to "${NumberFormatter.short(p.gold)} 🪙",
-                "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} 🕊",
-                "SLAYER POINTS" to "${state.slayer.slayerPoints} ⚔",
+                "CREDITS IN TREASURY" to "${NumberFormatter.short(p.gold)} CR",
+                "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} FAITH",
+                "SLAYER POINTS" to "${state.slayer.slayerPoints} PTS",
                 "TAMED COMPANIONS" to "${state.beasts.beasts.size}",
                 "UNDEAD CORPS SIZE" to "${state.necro.army.sumOf { it.count }}"
             ).forEach { (label, value) ->

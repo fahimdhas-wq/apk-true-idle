@@ -46,7 +46,7 @@ object ItemCatalog {
     fun isOre(name: String): Boolean = ORES.any { it.equals(name, ignoreCase = true) }
     fun isHerb(name: String): Boolean = HERBS.any { it.equals(name, ignoreCase = true) }
 
-    fun newResource(id: String, name: String, count: Int): InventoryItem {
+    fun newResource(id: String, name: String, count: Double): InventoryItem {
         val def = resource(name)
         return InventoryItem(
             id = id,
@@ -58,6 +58,9 @@ object ItemCatalog {
             sellValue = def.sellValue
         )
     }
+
+    fun newResource(id: String, name: String, count: Int): InventoryItem =
+        newResource(id, name, count.toDouble())
 
     /** Potion recipes: name -> (required herb, herb count, heal amount). */
     data class PotionDef(val name: String, val herb: String, val herbCost: Int, val heal: Double)

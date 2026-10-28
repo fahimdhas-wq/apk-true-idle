@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
@@ -50,18 +52,12 @@ fun TrainingScreen(
                         Text("CYBER DOJO PROTOCOL", style = TrueIdleType.titleLarge, color = PrimaryNeon)
                         Text("Neural attribute enhancements via Credits", style = TrueIdleType.meta, color = TextMuted)
                     }
-                    Box(
-                        modifier = Modifier
-                            .background(SecondaryGold.copy(alpha = 0.15f), RectangleShape)
-                            .border(1.dp, SecondaryGold, RectangleShape)
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "🪙 ${NumberFormatter.short(state.player.gold)}",
-                            style = TrueIdleType.numberSmall,
-                            color = SecondaryGold
-                        )
-                    }
+                    SciFiBadge(
+                        type = SciFiIconType.CREDIT,
+                        label = NumberFormatter.short(state.player.gold),
+                        iconTint = SecondaryGold,
+                        textColor = SecondaryGold
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
@@ -135,7 +131,7 @@ fun TrainingScreen(
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} 🪙]",
+                                    text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} CR]",
                                     style = TrueIdleType.tag
                                 )
                             }

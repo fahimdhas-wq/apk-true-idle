@@ -222,6 +222,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleAutoCollect() = mutate { engine.toggleAutoCollect() }
     fun harvestPlot(plotId: Int) = mutate { engine.harvestPlot(plotId) }
     fun mineVein(veinId: Int) = mutate { engine.mineVein(veinId) }
+    fun togglePlotAutoQueue(plotId: Int) = mutate { engine.togglePlotAutoQueue(plotId) }
+    fun toggleVeinAutoQueue(veinId: Int) = mutate { engine.toggleVeinAutoQueue(veinId) }
     fun summonMinion(type: String) = mutate { engine.summonMinion(type) }
     fun mergeBeasts(id1: String, id2: String) = mutate { engine.mergeBeasts(id1, id2) }
     fun trainNode(nodeId: String) = mutate { engine.trainNode(nodeId) }
