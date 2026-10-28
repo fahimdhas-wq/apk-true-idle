@@ -22,9 +22,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Release signing is opt-in: provide `keystore.properties` at the repo root (never committed)
-    // with storeFile / storePassword / keyAlias / keyPassword. Without it the release output is
-    // left unsigned rather than falling back to the debug key.
     signingConfigs {
         create("debugConfig") {
             storeFile = file("${rootDir}/debug.keystore")
