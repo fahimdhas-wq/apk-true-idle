@@ -10,9 +10,13 @@ object ItemCatalog {
     const val COPPER_ORE = "Copper Ore"
     const val TIN_ORE = "Tin Ore"
     const val IRON_ORE = "Iron Ore"
+    const val SILVER_ORE = "Silver Ore"
+    const val OBSIDIAN_ORE = "Obsidian Ore"
     const val FELWEED = "Felweed"
     const val BLOODROOT = "Bloodroot"
     const val MOONFLOWER = "Moonflower"
+    const val STARBLOOM = "Starbloom"
+    const val VOIDCAP = "Voidcap"
     const val BOSS_TROPHY = "Boss Trophy"
 
     const val CATEGORY_RESOURCE = "Resource"
@@ -27,16 +31,20 @@ object ItemCatalog {
         val category: String = CATEGORY_RESOURCE
     )
 
-    val ORES = listOf(COPPER_ORE, TIN_ORE, IRON_ORE)
-    val HERBS = listOf(FELWEED, BLOODROOT, MOONFLOWER)
+    val ORES = listOf(COPPER_ORE, TIN_ORE, IRON_ORE, SILVER_ORE, OBSIDIAN_ORE)
+    val HERBS = listOf(FELWEED, BLOODROOT, MOONFLOWER, STARBLOOM, VOIDCAP)
 
     private val catalog: Map<String, ResourceDef> = buildMap {
         put(COPPER_ORE, ResourceDef(COPPER_ORE, 2L, "Crafting metal ore"))
         put(TIN_ORE, ResourceDef(TIN_ORE, 4L, "Crafting metal ore"))
         put(IRON_ORE, ResourceDef(IRON_ORE, 7L, "Crafting metal ore"))
+        put(SILVER_ORE, ResourceDef(SILVER_ORE, 11L, "Conductive crafting ore"))
+        put(OBSIDIAN_ORE, ResourceDef(OBSIDIAN_ORE, 16L, "Volcanic crafting ore"))
         put(FELWEED, ResourceDef(FELWEED, 3L, "Alchemy herb"))
         put(BLOODROOT, ResourceDef(BLOODROOT, 5L, "Alchemy herb"))
         put(MOONFLOWER, ResourceDef(MOONFLOWER, 8L, "Alchemy herb"))
+        put(STARBLOOM, ResourceDef(STARBLOOM, 12L, "Luminous alchemy herb"))
+        put(VOIDCAP, ResourceDef(VOIDCAP, 18L, "Abyssal alchemy herb"))
         put(BOSS_TROPHY, ResourceDef(BOSS_TROPHY, 120L, "Proof of a boss kill", CATEGORY_TROPHY))
     }
 
@@ -72,7 +80,9 @@ object ItemCatalog {
     val POTIONS = listOf(
         PotionDef("Minor Health Flask", FELWEED, 4, 50.0),
         PotionDef("Bloodroot Tonic", BLOODROOT, 6, 80.0),
-        PotionDef("Moonlight Philter", MOONFLOWER, 8, 150.0)
+        PotionDef("Moonlight Philter", MOONFLOWER, 8, 150.0),
+        PotionDef("Starbloom Elixir", STARBLOOM, 10, 250.0),
+        PotionDef("Voidcap Draught", VOIDCAP, 12, 400.0)
     )
 
     fun potion(name: String): PotionDef? = POTIONS.firstOrNull { it.name == name }

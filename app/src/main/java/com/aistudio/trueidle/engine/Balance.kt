@@ -84,6 +84,8 @@ object Balance {
         "mana_rampage" -> 25.0
         "aegis_bastion" -> 20.0
         "arcane_enchant" -> 25.0
+        "phoenix_protocol" -> 35.0
+        "void_pulse" -> 35.0
         else -> 0.0
     }
 

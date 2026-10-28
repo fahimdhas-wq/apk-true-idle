@@ -43,6 +43,7 @@ fun HarvestScreen(
     val speedRank = harvest.upgrades.firstOrNull { it.id == "harvest_speed" }?.rank ?: 0
     val miningRank = harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
     val extraYield = harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+    val extraOreYield = harvest.upgrades.firstOrNull { it.id == "mining_yield" }?.rank ?: 0
     val farmMult = (Math.pow(0.97, (harvest.farmingLvl - 1).toDouble()) * Math.pow(0.92, speedRank.toDouble()))
         .coerceAtLeast(0.20).toFloat()
     val mineMult = (Math.pow(0.97, (harvest.miningLvl - 1).toDouble()) * Math.pow(0.92, miningRank.toDouble()))
@@ -264,7 +265,7 @@ fun HarvestScreen(
                 val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
                 val reqProfXp = XpCurves.proficiency(vein.proficiencyLevel)
                 val profRatio = if (vein.proficiencyLevel >= 100) 1f else (vein.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
-                val totalYield = (3.0 + extraYield) * profMult
+                val totalYield = (3.0 + extraYield + extraOreYield) * profMult
 
                 Card(
                     modifier = Modifier

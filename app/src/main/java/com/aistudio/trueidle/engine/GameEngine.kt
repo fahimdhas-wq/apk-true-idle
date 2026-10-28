@@ -3,6 +3,7 @@ package com.aistudio.trueidle.engine
 import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
+import com.aistudio.trueidle.core.ContentCatalog
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.DisciplineCategory
@@ -12,6 +13,7 @@ import com.aistudio.trueidle.core.Ids
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.SlayerMath
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.data.NoOpSaveStore
 import com.aistudio.trueidle.data.SaveRepository
@@ -41,7 +43,7 @@ class GameEngine(
     private val random: Random = Random.Default,
     private val saves: SaveRepository = SaveRepository(NoOpSaveStore)
 ) {
-    var state: GameState = sanitize(initialState)
+    var state: GameState = ContentCatalog.reconcile(sanitize(initialState))
         private set
 
     private val ids = Ids(nextIdFrom(initialState))
@@ -68,7 +70,8 @@ class GameEngine(
     }
 
     fun restore(newState: GameState) {
-        state = sanitize(newState)
+        // A save written before a content expansion gains the new entries here, once, by id.
+        state = ContentCatalog.reconcile(sanitize(newState))
         // The saved notation preference drives the shared formatter, and the stored name is
         // normalised so an unknown/legacy value cannot leave the UI in a state the engine does not
         // recognise.
@@ -725,6 +728,7 @@ class GameEngine(
         val speedRank = frame.harvest.upgrades.firstOrNull { it.id == "harvest_speed" }?.rank ?: 0
         val miningRank = frame.harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
         val extraYield = frame.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        val extraOreYield = frame.harvest.upgrades.firstOrNull { it.id == "mining_yield" }?.rank ?: 0
         val farmMult = (0.97.pow((frame.harvest.farmingLvl - 1).toDouble()) * 0.92.pow(speedRank))
             .coerceAtLeast(0.20).toFloat()
         val mineMult = (0.97.pow((frame.harvest.miningLvl - 1).toDouble()) * 0.92.pow(miningRank))
@@ -769,7 +773,7 @@ class GameEngine(
                 val duration = (vein.durationSeconds * mineMult).coerceAtLeast(0.1f)
                 val shouldAuto = vein.autoQueue || autoCollect
                 val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
-                val baseYield = (3.0 + extraYield) * profMult
+                val baseYield = (3.0 + extraYield + extraOreYield) * profMult
                 if (vein.isReady) {
                     if (shouldAuto) {
                         oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
@@ -882,8 +886,9 @@ class GameEngine(
         if (!vein.isReady) return state
 
         val extraYield = state.harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
+        val extraOreYield = state.harvest.upgrades.firstOrNull { it.id == "mining_yield" }?.rank ?: 0
         val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
-        val yield = (3.0 + extraYield) * profMult
+        val yield = (3.0 + extraYield + extraOreYield) * profMult
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, vein.oreName, yield)
         val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 30L)
@@ -1363,6 +1368,27 @@ class GameEngine(
                 val barrier = derived.maxShield * 0.60 * rankScale
                 player = player.copy(shield = (player.shield + barrier).coerceAtMost(derived.maxShield * 1.5))
             }
+            "phoenix_protocol" -> {
+                player = player.copy(
+                    hp = derived.maxHp,
+                    shield = (player.shield + derived.maxShield * 0.40 * rankScale)
+                        .coerceAtMost(derived.maxShield)
+                )
+            }
+            "void_pulse" -> {
+                val burst = CombatMath.heroHitDamage(derived) * 3.0 * rankScale *
+                    CombatMath.mitigation(monster.armor)
+                var shield = monster.shield
+                var hp = monster.hp
+                if (shield > 0.0) {
+                    val absorbed = burst.coerceAtMost(shield)
+                    shield -= absorbed
+                    hp -= (burst - absorbed)
+                } else {
+                    hp -= burst
+                }
+                monster = monster.copy(shield = shield.coerceAtLeast(0.0), hp = hp.coerceAtLeast(0.0))
+            }
             else -> Unit // Timed buffs are picked up by DerivedStats while active.
         }
 
@@ -1523,8 +1549,8 @@ class GameEngine(
             targetName = monster.name,
             currentKills = 0,
             requiredKills = random.nextInt(10, 21),
-            rewardGold = (floor * 25L).coerceAtLeast(100L),
-            rewardPoints = (floor / 5 + 3).coerceIn(3, 15),
+            rewardGold = SlayerMath.scaledGold((floor * 25L).coerceAtLeast(100L), state.slayer.lvl),
+            rewardPoints = SlayerMath.scaledPoints((floor / 5 + 3).coerceIn(3, 15), state.slayer.lvl),
             isCompleted = false
         )
     }

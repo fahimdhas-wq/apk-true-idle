@@ -58,8 +58,12 @@ object CombatMath {
     fun beastDps(b: BeastTamingState, ferocityMultiplier: Double = 1.0): Double =
         b.beasts.sumOf { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) } * ferocityMultiplier
 
-    fun armyDps(n: NecromancyState): Double =
-        n.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) }
+    /** Corps DPS, scaled by the Grave Momentum discipline when it has been researched. */
+    fun armyDps(n: NecromancyState): Double {
+        val rank = n.upgrades.firstOrNull { it.id == "necro_dps" }?.rank ?: 0
+        val bonus = 1.0 + 0.10 * rank
+        return n.army.sumOf { it.dps * it.count * (1.0 + (it.lvl - 1) * 0.2) } * bonus
+    }
 
     fun totalDps(s: GameState, d: Derived): Double {
         val supportOverclock = s.talent.activeTalents.firstOrNull { it.id == "support_overclock" }?.isActive == true

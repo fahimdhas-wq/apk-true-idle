@@ -36,7 +36,8 @@ data class Derived(
     val struggleHpBonus: Double = 0.0,
     val struggleDefBonus: Double = 0.0,
     val struggleManaBonus: Double = 0.0,
-    val struggleAtkBonus: Double = 0.0
+    val struggleAtkBonus: Double = 0.0,
+    val struggleShieldBonus: Double = 0.0
 )
 
 object DerivedStats {
@@ -68,6 +69,8 @@ object DerivedStats {
         val struggleDef = (struggleDamage / defStep).toDouble() * 1.0 * struggleRank("struggle_def")
         val struggleMana = (struggleDamage / manaStep).toDouble() * 3.0 * struggleRank("struggle_mana")
         val struggleAtk = (struggleDamage / atkStep).toDouble() * 2.0 * struggleRank("struggle_atk")
+        val shieldStep = s.talent.struggleShieldThreshold.coerceAtLeast(1L)
+        val struggleShield = (struggleDamage / shieldStep).toDouble() * 2.0 * struggleRank("struggle_shield")
 
         // Active talent buffs.
         val berserk = s.talent.activeTalents.firstOrNull { it.id == "berserk" }
@@ -100,18 +103,22 @@ object DerivedStats {
         val amuletBonus = (amulet?.def ?: 0.0) * bonusMult
 
         val atkSpeed = s.player.let { 1.0 * 1.05.pow(rank("speed_bonus")) * speedMultiplier }
-        val critChance = (0.124 + luck * 0.001 + extraCrit).coerceIn(0.0, 1.0)
+        val critChance = (0.124 + luck * 0.001 + extraCrit + 0.005 * rank("crit_bonus")).coerceIn(0.0, 1.0)
         val critDamage = 1.85 + extraCritDmg
         // Smite is decoupled from Aegis, and Solar Lance scales the burst per rank.
         val smiteRank = s.essence.upgrades.firstOrNull { it.id == "smite_overdrive" }?.rank ?: 0
-        val smiteBonus = s.essence.smiteLevel * 3.0 * (1.0 + 0.30 * smiteRank)
+        val smiteFocusRank = s.essence.upgrades.firstOrNull { it.id == "smite_focus" }?.rank ?: 0
+        val smiteBonus = s.essence.smiteLevel * 3.0 * (1.0 + 0.30 * smiteRank) * (1.0 + 0.05 * smiteFocusRank)
 
         // Tame rate: base + luck, plus the Pheromone Baits discipline.
         val tameRateRank = s.beasts.upgrades.firstOrNull { it.id == "beast_tame_rate" }?.rank ?: 0
         val tameChance = 0.10 + luck / 100.0 + 0.05 * tameRateRank
 
         val maxHp = (40.0 + 5.0 * vit + 10.0 * lvl + 25.0 * rank("vit_bonus")) * bonusMult + struggleHp
-        val maxShield = (20.0 + 5.0 * lvl) * bonusMult
+        val shieldRank = rank("shield_bonus")
+        val aegisReserveRank = s.essence.upgrades.firstOrNull { it.id == "aegis_reserve" }?.rank ?: 0
+        val maxShield = (20.0 + 5.0 * lvl) * bonusMult *
+            (1.0 + 0.05 * shieldRank) * (1.0 + 0.08 * aegisReserveRank) + struggleShield
         val maxMana = (30.0 + 2.0 * intVal + 15.0 * rank("int_bonus")) * bonusMult + struggleMana
 
         val physicalDmg = CombatMath.heroDps(
@@ -125,8 +132,8 @@ object DerivedStats {
             critChance = critChance,
             critDamage = critDamage
         )
-        val computedGearScore = (1200 + (lvl * 15) + (weaponDmg * 20).toInt() +
-            (armorDef * 20).toInt() + ((ringBonus + amuletBonus) * 15).toInt()).toInt()
+        val computedGearScore = 1200 + (lvl * 15) + (weaponDmg * 20).toInt() +
+            (armorDef * 20).toInt() + ((ringBonus + amuletBonus) * 15).toInt()
 
         return Derived(
             str = str,
@@ -146,15 +153,16 @@ object DerivedStats {
             dmgMultiplier = dmgMultiplier,
             critChance = critChance,
             critDamage = critDamage,
-            xpGain = 1.0 + 0.02 * lvl,
+            xpGain = 1.0 + 0.02 * lvl + 0.02 * rank("xp_bonus"),
             physicalDamage = physicalDmg,
             gearScore = computedGearScore,
-            healthRegen = maxHp * 0.015,
-            shieldRegen = maxShield * 0.05,
+            healthRegen = maxHp * 0.015 * (1.0 + 0.04 * rank("regen_bonus")),
+            shieldRegen = maxShield * 0.05 * (1.0 + 0.04 * rank("regen_bonus")),
             struggleHpBonus = struggleHp,
             struggleDefBonus = struggleDef,
             struggleManaBonus = struggleMana,
-            struggleAtkBonus = struggleAtk
+            struggleAtkBonus = struggleAtk,
+            struggleShieldBonus = struggleShield
         )
     }
 }

@@ -239,6 +239,7 @@ data class TalentState(
     val struggleArmorThreshold: Long = 500L,
     val struggleManaThreshold: Long = 150L,
     val struggleAtkThreshold: Long = 250L,
+    val struggleShieldThreshold: Long = 200L,
     val activeTalents: List<Talent> = listOf(
         Talent(id = "berserk", name = "Berserk Overdrive", description = "+50% ATK Speed & +35% Damage for 10s (20 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 30.0, durationSeconds = 10.0),
         Talent(id = "nanite_heal", name = "Nanite Repair", description = "Instantly restores 40% Max HP & 25% Shield (15 Mana)", type = "ACTIVE", rank = 1, cooldownSeconds = 25.0, durationSeconds = 0.0),

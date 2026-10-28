@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.SlayerMath
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiBadge
@@ -119,6 +120,39 @@ fun SlayerScreen(
                     textColor = SecondaryGold
                 )
             }
+        }
+
+        // Mastery scaling: the same table the engine scales a new contract's bounty with.
+        SciFiPanel(
+            title = "MASTERY SCALING",
+            accent = PrimaryNeon,
+            tag = "LV ${slayer.lvl}"
+        ) {
+            Text(
+                text = "Each level above 1 adds +2% credits to a new contract, and every ${SlayerMath.LEVELS_PER_BONUS_POINT} levels adds +1 bounty point.",
+                style = TrueIdleType.body,
+                color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("POINT BONUS", style = TrueIdleType.meta, color = TextMuted)
+                    Text("+${SlayerMath.bonusPoints(slayer.lvl)} PTS", style = TrueIdleType.value, color = PrimaryNeon)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("CREDIT BONUS", style = TrueIdleType.meta, color = TextMuted)
+                    Text("+${SlayerMath.bonusGoldPercent(slayer.lvl)}%", style = TrueIdleType.value, color = SecondaryGold)
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "NEXT POINT BONUS AT SLAYER LV ${SlayerMath.nextBonusPointLevel(slayer.lvl)}",
+                style = TrueIdleType.tag,
+                color = TextMuted
+            )
         }
 
         // Active Directive Card

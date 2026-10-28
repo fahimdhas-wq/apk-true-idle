@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.ContentCatalog
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
@@ -28,7 +29,6 @@ import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
-private data class ForgeRecipe(val name: String, val tier: Int, val slot: String, val reqOre: String, val reqQty: Int, val statPreview: String)
 private data class AlchemyRecipe(val name: String, val reqHerb: String, val reqQty: Int, val effectDesc: String)
 
 @Composable
@@ -42,14 +42,8 @@ fun ArmoryScreen(
     val armory = state.armory
     val scrollState = rememberScrollState()
 
-    val forgeRecipes = listOf(
-        ForgeRecipe("Bronze Glaive", 1, Equipment.SLOT_WEAPON, ItemCatalog.COPPER_ORE, 6, "+12 ATK"),
-        ForgeRecipe("Heavy Plate", 1, Equipment.SLOT_ARMOR, ItemCatalog.COPPER_ORE, 8, "+8 DEF"),
-        ForgeRecipe("Titan Edge", 2, Equipment.SLOT_WEAPON, ItemCatalog.TIN_ORE, 10, "+24 ATK"),
-        ForgeRecipe("Cobalt Cuirass", 2, Equipment.SLOT_ARMOR, ItemCatalog.TIN_ORE, 12, "+16 DEF"),
-        ForgeRecipe("Plasma Cleaver", 3, Equipment.SLOT_WEAPON, ItemCatalog.IRON_ORE, 15, "+36 ATK"),
-        ForgeRecipe("Aegis Carapace", 3, Equipment.SLOT_ARMOR, ItemCatalog.IRON_ORE, 18, "+24 DEF")
-    )
+    // Rendered from the shared catalog so the tier and stat preview cannot drift from the recipe.
+    val forgeRecipes = ContentCatalog.FORGE_RECIPES
 
     // Rendered from the catalog the engine charges against, so the two cannot drift.
     val alchemyRecipes = ItemCatalog.POTIONS.map { potion ->
@@ -111,7 +105,7 @@ fun ArmoryScreen(
         SciFiPanel(
             title = "CYBER FORGE (WEAPONS & ARMOR)",
             accent = SecondaryGold,
-            tag = "TIER 1-3"
+            tag = "TIER 1-6"
         ) {
             forgeRecipes.forEach { recipe ->
                 val have = state.inventory.find { it.name == recipe.reqOre }?.count ?: 0.0
