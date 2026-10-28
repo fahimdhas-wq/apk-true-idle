@@ -23,12 +23,6 @@ android {
     }
 
     signingConfigs {
-        create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
         val propsFile = rootProject.file("keystore.properties")
         if (propsFile.exists()) {
             create("release") {
@@ -45,7 +39,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debugConfig")
+            // Use Android's standard generated debug key, not a project-local keystore.
         }
         release {
             isMinifyEnabled = true
@@ -58,7 +52,7 @@ android {
         }
         create("benchmark") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debugConfig")
+            signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
             isDebuggable = false
         }
