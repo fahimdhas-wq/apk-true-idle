@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.GameCaps
-import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.*
@@ -162,9 +161,12 @@ fun CombatScreen(
         }
 
         // 3. CLASH TELEMETRY STATUS BANNER (§7.6)
+        // Memoised so an unchanged value never re-enters the formatter on a combat tick.
+        val dpsOutText = rememberStableShort(effDps)
+        val dpsInText = rememberStableShort(incomingRate)
         val clashStatusText = when {
             p.recoverLeft > 0.0 -> "SYSTEM RECOVERING (${String.format(Locale.ROOT, "%.1f", p.recoverLeft)}s)"
-            else -> "CLASH ACTIVE · ${NumberFormatter.short(effDps)} DPS OUT · ${NumberFormatter.short(incomingRate)} DPS IN"
+            else -> "CLASH ACTIVE · $dpsOutText DPS OUT · $dpsInText DPS IN"
         }
         val clashColor = if (p.recoverLeft > 0.0) Warn else PrimaryNeon
         Box(

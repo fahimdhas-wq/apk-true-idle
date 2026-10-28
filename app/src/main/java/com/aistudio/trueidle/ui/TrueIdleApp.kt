@@ -40,11 +40,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.ui.components.SciFiBadge
 import com.aistudio.trueidle.ui.components.SciFiIconType
+import com.aistudio.trueidle.ui.components.rememberStableShort
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
-import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.components.SupportKind
 import com.aistudio.trueidle.ui.screens.*
@@ -170,7 +170,7 @@ fun TrueIdleApp(
                         ) {
                             SciFiBadge(
                                 type = SciFiIconType.CREDIT,
-                                label = NumberFormatter.short(state.player.gold),
+                                label = rememberStableShort(state.player.gold),
                                 textColor = SecondaryGold
                             )
                         }
@@ -182,7 +182,7 @@ fun TrueIdleApp(
                         ) {
                             SciFiBadge(
                                 type = SciFiIconType.ESSENCE,
-                                label = NumberFormatter.short(state.necro.boneEssence),
+                                label = rememberStableShort(state.necro.boneEssence),
                                 textColor = NecroPurple
                             )
                         }
@@ -196,7 +196,7 @@ fun TrueIdleApp(
                             ) {
                                 SciFiBadge(
                                     type = SciFiIconType.DIAMOND,
-                                    label = NumberFormatter.short(state.player.diamonds),
+                                    label = rememberStableShort(state.player.diamonds),
                                     textColor = PrimaryNeon
                                 )
                             }

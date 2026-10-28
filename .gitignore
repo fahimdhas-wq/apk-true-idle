@@ -33,3 +33,7 @@ debug.keystore.base64
 
 # Logs / scratch
 *.log
+
+# Local verification toolchain (JDK / Android SDK / benchmark logs)
+.toolchain/
+scratch/
