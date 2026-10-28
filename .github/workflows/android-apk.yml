@@ -28,6 +28,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@41ad77ca97e46ee2e825d5e6b9a95d8169fcc44c # v4.4.2
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       # Unit tests and lint gate the build so compile errors and regressions cannot slip through.
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
