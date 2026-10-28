@@ -5,7 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme = darkColorScheme(
@@ -34,12 +37,29 @@ val SharpShapes = Shapes(
     extraLarge = RoundedCornerShape(0.dp)
 )
 
+/**
+ * Global UI scale. Multiplies both dp (layout, padding, bars, buttons, icons) and sp (text)
+ * across the entire app from a single point. 1.0 = original size. Lower = smaller.
+ */
+const val UI_SCALE = 0.82f
+
 @Composable
 fun TrueIdleTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = DarkColorScheme,
-        typography = Typography,
-        shapes = SharpShapes,
-        content = content
-    )
+    val base = LocalDensity.current
+    val scaled = remember(base.density, base.fontScale) {
+        Density(
+            density = base.density * UI_SCALE,
+            fontScale = base.fontScale
+        )
+    }
+    // fontScale multiplies against density for sp, so text shrinks with UI_SCALE as well
+    // while still honoring the user's system font-size setting.
+    CompositionLocalProvider(LocalDensity provides scaled) {
+        MaterialTheme(
+            colorScheme = DarkColorScheme,
+            typography = Typography,
+            shapes = SharpShapes,
+            content = content
+        )
+    }
 }
