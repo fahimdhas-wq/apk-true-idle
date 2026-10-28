@@ -76,7 +76,7 @@ fun SkillsScreen(
         ) {
             ResourceReadout("CR", NumberFormatter.short(state.player.gold), SecondaryGold)
             ResourceReadout("FA", NumberFormatter.short(state.essence.faith), ManaTeal)
-            ResourceReadout("SP", "${state.slayer.slayerPoints} PTS", HpRed)
+            ResourceReadout("SP", "${NumberFormatter.short(state.slayer.slayerPoints)} PTS", HpRed)
             ResourceReadout("TP", "${state.talent.talentPoints} TP", PrimaryNeon)
         }
 
@@ -339,7 +339,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "04 // GENESIS",
             icon = "[G]",
             accentColor = NecroPurple,
-            quickSummary = "${state.beasts.beasts.size}/${GameCaps.BEAST} BEASTS · ${state.necro.boneEssence} ESSENCE · ${(beastDps + armyDps).toInt()} TOTAL DPS",
+            quickSummary = "${state.beasts.beasts.size}/${GameCaps.BEAST} BEASTS · ${NumberFormatter.short(state.necro.boneEssence)} ESSENCE · ${NumberFormatter.short(beastDps + armyDps)} TOTAL DPS",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.GENESIS) },
             level = max(state.beasts.lvl, state.necro.lvl),
@@ -357,7 +357,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "05 // ESSENCE",
             icon = "[E]",
             accentColor = ManaTeal,
-            quickSummary = "${state.essence.faith} FAITH · SMITE LV ${state.essence.smiteLevel} · ${if (state.essence.aegisActive) "AEGIS ONLINE" else "AEGIS OFFLINE"}",
+            quickSummary = "${NumberFormatter.short(state.essence.faith)} FAITH · SMITE LV ${state.essence.smiteLevel} · ${if (state.essence.aegisActive) "AEGIS ONLINE" else "AEGIS OFFLINE"}",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.ESSENCE) },
             level = state.essence.lvl,
@@ -389,7 +389,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "07 // SLAYER",
             icon = "[S]",
             accentColor = HpRed,
-            quickSummary = "TARGET: ${state.slayer.currentTask.targetName.uppercase()} (${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills}) · ${state.slayer.slayerPoints} PTS",
+            quickSummary = "TARGET: ${state.slayer.currentTask.targetName.uppercase()} (${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills}) · ${NumberFormatter.short(state.slayer.slayerPoints)} PTS",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.SLAYER) },
             level = state.slayer.lvl,
@@ -414,7 +414,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             status = "TACTICAL MATRIX"
         ) {
             Text(
-                text = "STRUGGLE BONUSES: +${derived.struggleHpBonus.toInt()} HP · +${derived.struggleDefBonus.toInt()} DEF · +${derived.struggleAtkBonus.toInt()} ATK",
+                text = "STRUGGLE BONUSES: +${NumberFormatter.short(derived.struggleHpBonus)} HP · +${NumberFormatter.short(derived.struggleDefBonus)} DEF · +${NumberFormatter.short(derived.struggleAtkBonus)} ATK",
                 style = TrueIdleType.tag,
                 color = SecondaryGold
             )

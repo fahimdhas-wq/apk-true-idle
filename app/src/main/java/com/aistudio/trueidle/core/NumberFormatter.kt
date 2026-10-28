@@ -26,6 +26,9 @@ object NumberFormatter {
     const val NOT_AVAILABLE: String = BigNumberFormatter.NOT_AVAILABLE
 
     /** Formats [x] with the active notation (see [BigNumberFormatter.config]). */
+    /** Counters such as slayer points are `Int` in the save model; widening is lossless. */
+    fun short(x: Int): String = BigNumberFormatter.format(x.toLong())
+
     fun short(x: Long): String = BigNumberFormatter.format(x)
 
     /** Formats [x] with the active notation; non-finite values render as an em dash. */

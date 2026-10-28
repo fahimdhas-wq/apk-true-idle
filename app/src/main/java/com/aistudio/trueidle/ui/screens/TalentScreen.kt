@@ -94,10 +94,10 @@ fun TalentScreen(
 
             talent.struggleTalents.forEach { st ->
                 val (threshold, bonusText, currentBonus) = when (st.id) {
-                    "struggle_hp" -> Triple(100L, "+${5 * st.rank} HP per 100 DMG taken", "+${derived.struggleHpBonus.toInt()} MAX HP")
-                    "struggle_def" -> Triple(500L, "+${1 * st.rank} DEF per 500 DMG taken", "+${derived.struggleDefBonus.toInt()} DEF")
-                    "struggle_mana" -> Triple(150L, "+${3 * st.rank} MANA per 150 DMG taken", "+${derived.struggleManaBonus.toInt()} MAX MANA")
-                    "struggle_atk" -> Triple(250L, "+${2 * st.rank} ATK per 250 DMG taken", "+${derived.struggleAtkBonus.toInt()} ATK")
+                    "struggle_hp" -> Triple(100L, "+${5 * st.rank} HP per 100 DMG taken", "+${NumberFormatter.short(derived.struggleHpBonus)} MAX HP")
+                    "struggle_def" -> Triple(500L, "+${1 * st.rank} DEF per 500 DMG taken", "+${NumberFormatter.short(derived.struggleDefBonus)} DEF")
+                    "struggle_mana" -> Triple(150L, "+${3 * st.rank} MANA per 150 DMG taken", "+${NumberFormatter.short(derived.struggleManaBonus)} MAX MANA")
+                    "struggle_atk" -> Triple(250L, "+${2 * st.rank} ATK per 250 DMG taken", "+${NumberFormatter.short(derived.struggleAtkBonus)} ATK")
                     else -> Triple(100L, "", "")
                 }
 

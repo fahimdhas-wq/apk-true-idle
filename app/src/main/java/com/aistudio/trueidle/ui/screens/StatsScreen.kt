@@ -130,7 +130,7 @@ fun StatsScreen(
                                 maxLines = 1
                             )
                             Text(
-                                text = "DMG +${d.weaponDmg.toInt()}",
+                                text = "DMG +${NumberFormatter.short(d.weaponDmg)}",
                                 style = TrueIdleType.tag,
                                 color = PrimaryNeon
                             )
@@ -156,7 +156,7 @@ fun StatsScreen(
                                 maxLines = 1
                             )
                             Text(
-                                text = "DEF +${d.armorDef.toInt()}",
+                                text = "DEF +${NumberFormatter.short(d.armorDef)}",
                                 style = TrueIdleType.tag,
                                 color = ShieldBlue
                             )
@@ -190,7 +190,7 @@ fun StatsScreen(
                             Text(
                                 // Derived from the equipped item: the old hard-coded "CRIT +2.1%"
                                 // did not describe what the ring actually granted.
-                                text = if (ring != null) "+${d.ringBonus.toInt()} ATK" else "—",
+                                text = if (ring != null) "+${NumberFormatter.short(d.ringBonus)} ATK" else "—",
                                 style = TrueIdleType.tag,
                                 color = SecondaryGold
                             )
@@ -216,7 +216,7 @@ fun StatsScreen(
                                 maxLines = 1
                             )
                             Text(
-                                text = if (amulet != null) "+${amulet.def.toInt()} DEF" else "—",
+                                text = if (amulet != null) "+${NumberFormatter.short(amulet.def)} DEF" else "—",
                                 style = TrueIdleType.tag,
                                 color = NecroPurple
                             )
@@ -234,15 +234,15 @@ fun StatsScreen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Strength
-                StatDotRow(label = "STRENGTH", value = "${d.str.toInt()}", dotColor = PrimaryNeon, valueColor = PrimaryNeon)
+                StatDotRow(label = "STRENGTH", value = NumberFormatter.short(d.str), dotColor = PrimaryNeon, valueColor = PrimaryNeon)
                 // Intelligence
-                StatDotRow(label = "INTELLIGENCE", value = "${d.intVal.toInt()}", dotColor = SecondaryGold, valueColor = SecondaryGold)
+                StatDotRow(label = "INTELLIGENCE", value = NumberFormatter.short(d.intVal), dotColor = SecondaryGold, valueColor = SecondaryGold)
                 // Vitality
-                StatDotRow(label = "VITALITY", value = "${d.vit.toInt()}", dotColor = GreenSuccess, valueColor = GreenSuccess)
+                StatDotRow(label = "VITALITY", value = NumberFormatter.short(d.vit), dotColor = GreenSuccess, valueColor = GreenSuccess)
                 // Defense
-                StatDotRow(label = "DEFENSE", value = "${d.armorDef.toInt()}", dotColor = NecroPurple, valueColor = NecroPurple)
+                StatDotRow(label = "DEFENSE", value = NumberFormatter.short(d.armorDef), dotColor = NecroPurple, valueColor = NecroPurple)
                 // Physical Damage
-                StatDotRow(label = "PHYSICAL DAMAGE", value = "${d.physicalDamage.toInt()}", dotColor = null, valueColor = TextLight)
+                StatDotRow(label = "PHYSICAL DAMAGE", value = NumberFormatter.short(d.physicalDamage), dotColor = null, valueColor = TextLight)
                 // Crit Chance
                 StatDotRow(label = "CRIT CHANCE", value = String.format(Locale.ROOT, "%.1f%%", d.critChance * 100), dotColor = null, valueColor = TextLight)
                 // Crit Damage
@@ -262,7 +262,7 @@ fun StatsScreen(
                 "HERO SOLO DPS" to "${NumberFormatter.short(playerDps)} DPS",
                 "BEAST COMPANIONS DPS" to "${NumberFormatter.short(beastDps)} DPS (${state.beasts.beasts.size} BEASTS)",
                 "UNDEAD LEGION DPS" to "${NumberFormatter.short(armyDps)} DPS (${state.necro.army.sumOf { it.count }} UNITS)",
-                "ARMOR MITIGATION" to "${d.armorDef.toInt()} DEF (${(100 - (CombatMath.mitigation(d.armorDef) * 100)).toInt()}% REDUCTION)"
+                "ARMOR MITIGATION" to "${NumberFormatter.short(d.armorDef)} DEF (${(100 - (CombatMath.mitigation(d.armorDef) * 100)).toInt()}% REDUCTION)"
             ).forEach { (label, value) ->
                 Row(
                     modifier = Modifier
@@ -284,11 +284,11 @@ fun StatsScreen(
             tag = "LIFETIME"
         ) {
             listOf(
-                "TOTAL HOSTILES ELIMINATED" to "${state.lifetime.totalKills}",
+                "TOTAL HOSTILES ELIMINATED" to NumberFormatter.short(state.lifetime.totalKills),
                 "DEEPEST SECTOR UNLOCKED" to "SECTOR ${p.maxUnlockedFloor}",
                 "CREDITS IN TREASURY" to "${NumberFormatter.short(p.gold)} CR",
                 "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} FAITH",
-                "SLAYER POINTS" to "${state.slayer.slayerPoints} PTS",
+                "SLAYER POINTS" to "${NumberFormatter.short(state.slayer.slayerPoints)} PTS",
                 "TAMED COMPANIONS" to "${state.beasts.beasts.size}",
                 "UNDEAD CORPS SIZE" to "${state.necro.army.sumOf { it.count }}"
             ).forEach { (label, value) ->

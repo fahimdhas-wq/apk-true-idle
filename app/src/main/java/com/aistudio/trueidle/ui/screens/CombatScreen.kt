@@ -1,7 +1,6 @@
 package com.aistudio.trueidle.ui.screens
 
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -21,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.GameCaps
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.*
@@ -53,7 +53,7 @@ fun CombatScreen(
         SupportGroupUi(
             count = state.beasts.beasts.size,
             cap = GameCaps.BEAST,
-            totalDps = "${CombatMath.beastDps(state.beasts).toInt()} DPS",
+            totalDps = "${NumberFormatter.short(CombatMath.beastDps(state.beasts))} DPS",
             emptyText = "NO BEASTS ACTIVE. DEFEAT HOSTILES TO TAME.",
             top = state.beasts.beasts
                 .sortedByDescending { it.dps * it.rank * (1.0 + (it.stars - 1) * 0.25) }
@@ -62,7 +62,7 @@ fun CombatScreen(
                     SupportItemUi(
                         name = b.name.uppercase(),
                         stars = b.stars,
-                        dpsText = "${(b.dps * b.rank * (1.0 + (b.stars - 1) * 0.25)).toInt()} DPS",
+                        dpsText = "${NumberFormatter.short(b.dps * b.rank * (1.0 + (b.stars - 1) * 0.25))} DPS",
                         meta = "RANK ${b.rank} · ${b.trait.uppercase()}"
                     )
                 }
@@ -73,13 +73,13 @@ fun CombatScreen(
         SupportGroupUi(
             count = state.necro.army.sumOf { it.count },
             cap = GameCaps.MINION,
-            totalDps = "${CombatMath.armyDps(state.necro).toInt()} DPS",
+            totalDps = "${NumberFormatter.short(CombatMath.armyDps(state.necro))} DPS",
             emptyText = "NO MINIONS ACTIVE. REANIMATE AT ALTAR OF BONES.",
             top = state.necro.army.sortedByDescending { it.dps * it.count }.take(3).map { minion ->
                 SupportItemUi(
                     name = minion.type.uppercase(),
                     stars = 0,
-                    dpsText = "${(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2)).toInt()} DPS",
+                    dpsText = "${NumberFormatter.short(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2))} DPS",
                     meta = "CORPS x${minion.count} · LVL ${minion.lvl}"
                 )
             }
@@ -117,7 +117,7 @@ fun CombatScreen(
         ) {
             SciFiGauge(
                 label = "VITALITY (HP)",
-                valueText = "${m.hp.toInt()} / ${m.maxHp.toInt()}",
+                valueText = "${NumberFormatter.short(m.hp)} / ${NumberFormatter.short(m.maxHp)}",
                 ratio = if (m.maxHp > 0) (m.hp / m.maxHp).toFloat() else 0f,
                 color = HpRed
             )
@@ -126,7 +126,7 @@ fun CombatScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 SciFiGauge(
                     label = "ENERGY SHIELD",
-                    valueText = "${m.shield.toInt()} / ${m.maxShield.toInt()}",
+                    valueText = "${NumberFormatter.short(m.shield)} / ${NumberFormatter.short(m.maxShield)}",
                     ratio = if (m.maxShield > 0) (m.shield / m.maxShield).toFloat() else 0f,
                     color = ShieldBlue
                 )
@@ -143,19 +143,14 @@ fun CombatScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "ATK: ${m.damage.toInt()} DMG",
+                    text = "ATK: ${NumberFormatter.short(m.damage)} DMG",
                     style = TrueIdleType.value,
                     color = HpRed
                 )
                 Text(
-                    text = "DEF: ${m.armor.toInt()} (${(100 - (mitigation * 100)).toInt()}% MITIGATED)",
+                    text = "DEF: ${NumberFormatter.short(m.armor)} (${(100 - (mitigation * 100)).toInt()}% MITIGATED)",
                     style = TrueIdleType.value,
                     color = SecondaryGold
-                )
-                Text(
-                    text = if (m.isBoss) "CRITICAL" else "HIGH",
-                    style = TrueIdleType.tag,
-                    color = if (m.isBoss) HpRed else PrimaryNeon
                 )
             }
         }
@@ -194,25 +189,35 @@ fun CombatScreen(
         ) {
             SciFiGauge(
                 label = "HEALTH (HP)",
-                valueText = "${p.hp.toInt()} / ${derived.maxHp.toInt()}",
+                valueText = "${NumberFormatter.short(p.hp)} / ${NumberFormatter.short(derived.maxHp)}",
                 ratio = (p.hp / derived.maxHp).toFloat(),
                 color = GreenSuccess
             )
             Spacer(modifier = Modifier.height(4.dp))
             SciFiGauge(
                 label = "SHIELD",
-                valueText = "${p.shield.toInt()} / ${derived.maxShield.toInt()}",
+                valueText = "${NumberFormatter.short(p.shield)} / ${NumberFormatter.short(derived.maxShield)}",
                 ratio = (p.shield / derived.maxShield).toFloat(),
                 color = ShieldBlue
             )
             Spacer(modifier = Modifier.height(4.dp))
             SciFiGauge(
                 label = "MANA RESERVES",
-                valueText = "${p.mana.toInt()} / ${derived.maxMana.toInt()}",
+                valueText = "${NumberFormatter.short(p.mana)} / ${NumberFormatter.short(derived.maxMana)}",
                 ratio = (p.mana / derived.maxMana).toFloat(),
                 color = ManaTeal
             )
 
+            Spacer(modifier = Modifier.height(6.dp))
+            // The XP bar lives in the hero panel: a dedicated full-width card for one progress bar
+            // pushed the combat stack past a single screen on small devices.
+            XpProgressBar(
+                skillName = "HERO EXPERIENCE",
+                level = p.lvl,
+                currentXp = p.xp,
+                requiredXp = reqXp,
+                barColor = PrimaryNeon
+            )
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -233,7 +238,7 @@ fun CombatScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             SciFiBadge(SciFiIconType.WEAPON, "WEAPON", textColor = SecondaryGold)
-                            Text("+${derived.weaponDmg.toInt()} ATK", style = TrueIdleType.numberSmall, color = SecondaryGold)
+                            Text("+${NumberFormatter.short(derived.weaponDmg)} ATK", style = TrueIdleType.numberSmall, color = SecondaryGold)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -261,7 +266,7 @@ fun CombatScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             SciFiBadge(SciFiIconType.SHIELD, "ARMOR", textColor = ShieldBlue)
-                            Text("+${derived.armorDef.toInt()} DEF", style = TrueIdleType.numberSmall, color = ShieldBlue)
+                            Text("+${NumberFormatter.short(derived.armorDef)} DEF", style = TrueIdleType.numberSmall, color = ShieldBlue)
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -276,25 +281,7 @@ fun CombatScreen(
             }
         }
 
-        // 5. HERO EXPERIENCE PROGRESSION
-        Card(
-            modifier = Modifier.fillMaxWidth().testTag("combat_player_xp_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RectangleShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Box(modifier = Modifier.padding(8.dp)) {
-                XpProgressBar(
-                    skillName = "HERO EXPERIENCE",
-                    level = p.lvl,
-                    currentXp = p.xp,
-                    requiredXp = reqXp,
-                    barColor = PrimaryNeon
-                )
-            }
-        }
-
-        // 6. SUPPORT SQUAD MODULE (§7.5, §7.6)
+        // 5. SUPPORT SQUAD MODULE (§7.5, §7.6)
         SupportModule(
             beasts = beastsGroup,
             undead = undeadGroup,
@@ -302,7 +289,7 @@ fun CombatScreen(
             modifier = Modifier.testTag("combat_support_module")
         )
 
-        // 7. ACTIVE SLAYER DIRECTIVE BANNER (§7.6)
+        // 6. ACTIVE SLAYER DIRECTIVE BANNER (§7.6)
         val task = state.slayer.currentTask
         SciFiPanel(
             title = "TACTICAL DIRECTIVE",
@@ -321,7 +308,7 @@ fun CombatScreen(
                         color = TextLight
                     )
                     Text(
-                        text = "REWARD: +${task.rewardGold} CREDITS · +${task.rewardPoints} PTS",
+                        text = "REWARD: +${NumberFormatter.short(task.rewardGold)} CREDITS · +${NumberFormatter.short(task.rewardPoints)} PTS",
                         style = TrueIdleType.meta,
                         color = TextMuted
                     )
@@ -341,10 +328,10 @@ fun CombatScreen(
             }
         }
 
-        // 8. COMBAT DPS MATRIX TELEMETRY
+        // 7. COMBAT DPS MATRIX TELEMETRY
         CombatTelemetryCard(state = state)
 
-        // 9. LOGS PANEL
+        // 8. LOGS PANEL
         LogView(
             logs = state.logs,
             currentFilter = logFilter,

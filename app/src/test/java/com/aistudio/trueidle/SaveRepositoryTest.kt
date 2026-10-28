@@ -110,6 +110,27 @@ class SaveRepositoryTest {
     }
 
     @Test
+    fun testSaveWrittenBeforeNotationSettingsStillLoads() {
+        // Saves produced before DisplaySettings existed have no "display" key at all. Adding the
+        // field must not invalidate them: the default notation has to be applied on load.
+        val json = kotlinx.serialization.json.Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+            coerceInputValues = true
+        }
+        val encoded = json.encodeToString(
+            GameState.serializer(),
+            GameState(lifetime = LifetimeStats(totalKills = 3L))
+        )
+        val legacy = encoded.replace(Regex("\"display\":\\{[^}]*\\},?"), "")
+
+        assertTrue("the legacy payload must actually drop the field", !legacy.contains("\"display\""))
+        val restored = json.decodeFromString(GameState.serializer(), legacy)
+        assertEquals(3L, restored.lifetime.totalKills)
+        assertEquals("ALPHABETIC", restored.display.notation)
+    }
+
+    @Test
     fun testTamperedPayloadIsRejectedByCrc() {
         val repo = SaveRepository(com.aistudio.trueidle.data.NoOpSaveStore)
         val exported = repo.exportText(GameState())

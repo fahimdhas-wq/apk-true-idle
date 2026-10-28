@@ -198,7 +198,7 @@ fun GenesisScreen(
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text("$dpsVal DPS", style = TrueIdleType.value, color = GreenSuccess)
-                                        Text("HP: ${beast.hp.toInt()}/${beast.maxHp.toInt()}", style = TrueIdleType.meta, color = TextMuted)
+                                        Text("HP: ${NumberFormatter.short(beast.hp)}/${NumberFormatter.short(beast.maxHp)}", style = TrueIdleType.meta, color = TextMuted)
                                     }
                                 }
                             }
@@ -257,9 +257,9 @@ fun GenesisScreen(
                             ) {
                                 Column {
                                     Text("${minion.type.uppercase()} (x${minion.count})", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                    Text("LVL ${minion.lvl} · Absorption: +${(minion.soak * minion.count).toInt()} DEF", style = TrueIdleType.meta, color = TextMuted)
+                                    Text("LVL ${minion.lvl} · Absorption: +${NumberFormatter.short(minion.soak * minion.count)} DEF", style = TrueIdleType.meta, color = TextMuted)
                                 }
-                                Text("+${(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2)).toInt()} DPS", style = TrueIdleType.value, color = NecroPurple)
+                                Text("+${NumberFormatter.short(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2))} DPS", style = TrueIdleType.value, color = NecroPurple)
                             }
                         }
                     }

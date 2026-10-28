@@ -114,15 +114,15 @@ fun InventoryScreen(
                     ) {
                         Column {
                             Text("CURRENT: ${currentEquipped?.name ?: "NONE"}", style = TrueIdleType.meta, color = TextMuted)
-                            Text("${curVal.toInt()} $statLabel", style = TrueIdleType.label, color = TextLight)
+                            Text("${com.aistudio.trueidle.core.NumberFormatter.short(curVal)} $statLabel", style = TrueIdleType.label, color = TextLight)
                         }
                         Text("➔", style = TrueIdleType.title, color = PrimaryNeon)
                         Column(horizontalAlignment = Alignment.End) {
                             Text("NEW: ${item.name}", style = TrueIdleType.meta, color = TextMuted)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("${newVal.toInt()} $statLabel ", style = TrueIdleType.label, color = TextLight)
+                                Text("${com.aistudio.trueidle.core.NumberFormatter.short(newVal)} $statLabel ", style = TrueIdleType.label, color = TextLight)
                                 Text(
-                                    text = if (delta >= 0) "▲ +${delta.toInt()}" else "▼ ${delta.toInt()}",
+                                    text = if (delta >= 0) "▲ +${com.aistudio.trueidle.core.NumberFormatter.short(delta)}" else "▼ ${com.aistudio.trueidle.core.NumberFormatter.short(delta)}",
                                     style = TrueIdleType.tag,
                                     color = if (delta >= 0) GreenSuccess else HpRed
                                 )

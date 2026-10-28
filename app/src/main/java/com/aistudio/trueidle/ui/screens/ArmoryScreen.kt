@@ -53,7 +53,7 @@ fun ArmoryScreen(
 
     // Rendered from the catalog the engine charges against, so the two cannot drift.
     val alchemyRecipes = ItemCatalog.POTIONS.map { potion ->
-        AlchemyRecipe(potion.name, potion.herb, potion.herbCost, "Restores ${potion.heal.toInt()} HP")
+        AlchemyRecipe(potion.name, potion.herb, potion.herbCost, "Restores ${com.aistudio.trueidle.core.NumberFormatter.short(potion.heal)} HP")
     }
 
     Column(

@@ -84,7 +84,7 @@ fun CombatTelemetryCard(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("HERO", style = TrueIdleType.meta, color = TextMuted)
                         Text(
-                            "${playerDps.toInt()} DPS",
+                            "${NumberFormatter.short(playerDps)} DPS",
                             style = TrueIdleType.label,
                             color = SecondaryGold
                         )
@@ -103,7 +103,7 @@ fun CombatTelemetryCard(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("BEASTS", style = TrueIdleType.meta, color = TextMuted)
                         Text(
-                            "${beastDps.toInt()} DPS",
+                            "${NumberFormatter.short(beastDps)} DPS",
                             style = TrueIdleType.label,
                             color = GreenSuccess
                         )
@@ -122,7 +122,7 @@ fun CombatTelemetryCard(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("LEGION", style = TrueIdleType.meta, color = TextMuted)
                         Text(
-                            "${armyDps.toInt()} DPS",
+                            "${NumberFormatter.short(armyDps)} DPS",
                             style = TrueIdleType.label,
                             color = NecroPurple
                         )
