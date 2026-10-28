@@ -113,12 +113,24 @@ fun InventoryScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("CURRENT: ${currentEquipped?.name ?: "NONE"}", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                "CURRENT: ${currentEquipped?.name ?: "NONE"}",
+                                style = TrueIdleType.meta,
+                                color = TextMuted,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                             Text("${com.aistudio.trueidle.core.NumberFormatter.short(curVal)} $statLabel", style = TrueIdleType.label, color = TextLight)
                         }
                         Text("➔", style = TrueIdleType.title, color = PrimaryNeon)
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("NEW: ${item.name}", style = TrueIdleType.meta, color = TextMuted)
+                            Text(
+                                "NEW: ${item.name}",
+                                style = TrueIdleType.meta,
+                                color = TextMuted,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("${com.aistudio.trueidle.core.NumberFormatter.short(newVal)} $statLabel ", style = TrueIdleType.label, color = TextLight)
                                 Text(

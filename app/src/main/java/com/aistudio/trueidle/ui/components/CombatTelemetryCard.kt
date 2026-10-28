@@ -1,6 +1,5 @@
 package com.aistudio.trueidle.ui.components
 
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,87 +66,51 @@ fun CombatTelemetryCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // 4-Column Breakdown: Hero | Beasts | Legion | Speed
+            // Two rows of two. Four columns in one row left each cell ~70dp wide, which clipped
+            // its value once the system font size was raised.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Hero DPS
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFF000000), RectangleShape)
-                        .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("HERO", style = TrueIdleType.meta, color = TextMuted)
-                        Text(
-                            "${NumberFormatter.short(playerDps)} DPS",
-                            style = TrueIdleType.label,
-                            color = SecondaryGold
-                        )
-                    }
-                }
-
-                // Beasts DPS
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFF000000), RectangleShape)
-                        .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("BEASTS", style = TrueIdleType.meta, color = TextMuted)
-                        Text(
-                            "${NumberFormatter.short(beastDps)} DPS",
-                            style = TrueIdleType.label,
-                            color = GreenSuccess
-                        )
-                    }
-                }
-
-                // Legion DPS
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFF000000), RectangleShape)
-                        .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("LEGION", style = TrueIdleType.meta, color = TextMuted)
-                        Text(
-                            "${NumberFormatter.short(armyDps)} DPS",
-                            style = TrueIdleType.label,
-                            color = NecroPurple
-                        )
-                    }
-                }
-
-                // Atk Speed
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFF000000), RectangleShape)
-                        .border(1.dp, BorderDark, RectangleShape)
-                        .padding(vertical = 4.dp, horizontal = 3.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("SPEED", style = TrueIdleType.meta, color = TextMuted)
-                        Text(
-                            String.format(java.util.Locale.ROOT, "%.2fx", d.atkSpeed),
-                            style = TrueIdleType.label,
-                            color = TextLight
-                        )
-                    }
-                }
+                TelemetryCell("HERO", NumberFormatter.short(playerDps), SecondaryGold, Modifier.weight(1f))
+                TelemetryCell("BEASTS", NumberFormatter.short(beastDps), GreenSuccess, Modifier.weight(1f))
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TelemetryCell("LEGION", NumberFormatter.short(armyDps), NecroPurple, Modifier.weight(1f))
+                TelemetryCell(
+                    "SPEED",
+                    String.format(java.util.Locale.ROOT, "%.2fx", d.atkSpeed),
+                    TextLight,
+                    Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TelemetryCell(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(Color(0xFF000000), RectangleShape)
+            .border(1.dp, BorderDark, RectangleShape)
+            .padding(vertical = 4.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, style = TrueIdleType.meta, color = TextMuted)
+            Text("$value DPS", style = TrueIdleType.label, color = accent)
         }
     }
 }

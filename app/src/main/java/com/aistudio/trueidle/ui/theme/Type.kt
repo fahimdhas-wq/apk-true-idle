@@ -23,7 +23,7 @@ object TrueIdleType {
         fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 25.sp,
-        letterSpacing = 1.2.sp,
+        letterSpacing = 0.6.sp,
         fontFeatureSettings = "tnum"
     )
     val titleLarge = TextStyle(
@@ -59,7 +59,10 @@ object TrueIdleType {
         fontWeight = FontWeight.Bold,
         fontSize = 12.sp,
         lineHeight = 15.sp,
-        letterSpacing = 0.8.sp,
+        // Numeric styles use tabular figures, so the old 0.8sp tracking added width without adding
+        // legibility. Trimming it is what keeps DPS/HP/cost readouts from ellipsising on narrow
+        // screens; the glyph size is deliberately unchanged.
+        letterSpacing = 0.3.sp,
         fontFeatureSettings = "tnum"
     )
     val numberLarge = TextStyle(
@@ -67,7 +70,7 @@ object TrueIdleType {
         fontWeight = FontWeight.Bold,
         fontSize = 17.sp,
         lineHeight = 21.sp,
-        letterSpacing = 1.0.sp,
+        letterSpacing = 0.4.sp,
         fontFeatureSettings = "tnum"
     )
     val numberStat = TextStyle(
@@ -75,7 +78,7 @@ object TrueIdleType {
         fontWeight = FontWeight.Bold,
         fontSize = 13.sp,
         lineHeight = 17.sp,
-        letterSpacing = 0.8.sp,
+        letterSpacing = 0.4.sp,
         fontFeatureSettings = "tnum"
     )
     val numberSmall = TextStyle(
@@ -83,7 +86,7 @@ object TrueIdleType {
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        letterSpacing = 0.6.sp,
+        letterSpacing = 0.3.sp,
         fontFeatureSettings = "tnum"
     )
     val body = TextStyle(

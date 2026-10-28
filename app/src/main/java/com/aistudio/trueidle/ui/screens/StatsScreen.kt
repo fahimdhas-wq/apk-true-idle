@@ -37,10 +37,6 @@ fun StatsScreen(
     val reqXp = XpCurves.player(p.lvl)
 
     val d = com.aistudio.trueidle.ui.LocalDerived.current
-    val playerDps = CombatMath.heroDps(d)
-    val beastDps = CombatMath.beastDps(state.beasts)
-    val armyDps = CombatMath.armyDps(state.necro)
-    val totalDps = CombatMath.totalDps(state, d)
 
     val weapon = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_WEAPON }
     val armor = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_ARMOR }
@@ -249,35 +245,12 @@ fun StatsScreen(
                 StatDotRow(label = "CRIT DAMAGE", value = "${(d.critDamage * 100).toInt()}%", dotColor = null, valueColor = SecondaryGold)
                 // XP Gain
                 StatDotRow(label = "XP GAIN", value = "${(d.xpGain * 100).toInt()}%", dotColor = null, valueColor = TextLight)
+                // Kept from the removed telemetry panel: this figure appears nowhere else.
+                StatDotRow(label = "ARMOR MITIGATION", value = "${(CombatMath.mitigation(d.armorDef) * 100).toInt()}%", dotColor = null, valueColor = SecondaryGold)
             }
         }
 
-        // 3. COMBAT POWER BREAKDOWN
-        SciFiPanel(
-            title = "COMBAT TELEMETRY",
-            accent = PrimaryNeon,
-            tag = "COMBINED: ${NumberFormatter.short(totalDps)} DPS"
-        ) {
-            listOf(
-                "HERO SOLO DPS" to "${NumberFormatter.short(playerDps)} DPS",
-                "BEAST COMPANIONS DPS" to "${NumberFormatter.short(beastDps)} DPS (${state.beasts.beasts.size} BEASTS)",
-                "UNDEAD LEGION DPS" to "${NumberFormatter.short(armyDps)} DPS (${state.necro.army.sumOf { it.count }} UNITS)",
-                "ARMOR MITIGATION" to "${NumberFormatter.short(d.armorDef)} DEF (${(100 - (CombatMath.mitigation(d.armorDef) * 100)).toInt()}% REDUCTION)"
-            ).forEach { (label, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(label, style = TrueIdleType.label, color = TextMuted)
-                    Text(value, style = TrueIdleType.value, color = TextLight)
-                }
-            }
-        }
-
-        // 4. LIFETIME TACTICAL TELEMETRY
+        // 3. LIFETIME TACTICAL TELEMETRY
         SciFiPanel(
             title = "TACTICAL TELEMETRY",
             accent = TextLight,

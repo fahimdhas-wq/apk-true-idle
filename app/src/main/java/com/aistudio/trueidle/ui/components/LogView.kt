@@ -182,7 +182,12 @@ fun LogView(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(145.dp)
+                    // Scaled by the system font size so a large-text user sees the same number of
+                    // lines instead of clipped ones; bounded so it can never swallow the screen.
+                    .height(
+                        (145.dp * androidx.compose.ui.platform.LocalDensity.current.fontScale)
+                            .coerceIn(145.dp, 220.dp)
+                    )
                     .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                     .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
                     .padding(4.dp)
