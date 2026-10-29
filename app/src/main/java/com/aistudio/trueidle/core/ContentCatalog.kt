@@ -38,9 +38,9 @@ object ContentCatalog {
             val reqOre = ItemCatalog.ORES[oreIdx]
             val reqQty = 4 + ((tier - 1) % 4) * 2
             val statPreview = if (Equipment.isWeapon(group)) {
-                "+${NumberFormatter.short((tier * 12).toLong())} ATK"
+                "+${tier * 12} ATK"
             } else {
-                "+${NumberFormatter.short((tier * 8).toLong())} DEF, +${NumberFormatter.short((tier * 4).toLong())} VIT"
+                "+${tier * 8} DEF, +${tier * 4} VIT"
             }
             ForgeRecipe(name, tier, group, reqOre, reqQty, statPreview)
         }
