@@ -80,7 +80,7 @@ fun SkillsScreen(
             ResourceReadout("CR", NumberFormatter.short(state.player.gold), SecondaryGold)
             ResourceReadout("FA", NumberFormatter.short(state.essence.faith), ManaTeal)
             ResourceReadout("SP", "${NumberFormatter.short(state.slayer.slayerPoints)} PTS", HpRed)
-            ResourceReadout("TP", "${state.talent.talentPoints} TP", PrimaryNeon)
+            ResourceReadout("TP", "${NumberFormatter.short(state.talent.talentPoints)} TP", PrimaryNeon)
         }
 
         // Sub-Navigation Tabs with Uniform Alignment
@@ -302,7 +302,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "01 // COMBAT",
             icon = "[C]",
             accentColor = PrimaryNeon,
-            quickSummary = "SECTOR ${state.player.currentFloor} · ${state.lifetime.totalKills} ELIMINATIONS",
+            quickSummary = "SECTOR ${state.player.currentFloor} · ${NumberFormatter.short(state.lifetime.totalKills)} ELIMINATIONS",
             actionLabel = null,
             onAction = null,
             level = state.player.lvl,
