@@ -77,7 +77,7 @@ fun StatsScreen(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "LEVEL ${p.lvl}",
+                            text = "LEVEL ${NumberFormatter.short(p.lvl)}",
                             style = TrueIdleType.tag,
                             color = SecondaryGold
                         )
@@ -226,7 +226,7 @@ fun StatsScreen(
         SciFiPanel(
             title = "DERIVED STATS",
             accent = SecondaryGold,
-            tag = "LVL ${p.lvl}"
+            tag = "LVL ${NumberFormatter.short(p.lvl)}"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Strength
