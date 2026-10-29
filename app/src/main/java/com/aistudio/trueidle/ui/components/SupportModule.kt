@@ -8,6 +8,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.theme.*
 
 enum class SupportKind { BEAST, UNDEAD }
@@ -48,8 +49,8 @@ fun SupportModule(
     ) {
         SegmentedTabs(
             options = listOf(
-                SegOption("BEAST", "BEASTS ${beasts.count}/${beasts.cap}"),
-                SegOption("UNDEAD", "UNDEAD ${undead.count}/${undead.cap}")
+                SegOption("BEAST", "BEASTS ${NumberFormatter.short(beasts.count)} / ${NumberFormatter.short(beasts.cap)}"),
+                SegOption("UNDEAD", "UNDEAD ${NumberFormatter.short(undead.count)} / ${NumberFormatter.short(undead.cap)}")
             ),
             selectedId = kind.name,
             onSelect = { kind = SupportKind.valueOf(it) }
