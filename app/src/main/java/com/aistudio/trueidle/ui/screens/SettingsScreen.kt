@@ -38,28 +38,11 @@ import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.theme.*
 
-/** Selectable notation modes: settings key -> compact label. */
-private val NOTATION_OPTIONS = listOf(
-    "ALPHABETIC" to "ALPHA",
-    "COMPACT" to "K/M/B",
-    "GROUPED" to "FULL",
-    "SCIENTIFIC" to "SCI"
-)
+/** The one canonical notation used by every in-game numeric display. */
+private const val ACTIVE_NOTATION_LABEL = "A-Z / AA-ZZ / AAA…"
 
-/** Explains the active convention using the engine's own configuration, so the copy cannot drift. */
-private fun notationSummary(notation: String): String {
-    val cfg = BigNumberFormatter.Config.byName(notation)
-    return when (cfg.mode) {
-        BigNumberFormatter.Mode.ALPHABETIC ->
-            "Grouped digits, then A = 10^${cfg.firstSuffixExponent} and each letter x10^${cfg.exponentStep}."
-        BigNumberFormatter.Mode.COMPACT ->
-            "K/M/B/T suffixes, then scientific notation from 10^15."
-        BigNumberFormatter.Mode.GROUPED ->
-            "Full digits with a separator every ${cfg.groupSize} digits."
-        BigNumberFormatter.Mode.SCIENTIFIC ->
-            "Grouped digits below 10^6, then scientific with ${cfg.scientificDigits} decimals."
-    }
-}
+private fun notationSummary(): String =
+    "Grouped digits below 1 trillion, then A, B, C … Z, AA, AB … ZZ, AAA and onward. A = 10^12; each next label advances by 10^3."
 
 @Composable
 fun SettingsScreen(
@@ -375,37 +358,25 @@ fun SettingsScreen(
                 color = TextMuted
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PrimaryNeon.copy(alpha = 0.12f), RectangleShape)
+                    .border(1.dp, PrimaryNeon, RectangleShape)
+                    .padding(vertical = 9.dp, horizontal = 10.dp)
+                    .testTag("notation_alphabetic"),
+                contentAlignment = Alignment.Center
             ) {
-                NOTATION_OPTIONS.forEach { option ->
-                    val selected = state.display.notation == option.first
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { onSetNotation(option.first) }
-                            .background(
-                                if (selected) PrimaryNeon.copy(alpha = 0.16f) else Color(0xFF000000),
-                                RectangleShape
-                            )
-                            .border(1.dp, if (selected) PrimaryNeon else BorderDark, RectangleShape)
-                            .padding(vertical = 5.dp)
-                            .testTag("notation_${option.first.lowercase()}"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = option.second,
-                            style = TrueIdleType.tag,
-                            color = if (selected) PrimaryNeon else TextMuted,
-                            maxLines = 1
-                        )
-                    }
-                }
+                Text(
+                    text = ACTIVE_NOTATION_LABEL,
+                    style = TrueIdleType.tag,
+                    color = PrimaryNeon,
+                    maxLines = 1
+                )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = notationSummary(state.display.notation),
+                text = notationSummary(),
                 style = TrueIdleType.meta,
                 color = TextMuted
             )
