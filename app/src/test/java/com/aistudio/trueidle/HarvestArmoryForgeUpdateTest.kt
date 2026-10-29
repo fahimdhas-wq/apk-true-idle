@@ -65,6 +65,29 @@ class HarvestArmoryForgeUpdateTest {
         assertEquals(48L, vein.proficiencyXp)
     }
 
+    @Test
+    fun autoCollectionUsesBaseActionXpInsteadOfBoostedYield() {
+        val base = GameState()
+        val harvest = base.harvest.copy(
+            plots = base.harvest.plots.map { if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 5, proficiencyXp = 0L) else it },
+            veins = base.harvest.veins.map { if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 5, proficiencyXp = 0L) else it },
+            farmingXp = 0L,
+            miningXp = 0L,
+            farmingLvl = 1,
+            miningLvl = 1,
+            autoCollectUnlocked = true,
+            autoCollectEnabled = true
+        )
+        val engine = GameEngine(base.copy(harvest = harvest))
+
+        engine.tick(0f)
+
+        assertEquals(2L, engine.state.harvest.farmingXp)
+        assertEquals(3L, engine.state.harvest.miningXp)
+        assertEquals(32L, engine.state.harvest.plots.first { it.id == 0 }.proficiencyXp)
+        assertEquals(48L, engine.state.harvest.veins.first { it.id == 0 }.proficiencyXp)
+    }
+
     // -------------------------------------------------------------------------
     // ITEM 3: 20 MINING ORES IN EXACT CANONICAL ORDER
     // -------------------------------------------------------------------------
