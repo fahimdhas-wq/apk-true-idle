@@ -69,7 +69,9 @@ fun XpProgressBar(
                 Text(
                     text = "LVL ${NumberFormatter.short(level)}",
                     style = TrueIdleType.tag,
-                    color = barColor
+                    color = barColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
