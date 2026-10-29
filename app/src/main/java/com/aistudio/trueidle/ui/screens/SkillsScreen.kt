@@ -98,14 +98,14 @@ fun SkillsScreen(
                 val selected = currentSection == section
                 val level = when (section) {
                     SkillSubSection.OVERVIEW -> ""
-                    SkillSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
+                    SkillSubSection.HARVEST -> "LV ${NumberFormatter.short(max(state.harvest.farmingLvl, state.harvest.miningLvl))}"
                     SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
                     SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
-                    SkillSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
-                    SkillSubSection.ESSENCE -> "LV ${state.essence.lvl}"
-                    SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
-                    SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
-                    SkillSubSection.TALENTS -> "${state.talent.talentPoints} TP"
+                    SkillSubSection.GENESIS -> "LV ${NumberFormatter.short(max(state.beasts.lvl, state.necro.lvl))}"
+                    SkillSubSection.ESSENCE -> "LV ${NumberFormatter.short(state.essence.lvl)}"
+                    SkillSubSection.TRAINING -> "LV ${NumberFormatter.short(state.training.lvl)}"
+                    SkillSubSection.SLAYER -> "LV ${NumberFormatter.short(state.slayer.lvl)}"
+                    SkillSubSection.TALENTS -> "${NumberFormatter.short(state.talent.talentPoints)} TP"
                 }
                 Row(
                     Modifier
@@ -282,7 +282,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         // High-level Telemetry Tiles
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MetricTile("DISCIPLINES", "$active/6 OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
-            MetricTile("TOTAL LEVEL", totalLevel.toString(), SecondaryGold, Modifier.weight(1f))
+            MetricTile("TOTAL LEVEL", NumberFormatter.short(totalLevel.toLong()), SecondaryGold, Modifier.weight(1f))
         }
 
         Card(
