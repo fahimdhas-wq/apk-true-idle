@@ -237,7 +237,7 @@ fun OfflineLootDialog(
                         )
                         ReportTile(
                             label = "TALENT POINTS",
-                            value = "+$talentPoints TP",
+                            value = "+${NumberFormatter.short(talentPoints)} TP",
                             sub = "${projection.levels} LEVELS · ${loot.talentPointsGained} BOSS",
                             color = PrimaryNeon,
                             modifier = Modifier.weight(1f)
