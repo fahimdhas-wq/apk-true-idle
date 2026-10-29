@@ -80,7 +80,7 @@ fun CombatScreen(
                     name = minion.type.uppercase(),
                     stars = 0,
                     dpsText = "${NumberFormatter.short(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2))} DPS",
-                    meta = "CORPS x${minion.count} · LVL ${minion.lvl}"
+                    meta = "CORPS x${NumberFormatter.short(minion.count)} · LVL ${minion.lvl}"
                 )
             }
         )
@@ -320,7 +320,7 @@ fun CombatScreen(
                         .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = "${task.currentKills}/${task.requiredKills}",
+                        text = "${NumberFormatter.short(task.currentKills)} / ${NumberFormatter.short(task.requiredKills)}",
                         style = TrueIdleType.value,
                         color = HpRed
                     )
