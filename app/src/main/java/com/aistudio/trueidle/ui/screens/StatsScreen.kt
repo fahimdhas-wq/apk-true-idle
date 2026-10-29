@@ -263,7 +263,7 @@ fun StatsScreen(
                 "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} FAITH",
                 "SLAYER POINTS" to "${NumberFormatter.short(state.slayer.slayerPoints)} PTS",
                 "TAMED COMPANIONS" to "${state.beasts.beasts.size}",
-                "UNDEAD CORPS SIZE" to "${state.necro.army.sumOf { it.count }}"
+                "UNDEAD CORPS SIZE" to NumberFormatter.short(state.necro.army.sumOf { it.count }.toLong())
             ).forEach { (label, value) ->
                 Row(
                     modifier = Modifier
