@@ -95,7 +95,7 @@ fun SlayerScreen(
         SciFiPanel(
             title = "SLAYER CREDENTIALS",
             accent = SecondaryGold,
-            tag = "${slayer.slayerPoints} POINTS"
+            tag = "${NumberFormatter.short(slayer.slayerPoints)} POINTS"
         ) {
             Text(
                 text = "Targeted eradication contracts awarded by the Tactical Command. Complete directives to earn gold, points, and permanent mastery.",
@@ -115,7 +115,7 @@ fun SlayerScreen(
                 Text("ACCREDITED SLAYER POINTS:", style = TrueIdleType.label, color = TextMuted)
                 SciFiBadge(
                     type = SciFiIconType.WEAPON,
-                    label = "${slayer.slayerPoints} PTS",
+                    label = "${NumberFormatter.short(slayer.slayerPoints)} PTS",
                     iconTint = SecondaryGold,
                     textColor = SecondaryGold
                 )
@@ -176,7 +176,7 @@ fun SlayerScreen(
 
             SciFiGauge(
                 label = "ELIMINATION PROGRESS",
-                valueText = "${task.currentKills} / ${task.requiredKills}",
+                valueText = "${NumberFormatter.short(task.currentKills)} / ${NumberFormatter.short(task.requiredKills)}",
                 ratio = taskProgressRatio,
                 color = HpRed
             )
@@ -195,7 +195,7 @@ fun SlayerScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     SciFiBadge(
                         type = SciFiIconType.CREDIT,
-                        label = "+${task.rewardGold}",
+                        label = "+${NumberFormatter.short(task.rewardGold)}",
                         iconTint = SecondaryGold,
                         textColor = SecondaryGold
                     )
@@ -205,7 +205,7 @@ fun SlayerScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     SciFiBadge(
                         type = SciFiIconType.WEAPON,
-                        label = "+${task.rewardPoints} PTS",
+                        label = "+${NumberFormatter.short(task.rewardPoints)} PTS",
                         iconTint = HpRed,
                         textColor = HpRed
                     )
