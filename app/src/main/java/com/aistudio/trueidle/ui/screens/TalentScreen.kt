@@ -69,7 +69,7 @@ fun TalentScreen(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "${talent.talentPoints} TP AVAILABLE",
+                        text = "${NumberFormatter.short(talent.talentPoints)} TP AVAILABLE",
                         style = TrueIdleType.numberSmall,
                         color = PrimaryNeon,
                         fontWeight = FontWeight.Bold
