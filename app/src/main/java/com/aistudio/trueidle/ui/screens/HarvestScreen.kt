@@ -130,7 +130,7 @@ fun HarvestScreen(
                         skillName = "BIO-FARMING",
                         level = harvest.farmingLvl,
                         currentXp = harvest.farmingXp,
-                        requiredXp = XpCurves.skill(harvest.farmingLvl),
+                        requiredXp = XpCurves.gatheringSkill(harvest.farmingLvl),
                         barColor = GreenSuccess
                     )
                 }
@@ -214,7 +214,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "PROFICIENCY (2x/LVL · +${NumberFormatter.short(rewardAmt)} XP)",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
@@ -332,7 +332,7 @@ fun HarvestScreen(
                         skillName = "PLASMA MINING",
                         level = harvest.miningLvl,
                         currentXp = harvest.miningXp,
-                        requiredXp = XpCurves.skill(harvest.miningLvl),
+                        requiredXp = XpCurves.gatheringSkill(harvest.miningLvl),
                         barColor = SecondaryGold
                     )
                 }
@@ -425,7 +425,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "PROFICIENCY (2x/LVL · +${NumberFormatter.short(rewardAmt)} XP)",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
