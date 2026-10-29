@@ -179,7 +179,7 @@ fun OfflineLootDialog(
                     if (loot.floorsLost > 0) {
                         ReportRow("FELL BACK (UNSURVIVABLE)", "-${loot.floorsLost}", Warn)
                     }
-                    ReportRow("PROGRESS ON FINAL SECTOR", "${loot.killsOnFloor} KILLS", TextLight)
+                    ReportRow("PROGRESS ON FINAL SECTOR", "${NumberFormatter.short(loot.killsOnFloor.toLong())} KILLS", TextLight)
                     if (loot.dps > 0.0) {
                         ReportRow("SIMULATED OUTPUT", "${NumberFormatter.short(loot.dps)} DPS", SecondaryGold)
                     }
@@ -195,7 +195,7 @@ fun OfflineLootDialog(
                         ReportTile(
                             label = "HOSTILES ELIMINATED",
                             value = NumberFormatter.short(loot.kills),
-                            sub = "${NumberFormatter.short(loot.killsPerHour)}/HR · ${loot.bossKills} BOSS",
+                            sub = "${NumberFormatter.short(loot.killsPerHour)}/HR · ${NumberFormatter.short(loot.bossKills.toLong())} BOSS",
                             color = HpRed,
                             modifier = Modifier.weight(1f)
                         )
@@ -238,7 +238,7 @@ fun OfflineLootDialog(
                         ReportTile(
                             label = "TALENT POINTS",
                             value = "+${NumberFormatter.short(talentPoints)} TP",
-                            sub = "${projection.levels} LEVELS · ${loot.talentPointsGained} BOSS",
+                            sub = "${projection.levels} LEVELS · ${NumberFormatter.short(loot.talentPointsGained.toLong())} BOSS",
                             color = PrimaryNeon,
                             modifier = Modifier.weight(1f)
                         )
@@ -319,12 +319,12 @@ fun OfflineLootDialog(
                         ReportRow("◈ ${item.name.uppercase()}", "+${NumberFormatter.short(item.count)}", GreenSuccess)
                     }
                     if (loot.beastsTamed > 0) {
-                        ReportRow("◈ COMPANION BEASTS TAMED", "+${loot.beastsTamed}", GreenSuccess)
+                        ReportRow("◈ COMPANION BEASTS TAMED", "+${NumberFormatter.short(loot.beastsTamed.toLong())}", GreenSuccess)
                     }
                     if (loot.slayerKills > 0) {
                         ReportRow(
                             "◈ SLAYER: ${slayerTask.targetName.uppercase()}",
-                            "+${loot.slayerKills} (${minOf(slayerTask.currentKills + loot.slayerKills, slayerTask.requiredKills)}/${slayerTask.requiredKills})",
+                            "+${NumberFormatter.short(loot.slayerKills.toLong())} (${NumberFormatter.short(minOf(slayerTask.currentKills + loot.slayerKills, slayerTask.requiredKills).toLong())}/${NumberFormatter.short(slayerTask.requiredKills.toLong())})",
                             HpRed
                         )
                     }
