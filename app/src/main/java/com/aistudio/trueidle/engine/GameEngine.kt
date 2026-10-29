@@ -567,7 +567,7 @@ class GameEngine(
             val after = DerivedStats.of(frame.view().copy(player = player))
             player = player.copy(hp = after.maxHp, shield = after.maxShield, mana = after.maxMana)
             frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + levels)
-            frame.logs += log(LogType.SKILL, "PLAYER LEVEL UP: Advanced to Level $lvl!")
+            frame.logs += log(LogType.SKILL, "PLAYER LEVEL UP: Advanced to Level ${NumberFormatter.short(lvl)}!")
         }
         if (monster.isBoss) {
             frame.talent = frame.talent.copy(talentPoints = frame.talent.talentPoints + 2 * count)
@@ -661,7 +661,7 @@ class GameEngine(
             lvl++
             leveled = true
         }
-        if (leveled) frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Essence reached Level $lvl!")
+        if (leveled) frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Essence reached Level ${NumberFormatter.short(lvl)}!")
         return essence.copy(xp = xp, lvl = lvl)
     }
 
@@ -883,12 +883,12 @@ class GameEngine(
         while (farmingXp >= Balance.gatheringSkillXpReq(farmingLvl)) {
             farmingXp -= Balance.gatheringSkillXpReq(farmingLvl)
             farmingLvl++
-            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Farming reached Level $farmingLvl!")
+            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Farming reached Level ${NumberFormatter.short(farmingLvl)}!")
         }
         while (miningXp >= Balance.gatheringSkillXpReq(miningLvl)) {
             miningXp -= Balance.gatheringSkillXpReq(miningLvl)
             miningLvl++
-            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Mining reached Level $miningLvl!")
+            frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Mining reached Level ${NumberFormatter.short(miningLvl)}!")
         }
 
         frame.harvest = frame.harvest.copy(
@@ -1021,7 +1021,7 @@ class GameEngine(
         while (xp >= xpRequirement(lvl)) {
             xp -= xpRequirement(lvl)
             lvl++
-            logs += log(LogType.SKILL, "SKILL LEVEL UP: $skillName reached Level $lvl!")
+            logs += log(LogType.SKILL, "SKILL LEVEL UP: $skillName reached Level ${NumberFormatter.short(lvl)}!")
         }
         return Triple(xp, lvl, logs)
     }
