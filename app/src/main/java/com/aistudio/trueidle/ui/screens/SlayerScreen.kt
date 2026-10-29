@@ -168,7 +168,7 @@ fun SlayerScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Locate and neutralize ${task.requiredKills} specimens of this species in the dungeon sectors.",
+                text = "Locate and neutralize ${NumberFormatter.short(task.requiredKills)} specimens of this species in the dungeon sectors.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
