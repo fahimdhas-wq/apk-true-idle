@@ -66,6 +66,9 @@ object Balance {
      */
     fun skillXpReq(lvl: Int): Long = XpCurves.skill(lvl)
 
+    /** Higher requirement curve for the continuously rewarded farming and mining skills. */
+    fun gatheringSkillXpReq(lvl: Int): Long = XpCurves.gatheringSkill(lvl)
+
     fun slayerXpReq(lvl: Int): Long = XpCurves.slayer(lvl)
 
     fun playerXpReq(lvl: Int): Long = XpCurves.player(lvl)
