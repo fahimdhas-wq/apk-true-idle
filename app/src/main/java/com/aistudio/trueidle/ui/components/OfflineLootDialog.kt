@@ -238,7 +238,7 @@ fun OfflineLootDialog(
                         ReportTile(
                             label = "TALENT POINTS",
                             value = "+${NumberFormatter.short(talentPoints)} TP",
-                            sub = "${projection.levels} LEVELS · ${NumberFormatter.short(loot.talentPointsGained.toLong())} BOSS",
+                            sub = "${NumberFormatter.short(projection.levels.toLong())} LEVELS · ${NumberFormatter.short(loot.talentPointsGained.toLong())} BOSS",
                             color = PrimaryNeon,
                             modifier = Modifier.weight(1f)
                         )
@@ -255,7 +255,7 @@ fun OfflineLootDialog(
                 SciFiPanel(
                     title = "HERO PROGRESSION",
                     accent = PrimaryNeon,
-                    tag = if (projection.levels > 0) "LVL ${state.player.lvl} ➔ ${projection.level}" else "LVL ${state.player.lvl}"
+                    tag = if (projection.levels > 0) "LVL ${NumberFormatter.short(state.player.lvl)} ➔ ${NumberFormatter.short(projection.level)}" else "LVL ${NumberFormatter.short(state.player.lvl)}"
                 ) {
                     XpProgressBar(
                         skillName = "HERO EXPERIENCE (AFTER CLAIM)",
@@ -267,7 +267,7 @@ fun OfflineLootDialog(
                     Spacer(Modifier.height(4.dp))
                     ReportRow(
                         "LEVELS GAINED",
-                        "+${projection.levels}",
+                        "+${NumberFormatter.short(projection.levels.toLong())}",
                         if (projection.levels > 0) GreenSuccess else TextMuted
                     )
                     if (projection.levels > 0) {
