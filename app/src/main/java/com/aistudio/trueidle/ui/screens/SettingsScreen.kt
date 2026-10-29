@@ -118,7 +118,7 @@ fun SettingsScreen(
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DossierTile("CURRENT SECTOR", "SECTOR ${state.player.currentFloor}", PrimaryNeon, Modifier.weight(1f))
-                    DossierTile("GEAR SCORE", "${d.gearScore} GS", SecondaryGold, Modifier.weight(1f))
+                    DossierTile("GEAR SCORE", "${NumberFormatter.short(d.gearScore)} GS", SecondaryGold, Modifier.weight(1f))
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DossierTile("ORES MINED", state.lifetime.oresMined.toString(), SecondaryGold, Modifier.weight(1f))
@@ -297,7 +297,7 @@ fun SettingsScreen(
                         ) {
                             Text("GEAR SCORE", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = "${d.gearScore} / ${promo.requiredGearScore}",
+                                text = "${NumberFormatter.short(d.gearScore)} / ${NumberFormatter.short(promo.requiredGearScore)}",
                                 style = TrueIdleType.numberSmall,
                                 color = if (gearMet) GreenSuccess else SecondaryGold
                             )
