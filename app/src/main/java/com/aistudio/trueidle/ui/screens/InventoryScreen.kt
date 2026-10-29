@@ -65,6 +65,7 @@ fun InventoryScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .heightIn(min = 40.dp)
                         .clickable { selectedCategory = cat }
                         .background(if (isSelected) PrimaryNeon.copy(alpha = 0.15f) else SurfaceDark, RectangleShape)
                         .border(

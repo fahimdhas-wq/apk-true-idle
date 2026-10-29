@@ -196,7 +196,7 @@ fun EssenceScreen(
                             border = BorderStroke(1.dp, if (canAfford) ManaTeal else MaterialTheme.colorScheme.outline),
                             modifier = Modifier.testTag("upgrade_essence_${upg.id}")
                         ) {
-                            Text(if (isMax) "MAX" else "⚡ $cost", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            Text(if (isMax) "MAX" else "$cost FAITH", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.NumberFormatter
@@ -78,10 +79,20 @@ fun LogView(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Text("◈", color = PrimaryNeon, style = TrueIdleType.tag)
-                    Text("MISSION TELEMETRY TERMINAL", style = TrueIdleType.title, color = PrimaryNeon)
+                    Text(
+                        "MISSION TELEMETRY",
+                        style = TrueIdleType.title,
+                        color = PrimaryNeon,
+                        maxLines = 1
+                    )
                 }
+                Spacer(modifier = Modifier.width(6.dp))
 
                 // Play Duration Counter in Orbitron Font
                 Box(
@@ -100,80 +111,70 @@ fun LogView(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Filter Tabs & Action Buttons
+            // Filters: five equal chips that share the full width, so none can be pushed off screen.
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    listOf(
-                        "all" to "ALL",
-                        "combat" to "COMBAT",
-                        "loot" to "LOOT",
-                        "skills" to "SKILLS",
-                        "system" to "SYSTEM"
-                    ).forEach { (key, label) ->
-                        val isSelected = (currentFilter == key)
-                        val accentColor = when (key) {
-                            "combat" -> HpRed
-                            "loot" -> SecondaryGold
-                            "skills" -> GreenSuccess
-                            "system" -> PrimaryNeon
-                            else -> PrimaryNeon
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clickable { onFilterSelect(key) }
-                                .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color(0xFF000000), RectangleShape)
-                                .border(1.dp, if (isSelected) accentColor else BorderDark, RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 3.dp)
-                                .testTag("log_filter_$key")
-                        ) {
-                            Text(
-                                text = label,
-                                style = TrueIdleType.tag,
-                                color = if (isSelected) accentColor else TextMuted
-                            )
-                        }
+                listOf(
+                    "all" to "ALL",
+                    "combat" to "COMBAT",
+                    "loot" to "LOOT",
+                    "skills" to "SKILLS",
+                    "system" to "SYSTEM"
+                ).forEach { (key, label) ->
+                    val isSelected = (currentFilter == key)
+                    val accentColor = when (key) {
+                        "combat" -> HpRed
+                        "loot" -> SecondaryGold
+                        "skills" -> GreenSuccess
+                        else -> PrimaryNeon
                     }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    // Export Telemetry Log
                     Box(
                         modifier = Modifier
-                            .clickable {
-                                val report = onExport()
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("MissionLog", report))
-                                exportFeedback = "COPIED!"
-                                Toast.makeText(context, "Log Dossier Copied to Clipboard", Toast.LENGTH_SHORT).show()
-
-                                
-                            }
-                            .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
-                            .border(1.dp, PrimaryNeon, RectangleShape)
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                            .testTag("export_logs_button"),
+                            .weight(1f)
+                            .heightIn(min = 40.dp)
+                            .clickable(role = Role.Tab) { onFilterSelect(key) }
+                            .background(if (isSelected) accentColor.copy(alpha = 0.2f) else Color(0xFF000000), RectangleShape)
+                            .border(1.dp, if (isSelected) accentColor else BorderDark, RectangleShape)
+                            .testTag("log_filter_$key"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (exportFeedback.isNotEmpty()) exportFeedback else "COPY", style = TrueIdleType.tag, color = PrimaryNeon)
-                    }
-
-                    // Clear Logs
-                    Box(
-                        modifier = Modifier
-                            .clickable { onClear() }
-                            .border(1.dp, BorderDark, RectangleShape)
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                            .testTag("clear_logs_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("CLR", style = TrueIdleType.tag, color = TextMuted)
+                        Text(
+                            text = label,
+                            style = TrueIdleType.tag,
+                            color = if (isSelected) accentColor else TextMuted,
+                            maxLines = 1
+                        )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Actions on their own row: full-width, labelled, 48dp targets.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SciFiButton(
+                    label = if (exportFeedback.isNotEmpty()) exportFeedback else "COPY LOG",
+                    onClick = {
+                        val report = onExport()
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("MissionLog", report))
+                        exportFeedback = "COPIED"
+                        Toast.makeText(context, "Log dossier copied to clipboard", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f).testTag("export_logs_button"),
+                    color = PrimaryNeon
+                )
+                SciFiButton(
+                    label = "CLEAR LOG",
+                    onClick = onClear,
+                    modifier = Modifier.weight(1f).testTag("clear_logs_button"),
+                    color = HpRed
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))

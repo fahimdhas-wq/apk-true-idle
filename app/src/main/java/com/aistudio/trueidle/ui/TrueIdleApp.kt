@@ -46,6 +46,8 @@ import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
+import com.aistudio.trueidle.ui.components.SciFiButton
+import com.aistudio.trueidle.ui.components.SciFiDialog
 import com.aistudio.trueidle.ui.components.SupportKind
 import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
@@ -91,30 +93,35 @@ fun TrueIdleApp(
     }
 
     if (recoveryReason != null) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("SAVE RECOVERY", style = TrueIdleType.title, color = Warn) },
-            text = {
-                Text(
-                    text = "The stored save could not be read (${recoveryReason}). The raw bytes have " +
-                        "been quarantined and saving is paused so nothing overwrites them. Retry the " +
-                        "load, or start a fresh game.",
-                    style = TrueIdleType.body,
-                    color = TextMuted
+        SciFiDialog(
+            title = "SAVE RECOVERY",
+            accent = Warn,
+            onDismiss = { },
+            dismissible = false,
+            actions = {
+                SciFiButton(
+                    label = "START FRESH",
+                    onClick = { viewModel.discardCorruptSave() },
+                    modifier = Modifier.weight(1f),
+                    color = HpRed
                 )
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.retryLoad() }) {
-                    Text("RETRY LOAD", style = TrueIdleType.tag, color = PrimaryNeon)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.discardCorruptSave() }) {
-                    Text("START FRESH", style = TrueIdleType.tag, color = HpRed)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+                SciFiButton(
+                    label = "RETRY LOAD",
+                    onClick = { viewModel.retryLoad() },
+                    modifier = Modifier.weight(1f),
+                    color = PrimaryNeon,
+                    filled = true
+                )
+            }
+        ) {
+            Text(
+                text = "The stored save could not be read (${recoveryReason}). The raw bytes have " +
+                    "been quarantined and saving is paused so nothing overwrites them. Retry the " +
+                    "load, or start a fresh game.",
+                style = TrueIdleType.body,
+                color = TextMuted
+            )
+        }
     }
 
     CompositionLocalProvider(LocalDerived provides derived) {
@@ -333,7 +340,6 @@ fun TrueIdleApp(
                     onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
                     onToggleRunInBackground = { viewModel.toggleRunInBackground() },
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
-                    onSetNotation = { viewModel.setNotation(it) },
                     onFightPromotionBoss = { viewModel.fightPromotionBoss() },
                     onExportTelemetryLog = { viewModel.buildTelemetryReport() }
                 )
