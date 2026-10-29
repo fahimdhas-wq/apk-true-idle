@@ -436,7 +436,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             title = "08 // TALENTS & STRUGGLE",
             icon = "[★]",
             accentColor = SecondaryGold,
-            quickSummary = "${state.talent.talentPoints} TP AVAILABLE · ${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG ENDURED",
+            quickSummary = "${NumberFormatter.short(state.talent.talentPoints)} TP AVAILABLE · ${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG ENDURED",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.TALENTS) },
             level = state.talent.activeTalents.sumOf { it.rank },
