@@ -256,7 +256,7 @@ fun GenesisScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("${minion.type.uppercase()} (x${minion.count})", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                                    Text("${minion.type.uppercase()} (x${NumberFormatter.short(minion.count.toLong())})", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
                                     Text("LVL ${minion.lvl} · Absorption: +${NumberFormatter.short(minion.soak * minion.count)} DEF", style = TrueIdleType.meta, color = TextMuted)
                                 }
                                 Text("+${NumberFormatter.short(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2))} DPS", style = TrueIdleType.value, color = NecroPurple)
