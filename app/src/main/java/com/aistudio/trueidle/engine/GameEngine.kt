@@ -1834,14 +1834,18 @@ class GameEngine(
     }
 
     private fun progressFor(id: String): Int = when (id) {
-        "ach_first_blood" -> state.lifetime.totalKills.toInt()
+        "ach_first_blood" -> nonNegativeInt(state.lifetime.totalKills)
         "ach_floor_10" -> state.player.maxUnlockedFloor
-        // The starting Dusk Wolf counts; the old lifetime-only figure never included it.
-        "ach_tamer" -> state.lifetime.beastsTamed.toInt() + 1
+        // The starting Dusk Wolf counts; clamp the Long before narrowing it to Int.
+        "ach_tamer" -> nonNegativeInt(safeAddNonNegative(state.lifetime.beastsTamed, 1L))
         "ach_necro" -> state.necro.army.sumOf { it.count }
-        "ach_miner" -> state.lifetime.oresMined.toInt()
+        "ach_miner" -> nonNegativeInt(state.lifetime.oresMined)
         else -> 0
     }
+
+    /** Avoid Long.toInt() wrapping large lifetime counters into negative achievement progress. */
+    private fun nonNegativeInt(value: Long): Int =
+        value.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
 
     // ------------------------------------------------------------------ save helpers
 
