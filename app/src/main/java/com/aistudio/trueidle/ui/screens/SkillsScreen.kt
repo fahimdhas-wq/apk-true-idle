@@ -99,8 +99,8 @@ fun SkillsScreen(
                 val level = when (section) {
                     SkillSubSection.OVERVIEW -> ""
                     SkillSubSection.HARVEST -> "LV ${NumberFormatter.short(max(state.harvest.farmingLvl, state.harvest.miningLvl))}"
-                    SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
-                    SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
+                    SkillSubSection.FORGE -> "LV ${NumberFormatter.short(state.armory.smithingLvl)}"
+                    SkillSubSection.ARMORY -> "LV ${NumberFormatter.short(max(state.armory.smithingLvl, state.armory.herbloreLvl))}"
                     SkillSubSection.GENESIS -> "LV ${NumberFormatter.short(max(state.beasts.lvl, state.necro.lvl))}"
                     SkillSubSection.ESSENCE -> "LV ${NumberFormatter.short(state.essence.lvl)}"
                     SkillSubSection.TRAINING -> "LV ${NumberFormatter.short(state.training.lvl)}"
