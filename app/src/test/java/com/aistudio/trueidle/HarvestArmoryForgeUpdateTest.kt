@@ -6,6 +6,8 @@ import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.XpCurves
+import kotlin.math.floor
+import kotlin.math.pow
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.InventoryItem
@@ -43,13 +45,22 @@ class HarvestArmoryForgeUpdateTest {
 
     @Test
     fun gatheringSkillsRequireMoreXpThanGeneralSkills() {
+        // The gathering curve is now five times the previous gathering requirement at every level.
         for (level in listOf(1, 2, 5, 10, 25, 50, 100)) {
-            val regular = XpCurves.skill(level)
             val gathering = XpCurves.gatheringSkill(level)
-            assertTrue("gathering XP should be at least 3x at level $level", gathering >= regular * 3L)
-            assertTrue("gathering XP should stay within rounding of 3x at level $level", gathering <= regular * 3L + 2L)
+            val previousGathering = floor(
+                270.0 * level.coerceAtLeast(1).toDouble().pow(2.3)
+            ).toLong().coerceAtLeast(300L)
+            assertTrue(
+                "gathering XP should be at least 5x the previous curve at level $level",
+                gathering >= previousGathering * 5L
+            )
+            assertTrue(
+                "gathering XP should differ by at most rounding from 5x at level $level",
+                gathering <= previousGathering * 5L + 4L
+            )
         }
-        assertEquals(300L, XpCurves.gatheringSkill(1))
+        assertEquals(1_500L, XpCurves.gatheringSkill(1))
         assertTrue(XpCurves.gatheringSkill(10) > XpCurves.gatheringSkill(9))
     }
 
