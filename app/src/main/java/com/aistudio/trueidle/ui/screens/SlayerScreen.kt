@@ -73,7 +73,7 @@ fun SlayerScreen(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "LVL ${slayer.lvl}",
+                            text = "LVL ${NumberFormatter.short(slayer.lvl)}",
                             style = TrueIdleType.tag,
                             color = HpRed
                         )
@@ -126,7 +126,7 @@ fun SlayerScreen(
         SciFiPanel(
             title = "MASTERY SCALING",
             accent = PrimaryNeon,
-            tag = "LV ${slayer.lvl}"
+            tag = "LV ${NumberFormatter.short(slayer.lvl)}"
         ) {
             Text(
                 text = "Each level above 1 adds +2% credits to a new contract, and every ${SlayerMath.LEVELS_PER_BONUS_POINT} levels adds +1 bounty point.",
@@ -149,7 +149,7 @@ fun SlayerScreen(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "NEXT POINT BONUS AT SLAYER LV ${SlayerMath.nextBonusPointLevel(slayer.lvl)}",
+                text = "NEXT POINT BONUS AT SLAYER LV ${NumberFormatter.short(SlayerMath.nextBonusPointLevel(slayer.lvl))}",
                 style = TrueIdleType.tag,
                 color = TextMuted
             )
