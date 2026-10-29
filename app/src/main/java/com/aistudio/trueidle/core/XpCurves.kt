@@ -15,6 +15,14 @@ object XpCurves {
     fun skill(lvl: Int): Long =
         floor(90.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(100L)
 
+    /**
+     * Farming and mining are rewarded repeatedly during idle play, so they use a slower curve.
+     * The XP required at each level is five times the general skill curve, without slowing
+     * unrelated disciplines.
+     */
+    fun gatheringSkill(lvl: Int): Long =
+        floor(450.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(450L)
+
     fun slayer(lvl: Int): Long =
         floor(25.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(50L)
 
