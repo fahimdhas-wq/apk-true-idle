@@ -289,8 +289,8 @@ class GameEngine(
             pendingOfflineLoot = null,
             logs = (state.logs + log(
                 LogType.MILESTONE,
-                "OFFLINE REPORT PROCESSED: +${loot.goldEarned} CREDITS, +${loot.xpEarned} XP, " +
-                    "+${loot.bonesEarned} BONE ESSENCE, +${loot.faithEarned} FAITH (${loot.kills} kills)."
+                "OFFLINE REPORT PROCESSED: +${NumberFormatter.short(loot.goldEarned)} CREDITS, +${NumberFormatter.short(loot.xpEarned)} XP, " +
+                    "+${NumberFormatter.short(loot.bonesEarned)} BONE ESSENCE, +${NumberFormatter.short(loot.faithEarned)} FAITH (${NumberFormatter.short(loot.kills)} kills)."
             )).takeLast(Balance.LOG_CAP)
         )
         evaluateAchievements(force = true)
@@ -540,12 +540,12 @@ class GameEngine(
         if (count > 1) {
             frame.logs += log(
                 LogType.GAIN,
-                "HIGH-SPEED ENGAGEMENT: x$count ${monster.name.uppercase()} NEUTRALIZED (+$goldGained CREDITS, +$xpGained XP)"
+                "HIGH-SPEED ENGAGEMENT: x${NumberFormatter.short(count.toLong())} ${monster.name.uppercase()} NEUTRALIZED (+${NumberFormatter.short(goldGained)} CREDITS, +${NumberFormatter.short(xpGained)} XP)"
             )
         } else {
             frame.logs += log(
                 LogType.GAIN,
-                "HOSTILE NEUTRALIZED: ${monster.name.uppercase()} (+$goldGained CREDITS, +$xpGained XP)"
+                "HOSTILE NEUTRALIZED: ${monster.name.uppercase()} (+${NumberFormatter.short(goldGained)} CREDITS, +${NumberFormatter.short(xpGained)} XP)"
             )
         }
 
@@ -682,7 +682,7 @@ class GameEngine(
         frame.player = frame.player.copy(gold = frame.player.gold + task.rewardGold)
         frame.logs += log(
             LogType.MILESTONE,
-            "SLAYER DIRECTIVE FULFILLED: ${task.targetName} (+${task.rewardGold} CREDITS, +${task.rewardPoints} PTS)"
+            "SLAYER DIRECTIVE FULFILLED: ${task.targetName} (+${NumberFormatter.short(task.rewardGold)} CREDITS, +${NumberFormatter.short(task.rewardPoints)} PTS)"
         )
         var xp = frame.slayer.xp + 100L
         var lvl = frame.slayer.lvl
@@ -1071,7 +1071,7 @@ class GameEngine(
         val atk = if (isWep) tier * 12.0 else 0.0
         val def = if (!isWep) tier * 8.0 else 0.0
         val vit = if (!isWep) tier * 4.0 else 0.0
-        val statDesc = if (isWep) "+${atk.toInt()} ATK" else "+${def.toInt()} DEF, +${vit.toInt()} VIT"
+        val statDesc = if (isWep) "+${NumberFormatter.short(atk)} ATK" else "+${NumberFormatter.short(def)} DEF, +${NumberFormatter.short(vit)} VIT"
         inventory.add(
             InventoryItem(
                 id = "craft_${ids.next()}",
@@ -1144,7 +1144,7 @@ class GameEngine(
                     category = ItemCatalog.CATEGORY_POTION,
                     count = 1,
                     tier = 1,
-                    statDesc = "Restores ${heal.toInt()} HP",
+                    statDesc = "Restores ${NumberFormatter.short(heal)} HP",
                     sellValue = 15L
                 )
             )
@@ -1188,7 +1188,7 @@ class GameEngine(
         state = state.copy(
             player = state.player.copy(gold = state.player.gold + gold),
             inventory = inventory,
-            logs = (state.logs + log(LogType.GAIN, "ITEM SOLD: ${NumberFormatter.short(actual)} x ${item.name} for +$gold CREDITS."))
+            logs = (state.logs + log(LogType.GAIN, "ITEM SOLD: ${NumberFormatter.short(actual)} x ${item.name} for +${NumberFormatter.short(gold)} CREDITS."))
                 .takeLast(Balance.LOG_CAP)
         )
         return state
@@ -1257,7 +1257,7 @@ class GameEngine(
         state = state.copy(
             player = state.player.copy(hp = healed),
             inventory = inventory,
-            logs = (state.logs + log(LogType.GAIN, "POTION DEPLOYED: restored ${heal.toInt()} HP."))
+            logs = (state.logs + log(LogType.GAIN, "POTION DEPLOYED: restored ${NumberFormatter.short(heal)} HP."))
                 .takeLast(Balance.LOG_CAP)
         )
         return state
@@ -1340,7 +1340,7 @@ class GameEngine(
                 xp = xp,
                 lvl = lvl
             ),
-            logs = (state.logs + log(LogType.SYSTEM, "NECRO ANIMATION: reanimated $kind for $cost BONE ESSENCE."))
+            logs = (state.logs + log(LogType.SYSTEM, "NECRO ANIMATION: reanimated $kind for ${NumberFormatter.short(cost)} BONE ESSENCE."))
                 .takeLast(Balance.LOG_CAP)
         )
         evaluateAchievements(force = true)
@@ -1913,7 +1913,7 @@ class GameEngine(
                         val atk = if (isWep) (if (item.atk > 0.0) item.atk else item.tier * 18.0) else 0.0
                         val def = if (!isWep) (if (item.def > 0.0) item.def else item.tier * 8.0) else 0.0
                         val vit = if (!isWep) (if (item.vit > 0.0) item.vit else item.tier * 4.0) else 0.0
-                        val statDesc = if (isWep) "+${atk.toInt()} ATK" else "+${def.toInt()} DEF, +${vit.toInt()} VIT"
+                        val statDesc = if (isWep) "+${NumberFormatter.short(atk)} ATK" else "+${NumberFormatter.short(def)} DEF, +${NumberFormatter.short(vit)} VIT"
                         val equipped = item.isEquipped && seenEquippedSlots.add(migratedSlot.lowercase())
                         item.copy(
                             slot = migratedSlot,
