@@ -769,7 +769,7 @@ class GameEngine(
 
     private fun advanceProficiency(currentLvl: Int, currentXp: Long, gain: Long): Pair<Int, Long> {
         var lvl = currentLvl.coerceIn(1, 100)
-        var xp = currentXp + gain
+        var xp = safeAddNonNegative(currentXp, gain)
         while (lvl < 100 && xp >= XpCurves.proficiency(lvl)) {
             xp -= XpCurves.proficiency(lvl)
             lvl++
