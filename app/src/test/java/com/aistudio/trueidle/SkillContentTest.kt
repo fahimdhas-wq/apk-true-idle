@@ -7,6 +7,7 @@ import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.MinionCatalog
 import com.aistudio.trueidle.core.SlayerMath
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.InventoryItem
@@ -24,6 +25,20 @@ import org.junit.Test
 class SkillContentTest {
 
     private val reconciled = ContentCatalog.reconcile(GameState())
+
+    @Test
+    fun `gathering skill XP curve is slower and strictly increasing`() {
+        // The previous gathering curve required 300 XP at level 1; the new curve starts at 1,500.
+        assertEquals(1_500L, XpCurves.gatheringSkill(1))
+        assertTrue(XpCurves.gatheringSkill(1) >= XpCurves.skill(1) * 10L)
+
+        for (level in 1 until 100) {
+            assertTrue(
+                "Gathering XP must increase from level $level to ${level + 1}",
+                XpCurves.gatheringSkill(level + 1) > XpCurves.gatheringSkill(level)
+            )
+        }
+    }
 
     // ------------------------------------------------------------------ catalog shapes
 
