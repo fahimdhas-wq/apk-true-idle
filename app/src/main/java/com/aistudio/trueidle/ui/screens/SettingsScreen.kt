@@ -29,7 +29,10 @@ import androidx.compose.ui.window.Dialog
 import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.GameCaps
+import com.aistudio.trueidle.core.BackgroundCost
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.runtime.ResourceProbe
+import com.aistudio.trueidle.runtime.ResourceSample
 import com.aistudio.trueidle.ui.rememberTierColorForOrdinal
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiPanel
@@ -68,6 +71,7 @@ fun SettingsScreen(
     onSetNotation: (String) -> Unit = {},
     onToggleAutoEquip: () -> Unit = {},
     onToggleAutoMerge: () -> Unit = {},
+    onToggleRunInBackground: () -> Unit = {},
     onSetCraftUsage: (Int) -> Unit = {},
     onFightPromotionBoss: () -> Unit = {},
     onExportTelemetryLog: () -> String = { "" },
@@ -87,6 +91,15 @@ fun SettingsScreen(
     var copyStatus by rememberSaveable { mutableStateOf("") }
     var importError by rememberSaveable { mutableStateOf("") }
     var telemetryCopyFeedback by rememberSaveable { mutableStateOf("") }
+    var showBackgroundConfirm by rememberSaveable { mutableStateOf(false) }
+    var resourceSample by remember { mutableStateOf<ResourceSample?>(null) }
+    LaunchedEffect(Unit) {
+        val probe = ResourceProbe()
+        while (true) {
+            kotlinx.coroutines.delay(2_000L)
+            resourceSample = probe.sample()
+        }
+    }
 
     val floorMet = state.player.currentFloor >= promo.requiredFloor
     val gearMet = d.gearScore >= promo.requiredGearScore
@@ -499,6 +512,104 @@ fun SettingsScreen(
             }
         }
 
+        // 7b. BACKGROUND EXECUTION
+        SciFiPanel(
+            title = "BACKGROUND EXECUTION",
+            accent = Warn,
+            tag = if (auto.runInBackground) "ACTIVE" else "OFF"
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF000000))
+                    .border(BorderStroke(1.dp, BorderDark))
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("RUN GAME IN BACKGROUND", style = TrueIdleType.label, color = TextLight)
+                    Text(
+                        "Keep fighting live while the app is not on screen",
+                        style = TrueIdleType.meta,
+                        color = TextMuted
+                    )
+                }
+                Switch(
+                    checked = auto.runInBackground,
+                    onCheckedChange = { enable ->
+                        if (enable) showBackgroundConfirm = true else onToggleRunInBackground()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Warn,
+                        checkedTrackColor = Warn.copy(alpha = 0.3f),
+                        uncheckedThumbColor = TextMuted,
+                        uncheckedTrackColor = SurfaceVariantDark
+                    ),
+                    modifier = Modifier.testTag("run_in_background_switch")
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "CAUTION: uses battery, RAM and CPU while running and shows a persistent " +
+                    "notification. Rewards are earned at full live rate, not the " +
+                    "${GameCaps.OFFLINE_EFFICIENCY_PCT}% offline rate. While the device sleeps or the " +
+                    "system freezes the app, that time is paid out as an offline report on return. " +
+                    "Swiping the app away stops it.",
+                style = TrueIdleType.meta,
+                color = Warn
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            val sample = resourceSample
+            val battery = BackgroundCost.batteryPctPerHour(sample?.cpuPercent ?: 0.0)
+            ReportRowSettings("CPU (MEASURED, 1 CORE)", sample?.let { String.format(java.util.Locale.ROOT, "%.1f%%", it.cpuPercent) } ?: "SAMPLING")
+            ReportRowSettings("RAM (MEASURED, PSS)", sample?.let { String.format(java.util.Locale.ROOT, "%.0f MB", it.ramMb) } ?: "SAMPLING")
+            ReportRowSettings(
+                "BATTERY (ESTIMATE)",
+                String.format(java.util.Locale.ROOT, "%.1f-%.1f %%/HR", battery.lowPctPerHour, battery.highPctPerHour)
+            )
+            Text(
+                text = "CPU and RAM are read from this app while it runs on screen. Battery is derived: " +
+                    "measured CPU x ${BackgroundCost.ASSUMED_CORE_MA.toInt()} mA per core + " +
+                    "${BackgroundCost.SERVICE_OVERHEAD_MA.toInt()} mA service overhead, against a " +
+                    "${BackgroundCost.ASSUMED_BATTERY_MAH.toInt()} mAh battery, +/- device variance. " +
+                    "Approximate only.",
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+        }
+
+        if (showBackgroundConfirm) {
+            AlertDialog(
+                onDismissRequest = { showBackgroundConfirm = false },
+                title = { Text("ENABLE BACKGROUND RUN?", style = TrueIdleType.title, color = Warn) },
+                text = {
+                    Text(
+                        text = "The game loop keeps running behind other apps and drains more battery. " +
+                            "A persistent notification is shown while enabled. You can switch it off here at any time.",
+                        style = TrueIdleType.body,
+                        color = TextMuted
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showBackgroundConfirm = false
+                            onToggleRunInBackground()
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) { Text("ENABLE", style = TrueIdleType.tag, color = Warn) }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showBackgroundConfirm = false },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) { Text("CANCEL", style = TrueIdleType.tag, color = TextMuted) }
+                },
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        }
+
         // 7. ACHIEVEMENTS ARCHIVE
         val claimedCount = state.achievements.count { it.isClaimed }
         SciFiPanel(
@@ -855,5 +966,19 @@ private fun DossierTile(label: String, value: String, color: Color, modifier: Mo
             Text(label, style = TrueIdleType.meta, color = TextMuted)
             Text(value, style = TrueIdleType.numberStat, color = color)
         }
+    }
+}
+
+@Composable
+private fun ReportRowSettings(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = TrueIdleType.label, color = TextMuted, modifier = Modifier.weight(1f))
+        Text(value, style = TrueIdleType.value, color = TextLight)
     }
 }

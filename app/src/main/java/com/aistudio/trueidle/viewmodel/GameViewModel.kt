@@ -15,9 +15,11 @@ import com.aistudio.trueidle.engine.Balance
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.runtime.AndroidClock
+import com.aistudio.trueidle.runtime.BackgroundRunService
 import com.aistudio.trueidle.runtime.IdleAlertScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -55,6 +57,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private var writer: Job? = null
     private var booted = false
 
+    /** True from the moment the app leaves the screen with background play enabled. */
+    @Volatile private var backgroundRunActive = false
+
+    /**
+     * Time the loop could not tick while backgrounded (device asleep, process frozen). It is
+     * handed to the engine on return so that gap is paid out as an offline report.
+     */
+    @Volatile private var unticked = 0L
+
     /**
      * Set when the stored save could not be read. Saving stays blocked so the unreadable bytes are
      * never overwritten before the player decides what to do with them.
@@ -79,8 +90,19 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             }
             // The alert only matters while the app is away, so returning cancels it.
             IdleAlertScheduler.cancel(getApplication())
-            engine.resume(clock.snapshot())
+            val ranInBackground = backgroundRunActive
+            val missedMs = unticked
+            backgroundRunActive = false
+            unticked = 0L
+            if (ranInBackground) {
+                // The engine is single-threaded: stop the live loop before resume touches state.
+                loop?.cancelAndJoin()
+                loop = null
+            }
+            val now = clock.snapshot()
+            engine.resume(now, if (ranInBackground) now.elapsedMs - missedMs else null)
             _gameState.value = engine.state
+            syncBackgroundService()
             if (engine.consumeEightHourIdleAlert()) {
                 AppLog.warn(TAG, "eight-hour idle cap reached; offline report pending")
             }
@@ -102,6 +124,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun onBackground() {
+        if (engine.state.automation.runInBackground) {
+            // Keep the loop and autosave running; the foreground service keeps the process alive.
+            backgroundRunActive = true
+            requestSave()
+            IdleAlertScheduler.cancel(getApplication())
+            return
+        }
         loop?.cancel()
         loop = null
         autosave?.cancel()
@@ -118,7 +147,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         while (currentCoroutineContext().isActive) {
             delay(TICK_MS)
             val now = clock.elapsedMs()
-            accumulated += (now - last).coerceIn(0L, STEP_MS * MAX_STEPS)
+            val delta = now - last
+            // A long stall while backgrounded is real away time, not something to simulate tick by
+            // tick: bank it so the return pays it out as an offline report.
+            if (backgroundRunActive && delta > BACKGROUND_GAP_MS) unticked += delta
+            accumulated += delta.coerceIn(0L, STEP_MS * MAX_STEPS)
             last = now
 
             // Ticks are suspended while a report is pending: claiming applies the whole result
@@ -244,6 +277,25 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun upgradeTalent(talentId: String) = mutate { engine.upgradeTalent(talentId) }
     fun claimAchievement(achId: String) = mutate { engine.claimAchievement(achId) }
     fun toggleAutoEquipBestGear() = mutate { engine.toggleAutoEquipBestGear() }
+    fun toggleRunInBackground() {
+        mutate { engine.toggleRunInBackground() }
+        syncBackgroundService()
+    }
+
+    private fun syncBackgroundService() {
+        val app = getApplication<Application>()
+        if (engine.state.automation.runInBackground) BackgroundRunService.start(app) else BackgroundRunService.stop(app)
+    }
+
+    override fun onCleared() {
+        // Leaving for good (task swiped away): the loop dies with the scope, so persist and release.
+        if (backgroundRunActive && !savingBlocked) {
+            runCatching { repo.save(engine.snapshotForSave(clock.snapshot())) }
+        }
+        BackgroundRunService.stop(getApplication())
+        super.onCleared()
+    }
+
     fun toggleAutoMergeBeasts() = mutate { engine.toggleAutoMergeBeasts() }
     fun setCraftMaterialUsage(pct: Int) = mutate { engine.setCraftMaterialUsage(pct) }
     fun setNotation(notation: String) = mutate { engine.setNotation(notation) }
@@ -287,6 +339,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         const val STEP_MS = 250L
         const val MAX_STEPS = 8L
         const val TICK_MS = 50L
+        const val BACKGROUND_GAP_MS = 5_000L
         const val AUTOSAVE_MS = 30_000L
         const val SAVE_DEBOUNCE_MS = 750L
     }

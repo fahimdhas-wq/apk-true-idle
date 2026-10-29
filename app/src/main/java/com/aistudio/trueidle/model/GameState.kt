@@ -384,7 +384,9 @@ data class DisplaySettings(
 data class AutomationSettings(
     val autoEquipBestGear: Boolean = true,
     val autoMergeBeasts: Boolean = false,
-    val craftMaterialUsagePct: Int = 75
+    val craftMaterialUsagePct: Int = 75,
+    /** Keeps the game loop running (via a foreground service) while the app is not on screen. */
+    val runInBackground: Boolean = false
 )
 
 @Serializable

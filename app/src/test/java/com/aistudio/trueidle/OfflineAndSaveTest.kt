@@ -96,6 +96,41 @@ class OfflineAndSaveTest {
         )
     }
 
+    /** Any absence of at least five seconds must produce a report. */
+    @Test
+    fun testFiveSecondAbsenceProducesAReport() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(7))
+        engine.resume(clock.snapshot())
+        clock.elapsed += 6_000L
+        engine.resume(clock.snapshot())
+        assertNotNull(engine.state.pendingOfflineLoot)
+    }
+
+    @Test
+    fun testShortAbsenceProducesNoReport() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(7))
+        engine.resume(clock.snapshot())
+        clock.elapsed += 2_000L
+        engine.resume(clock.snapshot())
+        assertEquals(null, engine.state.pendingOfflineLoot)
+    }
+
+    /** Background-run mode: only the unticked gap counts, not time the loop was live. */
+    @Test
+    fun testBackgroundRunOnlyPaysTheUntickedGap() {
+        val clock = FakeClock()
+        val engine = GameEngine(clock = clock, random = Random(7))
+        engine.resume(clock.snapshot())
+        clock.elapsed += 3_600_000L
+        engine.resume(clock.snapshot(), clock.elapsed)
+        assertEquals(null, engine.state.pendingOfflineLoot)
+        clock.elapsed += 60_000L
+        engine.resume(clock.snapshot(), clock.elapsed - 60_000L)
+        assertNotNull(engine.state.pendingOfflineLoot)
+    }
+
     @Test
     fun testBossFloorsRequireASingleKill() {
         assertTrue(Balance.isBossFloor(10))

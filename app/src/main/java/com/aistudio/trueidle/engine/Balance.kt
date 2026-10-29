@@ -19,7 +19,7 @@ object Balance {
     const val OFFLINE_CAP_MS = GameCaps.OFFLINE_CAP_HOURS * 3600_000L
 
     /** Minimum time away before the offline report is produced. */
-    const val OFFLINE_MIN_AWAY_MS = 5 * 60_000L
+    const val OFFLINE_MIN_AWAY_MS = 5_000L
 
     /** Fraction of time away converted into rewards while offline. */
     const val OFFLINE_EFFICIENCY = GameCaps.OFFLINE_EFFICIENCY_PCT / 100.0

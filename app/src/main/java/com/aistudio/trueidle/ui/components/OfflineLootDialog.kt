@@ -10,12 +10,14 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +54,10 @@ fun OfflineLootDialog(
     onDismiss: () -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
+    // A Dialog is its own window and its view resets LocalDensity to the raw device density, which
+    // drops the app-wide UI_SCALE and makes this report render larger than the game. Re-provide the
+    // scaled density captured from the main composition.
+    val appDensity = LocalDensity.current
     val projection = remember(loot.xpEarned, state.player.lvl, state.player.xp) {
         projectLevel(state.player.lvl, state.player.xp, loot.xpEarned)
     }
@@ -84,6 +90,7 @@ fun OfflineLootDialog(
             usePlatformDefaultWidth = false
         )
     ) {
+        CompositionLocalProvider(LocalDensity provides appDensity) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -369,6 +376,7 @@ fun OfflineLootDialog(
                     )
                 }
             }
+        }
         }
     }
 }

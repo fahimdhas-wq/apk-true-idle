@@ -10,6 +10,9 @@
 
     <!-- Offline recon notification. -->
     <string name="notification_channel_offline_recon">Offline Recon</string>
+    <string name="notification_channel_background_run">Background Run</string>
+    <string name="notification_background_title">TRUE IDLE // RUNNING IN BACKGROUND</string>
+    <string name="notification_background_text">The game loop is active. Disable it in Settings to save battery.</string>
     <string name="notification_idle_title">TRUE IDLE // RECON COMPLETE</string>
     <string name="notification_idle_text">Your offline recon report is ready.</string>
     <string name="notification_idle_big_text">Your offline recon report is ready. Open True IDLE to claim the recovered rewards.</string>

@@ -108,7 +108,21 @@ class GameEngine(
      * Called on every foreground. Never replaces an unclaimed offline report, and re-anchors the
      * away window when the clock is not trustworthy.
      */
-    fun resume(now: ClockSnapshot) {
+    fun resume(now: ClockSnapshot, lastActiveElapsedMs: Long? = null) {
+        // Background-run mode: the loop was live until [lastActiveElapsedMs], so only the gap since
+        // then (device asleep, process frozen) is offline time. Re-anchoring the save meta to that
+        // moment lets the normal away-time maths below handle it.
+        if (lastActiveElapsedMs != null && lastActiveElapsedMs <= now.elapsedMs) {
+            val gap = now.elapsedMs - lastActiveElapsedMs
+            state = state.copy(
+                meta = state.meta.copy(
+                    savedWallMs = now.wallMs - gap,
+                    savedElapsedMs = lastActiveElapsedMs,
+                    bootCount = now.bootCount
+                )
+            )
+        }
+
         fun reanchor() {
             state = state.copy(
                 meta = state.meta.copy(
@@ -1652,6 +1666,13 @@ class GameEngine(
             autoMergeBeasts(frame)
             frame.commit(this)
         }
+        return state
+    }
+
+    fun toggleRunInBackground(): GameState {
+        state = state.copy(
+            automation = state.automation.copy(runInBackground = !state.automation.runInBackground)
+        )
         return state
     }
 

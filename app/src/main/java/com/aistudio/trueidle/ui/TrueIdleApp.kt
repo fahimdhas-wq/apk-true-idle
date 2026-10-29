@@ -329,6 +329,7 @@ fun TrueIdleApp(
                     onClaimAchievement = { achId -> viewModel.claimAchievement(achId) },
                     onToggleAutoEquip = { viewModel.toggleAutoEquipBestGear() },
                     onToggleAutoMerge = { viewModel.toggleAutoMergeBeasts() },
+                    onToggleRunInBackground = { viewModel.toggleRunInBackground() },
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
                     onSetNotation = { viewModel.setNotation(it) },
                     onFightPromotionBoss = { viewModel.fightPromotionBoss() },

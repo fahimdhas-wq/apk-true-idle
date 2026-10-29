@@ -16,6 +16,8 @@ import com.aistudio.trueidle.R
 object Notifications {
     const val CHANNEL_ID = "offline_recon"
     const val IDLE_NOTIFICATION_ID = 8001
+    const val BACKGROUND_CHANNEL_ID = "background_run"
+    const val BACKGROUND_NOTIFICATION_ID = 8002
 
     fun ensureChannel(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -26,6 +28,15 @@ object Notifications {
                     CHANNEL_ID,
                     context.getString(R.string.notification_channel_offline_recon),
                     NotificationManager.IMPORTANCE_DEFAULT
+                )
+            )
+        }
+        if (manager.getNotificationChannel(BACKGROUND_CHANNEL_ID) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    BACKGROUND_CHANNEL_ID,
+                    context.getString(R.string.notification_channel_background_run),
+                    NotificationManager.IMPORTANCE_LOW
                 )
             )
         }
