@@ -207,7 +207,7 @@ fun InventoryScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                     }
                                     if (item.count > 1) {
-                                        Text("[x${item.count}]", style = TrueIdleType.tag, color = SecondaryGold)
+                                        Text("[x${NumberFormatter.short(item.count)}]", style = TrueIdleType.tag, color = SecondaryGold)
                                     }
                                 }
 
