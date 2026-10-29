@@ -54,8 +54,8 @@ fun GenesisScreen(
 
     val beasts = state.beasts
     val necro = state.necro
-    val totalBeastDps = CombatMath.beastDps(beasts).toInt()
-    val totalArmyDps = CombatMath.armyDps(necro).toInt()
+    val totalBeastDps = CombatMath.beastDps(beasts)
+    val totalArmyDps = CombatMath.armyDps(necro)
 
     Column(
         modifier = modifier
@@ -86,7 +86,7 @@ fun GenesisScreen(
                             .border(1.dp, PrimaryNeon)
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
-                        Text("TOTAL DPS: ${totalBeastDps + totalArmyDps}", style = TrueIdleType.tag, color = PrimaryNeon)
+                        Text("TOTAL DPS: ${NumberFormatter.short(totalBeastDps + totalArmyDps)}", style = TrueIdleType.tag, color = PrimaryNeon)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -154,7 +154,7 @@ fun GenesisScreen(
                         beasts.beasts.forEach { beast ->
                             val isSel1 = selectedBeast1 == beast.id
                             val isSel2 = selectedBeast2 == beast.id
-                            val dpsVal = (beast.dps * beast.rank * (1.0 + (beast.stars - 1) * 0.25)).toInt()
+                            val dpsVal = beast.dps * beast.rank * (1.0 + (beast.stars - 1) * 0.25)
 
                             Card(
                                 modifier = Modifier
@@ -197,7 +197,7 @@ fun GenesisScreen(
                                         )
                                     }
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("$dpsVal DPS", style = TrueIdleType.value, color = GreenSuccess)
+                                        Text("${NumberFormatter.short(dpsVal)} DPS", style = TrueIdleType.value, color = GreenSuccess)
                                         Text("HP: ${NumberFormatter.short(beast.hp)}/${NumberFormatter.short(beast.maxHp)}", style = TrueIdleType.meta, color = TextMuted)
                                     }
                                 }
@@ -296,7 +296,7 @@ fun GenesisScreen(
                                 ) {
                                     SciFiBadge(
                                         type = SciFiIconType.ESSENCE,
-                                        label = "$cost",
+                                        label = NumberFormatter.short(cost),
                                         iconTint = if (canSummon) Color.Black else TextMuted,
                                         textColor = if (canSummon) Color.Black else TextMuted
                                     )
@@ -423,7 +423,7 @@ fun GenesisScreen(
                                     } else {
                                         SciFiBadge(
                                             type = SciFiIconType.ESSENCE,
-                                            label = "$cost",
+                                            label = NumberFormatter.short(cost),
                                             iconTint = if (canAfford) Color.Black else TextMuted,
                                             textColor = if (canAfford) Color.Black else TextMuted
                                         )
