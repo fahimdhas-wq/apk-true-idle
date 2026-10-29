@@ -268,7 +268,7 @@ fun SettingsScreen(
                         ) {
                             Text("FLOOR", style = TrueIdleType.meta, color = TextMuted)
                             Text(
-                                text = "${state.player.currentFloor} / ${promo.requiredFloor}",
+                                text = "${NumberFormatter.short(state.player.currentFloor)} / ${NumberFormatter.short(promo.requiredFloor)}",
                                 style = TrueIdleType.numberSmall,
                                 color = if (floorMet) GreenSuccess else PrimaryNeon
                             )
@@ -643,7 +643,7 @@ fun SettingsScreen(
                                 .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
                             Text(
-                                text = "LOCKED (${ach.progress}/${ach.target})",
+                                text = "LOCKED (${NumberFormatter.short(ach.progress)} / ${NumberFormatter.short(ach.target)})",
                                 style = TrueIdleType.meta,
                                 color = TextMuted
                             )
