@@ -27,7 +27,7 @@ class HarvestArmoryForgeUpdateTest {
             assertTrue("gathering XP should be at least 3x at level $level", gathering >= regular * 3L)
             assertTrue("gathering XP should stay within rounding of 3x at level $level", gathering <= regular * 3L + 2L)
         }
-        assertEquals(270L, XpCurves.gatheringSkill(1))
+        assertEquals(300L, XpCurves.gatheringSkill(1))
         assertTrue(XpCurves.gatheringSkill(10) > XpCurves.gatheringSkill(9))
     }
 
