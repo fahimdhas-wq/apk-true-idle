@@ -131,7 +131,7 @@ fun TrainingScreen(
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (isMaxed) "MAX" else "ENHANCE [${node.costGold} CR]",
+                                    text = if (isMaxed) "MAX" else "ENHANCE [${NumberFormatter.short(node.costGold)} CR]",
                                     style = TrueIdleType.tag
                                 )
                             }
