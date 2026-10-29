@@ -200,8 +200,13 @@ fun ForgeScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(2.dp))
+                                val formattedStatPreview = if (Equipment.isWeapon(recipe.slot)) {
+                                    "+${NumberFormatter.short((recipe.tier * 12).toLong())} ATK"
+                                } else {
+                                    "+${NumberFormatter.short((recipe.tier * 8).toLong())} DEF, +${NumberFormatter.short((recipe.tier * 4).toLong())} VIT"
+                                }
                                 Text(
-                                    text = "${recipe.statPreview} · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have ${NumberFormatter.short(have)})",
+                                    text = "$formattedStatPreview · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have ${NumberFormatter.short(have)})",
                                     style = TrueIdleType.meta,
                                     color = if (canCraft) GreenSuccess else TextMuted
                                 )
