@@ -117,7 +117,7 @@ fun EssenceScreen(
         SciFiPanel(
             title = "SOLAR SMITE LANCE",
             accent = SecondaryGold,
-            tag = "LVL ${essence.smiteLevel}"
+            tag = "LVL ${NumberFormatter.short(essence.smiteLevel)}"
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
