@@ -67,7 +67,7 @@ fun XpProgressBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "LVL $level",
+                    text = "LVL ${NumberFormatter.short(level)}",
                     style = TrueIdleType.tag,
                     color = barColor
                 )
