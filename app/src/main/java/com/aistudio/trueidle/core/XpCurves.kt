@@ -17,11 +17,11 @@ object XpCurves {
 
     /**
      * Farming and mining are rewarded repeatedly during idle play, so they use a slower curve.
-     * The XP required at each level is three times the general skill curve, without slowing
+     * The XP required at each level is five times the previous gathering curve (fifteen times the general curve), without slowing
      * unrelated disciplines. Skill XP also comes from base actions, not exponentially boosted yield.
      */
     fun gatheringSkill(lvl: Int): Long =
-        floor(270.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(300L)
+        floor(1_350.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(1_500L)
 
     fun slayer(lvl: Int): Long =
         floor(25.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(50L)
