@@ -80,7 +80,7 @@ fun CombatScreen(
                     name = minion.type.uppercase(),
                     stars = 0,
                     dpsText = "${NumberFormatter.short(minion.dps * minion.count * (1.0 + (minion.lvl - 1) * 0.2))} DPS",
-                    meta = "CORPS x${NumberFormatter.short(minion.count)} · LVL ${minion.lvl}"
+                    meta = "CORPS x${NumberFormatter.short(minion.count)} · LVL ${NumberFormatter.short(minion.lvl)}"
                 )
             }
         )
