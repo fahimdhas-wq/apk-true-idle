@@ -1712,7 +1712,8 @@ class GameEngine(
     }
 
     private fun applyNotation(notation: String): BigNumberFormatter.Config {
-        val config = BigNumberFormatter.Config.byName(notation)
+        // Normalize legacy saved preferences to the one requested in-game format.
+        val config = BigNumberFormatter.Config.DEFAULT
         BigNumberFormatter.setConfig(config)
         return config
     }
