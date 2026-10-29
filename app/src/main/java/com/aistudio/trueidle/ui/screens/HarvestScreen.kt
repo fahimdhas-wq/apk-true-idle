@@ -219,7 +219,7 @@ fun HarvestScreen(
                                     color = TextMuted
                                 )
                                 Text(
-                                    text = if (plot.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(plot.proficiencyXp.toDouble())} / ${NumberFormatter.short(reqProfXp.toDouble())} XP",
+                                    text = if (plot.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(plot.proficiencyXp)} / ${NumberFormatter.short(reqProfXp)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
@@ -430,7 +430,7 @@ fun HarvestScreen(
                                     color = TextMuted
                                 )
                                 Text(
-                                    text = if (vein.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(vein.proficiencyXp.toDouble())} / ${NumberFormatter.short(reqProfXp.toDouble())} XP",
+                                    text = if (vein.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(vein.proficiencyXp)} / ${NumberFormatter.short(reqProfXp)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
