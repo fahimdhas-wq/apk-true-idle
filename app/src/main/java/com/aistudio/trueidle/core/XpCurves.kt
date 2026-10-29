@@ -21,7 +21,7 @@ object XpCurves {
      * unrelated disciplines. Skill XP also comes from base actions, not exponentially boosted yield.
      */
     fun gatheringSkill(lvl: Int): Long =
-        floor(270.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(270L)
+        floor(270.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(300L)
 
     fun slayer(lvl: Int): Long =
         floor(25.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(50L)
