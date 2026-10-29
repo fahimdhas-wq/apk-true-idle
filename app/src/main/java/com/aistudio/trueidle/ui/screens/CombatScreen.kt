@@ -111,7 +111,7 @@ fun CombatScreen(
         SciFiPanel(
             title = "HOSTILE // ${m.name.uppercase()}",
             accent = if (m.isBoss) HpRed else PrimaryNeon,
-            tag = if (m.isBoss) "BOSS Lv${m.lvl}" else "NORMAL Lv${m.lvl}",
+            tag = if (m.isBoss) "BOSS Lv${NumberFormatter.short(m.lvl)}" else "NORMAL Lv${NumberFormatter.short(m.lvl)}",
             borderColor = if (m.isBoss) HpRed else BorderDark,
             modifier = Modifier.testTag("hostile_combat_card")
         ) {
@@ -184,7 +184,7 @@ fun CombatScreen(
         SciFiPanel(
             title = "HERO // PROTOCOL",
             accent = PrimaryNeon,
-            tag = "LVL ${p.lvl}",
+            tag = "LVL ${NumberFormatter.short(p.lvl)}",
             modifier = Modifier.testTag("hero_combat_card")
         ) {
             SciFiGauge(
