@@ -177,22 +177,22 @@ object OfflineEngine {
                     "${(efficiency * 100).toInt()}% EFFICIENCY"
             )
             if (floorsLost > 0) {
-                add("THREAT EXCEEDED DEFENSES AT SECTOR $startFloor: FELL BACK TO SECTOR $floorAfterRetreat")
+                add("THREAT EXCEEDED DEFENSES AT SECTOR ${NumberFormatter.short(startFloor)}: FELL BACK TO SECTOR ${NumberFormatter.short(floorAfterRetreat)}")
             }
             perFloorKills.entries.toList().takeLast(5).forEach { (f, k) ->
-                add("SECTOR $f // $k hostiles neutralized")
+                add("SECTOR ${NumberFormatter.short(f)} // ${NumberFormatter.short(k)} hostiles neutralized")
             }
             if (perFloorKills.size > 5) {
-                add("... and ${perFloorKills.size - 5} earlier sector engagement(s)")
+                add("... and ${NumberFormatter.short(perFloorKills.size - 5)} earlier sector engagement(s)")
             }
             when {
-                floor > startFloor -> add("ADVANCED ${floor - startFloor} SECTOR(S): $startFloor -> $floor")
-                floor < startFloor -> add("FINAL POSITION: SECTOR $floor (STARTED AT $startFloor)")
-                else -> add("HELD SECTOR $floor with no fatal breaches")
+                floor > startFloor -> add("ADVANCED ${NumberFormatter.short(floor - startFloor)} SECTOR(S): ${NumberFormatter.short(startFloor)} -> ${NumberFormatter.short(floor)}")
+                floor < startFloor -> add("FINAL POSITION: SECTOR ${NumberFormatter.short(floor)} (STARTED AT ${NumberFormatter.short(startFloor)})")
+                else -> add("HELD SECTOR ${NumberFormatter.short(floor)} with no fatal breaches")
             }
-            if (bossKills > 0) add("BOSS KILLS: $bossKills (+$bossTalentPoints TP, +$bossKills TROPHY)")
-            if (slayerKills > 0) add("SLAYER DIRECTIVE: +$slayerKills kills on ${slayerTarget?.uppercase()}")
-            add("SECURED +$gold CREDITS, +$xp XP, +$bones BONE ESSENCE, +$faith FAITH")
+            if (bossKills > 0) add("BOSS KILLS: ${NumberFormatter.short(bossKills)} (+${NumberFormatter.short(bossTalentPoints)} TP, +${NumberFormatter.short(bossKills)} TROPHY)")
+            if (slayerKills > 0) add("SLAYER DIRECTIVE: +${NumberFormatter.short(slayerKills)} kills on ${slayerTarget?.uppercase()}")
+            add("SECURED +${NumberFormatter.short(gold)} CREDITS, +${NumberFormatter.short(xp)} XP, +${NumberFormatter.short(bones)} BONE ESSENCE, +${NumberFormatter.short(faith)} FAITH")
             if (capApplied) add("${Balance.OFFLINE_CAP_MS / 3600_000L}-HOUR CAP ENGAGED")
         }
 
@@ -228,11 +228,11 @@ object OfflineEngine {
                 LootItem(ItemCatalog.BOSS_TROPHY, bossKills).takeIf { bossKills > 0 }
             ),
             beastsTamed = tamed.coerceAtLeast(0),
-            farmingGainsSummary = if (herb > 0) "$herb ${ItemCatalog.FELWEED} gathered" else "No herbs gathered",
-            miningGainsSummary = if (ore > 0) "$ore ${ItemCatalog.COPPER_ORE} mined" else "No ore mined",
+            farmingGainsSummary = if (herb > 0) "${NumberFormatter.short(herb)} ${ItemCatalog.FELWEED} gathered" else "No herbs gathered",
+            miningGainsSummary = if (ore > 0) "${NumberFormatter.short(ore)} ${ItemCatalog.COPPER_ORE} mined" else "No ore mined",
             dropsSummary = listOfNotNull(
-                "$ore ${ItemCatalog.COPPER_ORE}".takeIf { ore > 0 },
-                "$herb ${ItemCatalog.FELWEED}".takeIf { herb > 0 }
+                "${NumberFormatter.short(ore)} ${ItemCatalog.COPPER_ORE}".takeIf { ore > 0 },
+                "${NumberFormatter.short(herb)} ${ItemCatalog.FELWEED}".takeIf { herb > 0 }
             ),
             timelineLog = timeline
         )
