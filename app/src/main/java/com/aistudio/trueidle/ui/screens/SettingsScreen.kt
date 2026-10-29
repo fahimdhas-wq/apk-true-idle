@@ -633,7 +633,7 @@ fun SettingsScreen(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 3.dp),
                             modifier = Modifier.testTag("claim_ach_${ach.id}")
                         ) {
-                            Text("CLAIM (+${ach.rewardGold} CR)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            Text("CLAIM (+${NumberFormatter.short(ach.rewardGold)} CR)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         Box(
