@@ -20,6 +20,28 @@ import org.junit.Test
 class HarvestArmoryForgeUpdateTest {
 
     @Test
+    fun hugeLifetimeCountersNeverWrapAchievementProgressNegative() {
+        val base = GameState()
+        val state = base.copy(
+            lifetime = base.lifetime.copy(
+                totalKills = Long.MAX_VALUE,
+                beastsTamed = Long.MAX_VALUE,
+                oresMined = Long.MAX_VALUE
+            ),
+            harvest = base.harvest.copy(
+                plots = base.harvest.plots.map { if (it.id == 0) it.copy(isReady = true) else it }
+            )
+        )
+        val engine = GameEngine(state)
+        engine.harvestPlot(0) // forces achievement progress to be recalculated
+
+        for (id in listOf("ach_first_blood", "ach_tamer", "ach_miner")) {
+            val achievement = engine.state.achievements.first { it.id == id }
+            assertTrue("$id progress must not become negative", achievement.progress >= 0)
+        }
+    }
+
+    @Test
     fun gatheringSkillsRequireMoreXpThanGeneralSkills() {
         for (level in listOf(1, 2, 5, 10, 25, 50, 100)) {
             val regular = XpCurves.skill(level)
