@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.theme.*
 
 @Composable
@@ -127,7 +128,7 @@ fun FloorControls(
                     color = TextMuted
                 )
                 Text(
-                    text = "$killsOnFloor / $killsRequired TARGETS",
+                    text = "${NumberFormatter.short(killsOnFloor)} / ${NumberFormatter.short(killsRequired)} TARGETS",
                     style = TrueIdleType.value,
                     color = SecondaryGold
                 )
