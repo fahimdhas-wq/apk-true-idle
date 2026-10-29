@@ -5,6 +5,7 @@ import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.TierConfig
+import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.InventoryItem
@@ -17,6 +18,52 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HarvestArmoryForgeUpdateTest {
+
+    @Test
+    fun gatheringSkillsRequireMoreXpThanGeneralSkills() {
+        for (level in listOf(1, 2, 5, 10, 25, 50, 100)) {
+            val regular = XpCurves.skill(level)
+            val gathering = XpCurves.gatheringSkill(level)
+            assertTrue("gathering XP should be at least 3x at level $level", gathering >= regular * 3L)
+            assertTrue("gathering XP should stay within rounding of 3x at level $level", gathering <= regular * 3L + 2L)
+        }
+        assertEquals(270L, XpCurves.gatheringSkill(1))
+        assertTrue(XpCurves.gatheringSkill(10) > XpCurves.gatheringSkill(9))
+    }
+
+    @Test
+    fun boostedFarmingYieldDoesNotMultiplyFarmingSkillXp() {
+        val base = GameState()
+        val state = base.copy(harvest = base.harvest.copy(
+            plots = base.harvest.plots.map { if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 5, proficiencyXp = 0L) else it },
+            farmingXp = 0L,
+            farmingLvl = 1
+        ))
+        val engine = GameEngine(state)
+
+        engine.harvestPlot(0)
+
+        val plot = engine.state.harvest.plots.first { it.id == 0 }
+        assertEquals(2L, engine.state.harvest.farmingXp)
+        assertEquals(32L, plot.proficiencyXp)
+    }
+
+    @Test
+    fun boostedMiningYieldDoesNotMultiplyMiningSkillXp() {
+        val base = GameState()
+        val state = base.copy(harvest = base.harvest.copy(
+            veins = base.harvest.veins.map { if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 5, proficiencyXp = 0L) else it },
+            miningXp = 0L,
+            miningLvl = 1
+        ))
+        val engine = GameEngine(state)
+
+        engine.mineVein(0)
+
+        val vein = engine.state.harvest.veins.first { it.id == 0 }
+        assertEquals(3L, engine.state.harvest.miningXp)
+        assertEquals(48L, vein.proficiencyXp)
+    }
 
     // -------------------------------------------------------------------------
     // ITEM 3: 20 MINING ORES IN EXACT CANONICAL ORDER
