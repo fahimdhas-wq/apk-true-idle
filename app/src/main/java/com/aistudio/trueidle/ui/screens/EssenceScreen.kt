@@ -126,9 +126,9 @@ fun EssenceScreen(
             ) {
                 Column {
                     Text("PASSIVE BURST DAMAGE", style = TrueIdleType.label, color = MaterialTheme.colorScheme.onSurface)
-                    Text("+${essence.smiteLevel * 3} DPS added to hero combat output", style = TrueIdleType.meta, color = TextMuted)
+                    Text("+${NumberFormatter.short(essence.smiteLevel.toLong() * 3L)} DPS added to hero combat output", style = TrueIdleType.meta, color = TextMuted)
                 }
-                Text("+${essence.smiteLevel * 3} DPS", style = TrueIdleType.value, color = SecondaryGold)
+                Text("+${NumberFormatter.short(essence.smiteLevel.toLong() * 3L)} DPS", style = TrueIdleType.value, color = SecondaryGold)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
@@ -142,7 +142,7 @@ fun EssenceScreen(
                 border = BorderStroke(1.dp, if (canAffordSmite) SecondaryGold else MaterialTheme.colorScheme.outline),
                 modifier = Modifier.fillMaxWidth().testTag("upgrade_smite_btn")
             ) {
-                Text("UPGRADE SMITE (COST: $smiteCost FAITH)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                Text("UPGRADE SMITE (COST: ${NumberFormatter.short(smiteCost)} FAITH)", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -196,7 +196,7 @@ fun EssenceScreen(
                             border = BorderStroke(1.dp, if (canAfford) ManaTeal else MaterialTheme.colorScheme.outline),
                             modifier = Modifier.testTag("upgrade_essence_${upg.id}")
                         ) {
-                            Text(if (isMax) "MAX" else "⚡ $cost", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                            Text(if (isMax) "MAX" else "⚡ ${NumberFormatter.short(cost)}", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
