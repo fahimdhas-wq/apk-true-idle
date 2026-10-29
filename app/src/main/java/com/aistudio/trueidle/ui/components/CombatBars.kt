@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.theme.BorderDark
 import com.aistudio.trueidle.ui.theme.TextLight
 import com.aistudio.trueidle.ui.theme.TextMuted
@@ -31,8 +32,8 @@ fun StatBar(
     val progress = if (max > 0) (current / max).toFloat().coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "BarAnim")
 
-    val curInt = current.coerceAtLeast(0.0).toInt()
-    val maxInt = max.coerceAtLeast(1.0).toInt()
+    val currentText = NumberFormatter.short(current.coerceAtLeast(0.0))
+    val maxText = NumberFormatter.short(max.coerceAtLeast(1.0))
 
     Column(
         modifier = modifier
@@ -53,7 +54,7 @@ fun StatBar(
                 maxLines = 1
             )
             Text(
-                text = "$curInt / $maxInt",
+                text = "$currentText / $maxText",
                 style = TrueIdleType.value,
                 color = TextLight,
                 maxLines = 1,
