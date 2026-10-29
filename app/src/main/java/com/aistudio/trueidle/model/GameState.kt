@@ -341,7 +341,19 @@ data class OfflineLoot(
     val farmingGainsSummary: String = "",
     val miningGainsSummary: String = "",
     val dropsSummary: List<String> = emptyList(),
-    val timelineLog: List<String> = emptyList()
+    val timelineLog: List<String> = emptyList(),
+    /** Real wall time away, before the offline cap. */
+    val rawAwaySeconds: Long = 0L,
+    /** Combat time actually simulated: capped away time scaled by efficiency. */
+    val effectiveSeconds: Long = 0L,
+    val faithEarned: Long = 0L,
+    val faithDrained: Long = 0L,
+    val bossKills: Int = 0,
+    val floorsLost: Int = 0,
+    val slayerKills: Int = 0,
+    val aegisCoveragePct: Int = 0,
+    val dps: Double = 0.0,
+    val xpMultiplier: Double = 1.0
 )
 
 @Serializable

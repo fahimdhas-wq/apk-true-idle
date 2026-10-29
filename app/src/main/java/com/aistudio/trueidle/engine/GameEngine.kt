@@ -133,8 +133,14 @@ class GameEngine(
         }
 
         eightHourIdleAlertPending = awayMs >= Balance.OFFLINE_CAP_MS
+        val rawAwayMs = OfflineEngine.trustedAwayMs(state.meta, now, Long.MAX_VALUE)
         val derived = DerivedStats.of(state)
-        val loot = OfflineEngine.compute(state, derived, awayMs, Balance.OFFLINE_EFFICIENCY, random)
+        val computed = OfflineEngine.compute(state, derived, awayMs, Balance.OFFLINE_EFFICIENCY, random)
+        val drainedEssence = drainFaith(state.essence, awayMs)
+        val loot = computed.copy(
+            rawAwaySeconds = maxOf(rawAwayMs, awayMs) / 1000L,
+            faithDrained = (state.essence.faith - drainedEssence.faith).coerceAtLeast(0L)
+        )
 
         val harvest = if (state.harvest.autoCollectUnlocked && state.harvest.autoCollectEnabled) {
             state.harvest.copy(
@@ -154,7 +160,7 @@ class GameEngine(
             ),
             pendingOfflineLoot = loot,
             harvest = harvest,
-            essence = drainFaith(state.essence, awayMs)
+            essence = drainedEssence
         )
     }
 
@@ -206,8 +212,33 @@ class GameEngine(
             levels++
         }
 
+        // Slayer kills earned offline, resolved exactly like the live path.
+        var slayer = state.slayer
+        var slayerGold = 0L
+        val task = slayer.currentTask
+        if (loot.slayerKills > 0 && !task.isCompleted) {
+            val kills = task.currentKills + loot.slayerKills
+            if (kills < task.requiredKills) {
+                slayer = slayer.copy(currentTask = task.copy(currentKills = kills))
+            } else {
+                var sxp = slayer.xp + 100L
+                var slvl = slayer.lvl
+                while (sxp >= Balance.slayerXpReq(slvl)) {
+                    sxp -= Balance.slayerXpReq(slvl)
+                    slvl++
+                }
+                slayer = slayer.copy(
+                    lvl = slvl,
+                    xp = sxp,
+                    slayerPoints = slayer.slayerPoints + task.rewardPoints,
+                    currentTask = task.copy(currentKills = kills, isCompleted = true)
+                )
+                slayerGold = task.rewardGold
+            }
+        }
+
         var player = state.player.copy(
-            gold = state.player.gold + loot.goldEarned,
+            gold = state.player.gold + loot.goldEarned + slayerGold,
             xp = xp,
             lvl = lvl,
             currentFloor = finalFloor,
@@ -226,6 +257,8 @@ class GameEngine(
             player = player,
             monster = monster,
             necro = state.necro.copy(boneEssence = state.necro.boneEssence + loot.bonesEarned),
+            essence = state.essence.copy(faith = state.essence.faith + loot.faithEarned),
+            slayer = slayer,
             beasts = beasts,
             inventory = inventory,
             talent = state.talent.copy(
@@ -241,7 +274,7 @@ class GameEngine(
             logs = (state.logs + log(
                 LogType.MILESTONE,
                 "OFFLINE REPORT PROCESSED: +${loot.goldEarned} CREDITS, +${loot.xpEarned} XP, " +
-                    "+${loot.bonesEarned} BONE ESSENCE (${loot.kills} kills)."
+                    "+${loot.bonesEarned} BONE ESSENCE, +${loot.faithEarned} FAITH (${loot.kills} kills)."
             )).takeLast(Balance.LOG_CAP)
         )
         evaluateAchievements(force = true)

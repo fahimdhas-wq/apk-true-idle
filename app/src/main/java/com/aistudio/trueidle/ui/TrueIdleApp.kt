@@ -84,6 +84,7 @@ fun TrueIdleApp(
     if (pendingLoot != null) {
         OfflineLootDialog(
             loot = pendingLoot,
+            state = state,
             onClaim = { viewModel.claimOfflineLoot() },
             onDismiss = { }
         )

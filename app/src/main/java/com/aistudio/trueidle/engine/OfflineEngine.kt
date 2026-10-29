@@ -19,7 +19,8 @@ import kotlin.random.Random
 
 /**
  * Offline (idle) simulation. Kept in step with the live engine: the same spawn gap, the same
- * kills-per-floor requirement, the same Soul Siphon bone multiplier and the same faith drain rate.
+ * kills-per-floor requirement, the same XP multiplier, the same Soul Siphon bone multiplier, the
+ * same boss rewards (talent points, trophies), the same faith income and the same faith drain rate.
  */
 object OfflineEngine {
     const val SAFETY = 1.25
@@ -69,6 +70,7 @@ object OfflineEngine {
         val startFloor = s.player.currentFloor
         var floor = s.player.currentFloor
         val ceiling = s.player.maxUnlockedFloor // offline never unlocks new floors
+        val autoAdvance = s.player.autoAdvance
 
         // Faith is spent while away, so Aegis only covers part of the window.
         val faithPreserveRank = s.essence.upgrades.firstOrNull { it.id == "faith_preserve" }?.rank ?: 0
@@ -79,22 +81,36 @@ object OfflineEngine {
         } else 0.0
         val aegisFraction = if (awaySeconds > 0.0) (aegisSeconds / awaySeconds).coerceIn(0.0, 1.0) else 0.0
 
+        // The hero falls back to a floor it can survive; the report states how far.
         repeat(10) { if (floor > 1 && !stats(floor, dps, d, s, aegisFraction).survivable) floor-- }
+        val floorAfterRetreat = floor
+        val floorsLost = startFloor - floorAfterRetreat
+
         var killsOnFloor = if (floor == s.player.currentFloor) s.player.killsOnFloor else 0
         var kills = 0L
         var gold = 0L
         var xp = 0L
+        var faith = 0L
+        var bossKills = 0
+        var slayerKills = 0
         var gained = 0
-        val perFloorKills = mutableListOf<Pair<Int, Int>>()
+        val perFloorKills = LinkedHashMap<Int, Int>()
         var guard = 0
+
+        val slayerTask = s.slayer.currentTask
+        val slayerTarget = if (slayerTask.isCompleted) null else slayerTask.targetName
 
         fun award(f: Int, k: Int) {
             if (k <= 0) return
             val m = Balance.generateMonsterForFloor(f)
             kills += k
             gold += k * m.goldReward
-            xp += k * m.xpReward
-            perFloorKills += f to k
+            // Same rule as the live resolveKill: the XP multiplier applies, with a floor of 1.
+            xp += k * maxOf(1L, (m.xpReward * d.xpGain).toLong())
+            faith += k * (if (m.isBoss) 5L else 1L)
+            if (m.isBoss) bossKills += k
+            if (slayerTarget != null && m.name.equals(slayerTarget, ignoreCase = true)) slayerKills += k
+            perFloorKills[f] = (perFloorKills[f] ?: 0) + k
         }
 
         while (remaining > 0 && guard++ < 500) {
@@ -104,13 +120,15 @@ object OfflineEngine {
             val required = Balance.killsRequiredFor(floor)
             val need = (required - killsOnFloor).coerceAtLeast(0)
             if (need == 0) {
-                if (floor >= ceiling) break
-                floor++
                 killsOnFloor = 0
+                if (autoAdvance && floor < ceiling) {
+                    floor++
+                    gained++
+                }
                 continue
             }
             val clearS = need * st.perKillS
-            val advance = s.player.autoAdvance && floor < ceiling &&
+            val advance = autoAdvance && floor < ceiling &&
                 stats(floor + 1, dps, d, s, aegisFraction).survivable
             if (advance && remaining >= clearS) {
                 award(floor, need)
@@ -150,43 +168,64 @@ object OfflineEngine {
             levelsGained++
         }
 
-        // Real per-floor data instead of a fabricated two-hour narrative.
+        // Boss kills pay 2 talent points each live; the claim adds level-up points separately.
+        val bossTalentPoints = bossKills * 2
+
         val timeline = buildList {
             add(
                 "AWAY ${NumberFormatter.duration(effectiveAwayMs / 1000)} AT " +
                     "${(efficiency * 100).toInt()}% EFFICIENCY"
             )
-            perFloorKills.takeLast(5).forEach { (f, k) ->
+            if (floorsLost > 0) {
+                add("THREAT EXCEEDED DEFENSES AT SECTOR $startFloor: FELL BACK TO SECTOR $floorAfterRetreat")
+            }
+            perFloorKills.entries.toList().takeLast(5).forEach { (f, k) ->
                 add("SECTOR $f // $k hostiles neutralized")
             }
             if (perFloorKills.size > 5) {
                 add("... and ${perFloorKills.size - 5} earlier sector engagement(s)")
             }
-            if (gained > 0) add("ADVANCED $gained SECTOR(S): $startFloor -> $floor")
-            else add("HELD SECTOR $floor with no fatal breaches")
-            add("SECURED +$gold CREDITS, +$xp XP, +$bones BONE ESSENCE")
+            when {
+                floor > startFloor -> add("ADVANCED ${floor - startFloor} SECTOR(S): $startFloor -> $floor")
+                floor < startFloor -> add("FINAL POSITION: SECTOR $floor (STARTED AT $startFloor)")
+                else -> add("HELD SECTOR $floor with no fatal breaches")
+            }
+            if (bossKills > 0) add("BOSS KILLS: $bossKills (+$bossTalentPoints TP, +$bossKills TROPHY)")
+            if (slayerKills > 0) add("SLAYER DIRECTIVE: +$slayerKills kills on ${slayerTarget?.uppercase()}")
+            add("SECURED +$gold CREDITS, +$xp XP, +$bones BONE ESSENCE, +$faith FAITH")
             if (capApplied) add("${Balance.OFFLINE_CAP_MS / 3600_000L}-HOUR CAP ENGAGED")
         }
 
         return OfflineLoot(
             timeAwaySeconds = effectiveAwayMs / 1000,
+            rawAwaySeconds = effectiveAwayMs / 1000,
+            effectiveSeconds = (awaySeconds * efficiency).toLong(),
             kills = kills,
             goldEarned = gold,
             xpEarned = xp,
             bonesEarned = bones,
+            faithEarned = faith,
+            bossKills = bossKills,
+            slayerKills = slayerKills,
             playerLevelsGained = levelsGained,
+            talentPointsGained = bossTalentPoints,
             floorsGained = gained,
+            floorsLost = floorsLost,
             startFloor = startFloor,
             finalFloor = floor,
             killsOnFloor = killsOnFloor,
             efficiency = efficiency,
             capApplied = capApplied,
+            aegisCoveragePct = (aegisFraction * 100.0).roundToInt(),
+            dps = dps,
+            xpMultiplier = d.xpGain,
             killsPerHour = kPerHour,
             goldPerHour = gPerHour,
             xpPerHour = xPerHour,
             items = listOfNotNull(
                 LootItem(ItemCatalog.COPPER_ORE, ore).takeIf { ore > 0 },
-                LootItem(ItemCatalog.FELWEED, herb).takeIf { herb > 0 }
+                LootItem(ItemCatalog.FELWEED, herb).takeIf { herb > 0 },
+                LootItem(ItemCatalog.BOSS_TROPHY, bossKills).takeIf { bossKills > 0 }
             ),
             beastsTamed = tamed.coerceAtLeast(0),
             farmingGainsSummary = if (herb > 0) "$herb ${ItemCatalog.FELWEED} gathered" else "No herbs gathered",
