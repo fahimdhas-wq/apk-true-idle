@@ -242,7 +242,7 @@ fun CombatScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS"),
+                            text = Equipment.equippedName(state, Equipment.SLOT_RIFLE, Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS")),
                             style = TrueIdleType.label,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
@@ -270,7 +270,7 @@ fun CombatScreen(
                         }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE"),
+                            text = Equipment.equippedName(state, Equipment.SLOT_VEST, Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE")),
                             style = TrueIdleType.label,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,

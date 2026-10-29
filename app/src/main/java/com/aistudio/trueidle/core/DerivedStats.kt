@@ -46,12 +46,22 @@ object DerivedStats {
         val lvl = s.player.lvl
         val bonusMult = 1.0 + s.promotion.bonusPercent / 100.0
 
+        val equippedWeapons = s.inventory.filter { it.isEquipped && Equipment.isWeapon(it.slot) }
+        val equippedArmorAndNodes = s.inventory.filter { it.isEquipped && Equipment.isArmorOrNode(it.slot) }
+        val rawWeaponDmg = if (equippedWeapons.isNotEmpty()) {
+            equippedWeapons.sumOf { Equipment.baseAttack(it) }
+        } else {
+            2.0
+        }
+        val rawArmorDef = equippedArmorAndNodes.sumOf { Equipment.baseDefense(it) }
+        val rawItemVit = equippedArmorAndNodes.sumOf { Equipment.baseVit(it) }
+
         val str = (10.0 + 5.0 * rank("str_bonus") + 1.0 * (lvl - 1)) * bonusMult
         val luck = (5.0 + 5.0 * rank("luck_bonus")) * bonusMult
         // Dojo "Iron Constitution" / "Arcane Mind" genuinely raise VIT and INT instead of being
         // displayed as constants on the Stats screen, and both grow with the hero's level so
-        // levelling actually adds power.
-        val vit = (10.0 + 5.0 * rank("vit_bonus") + 0.5 * (lvl - 1)) * bonusMult
+        // levelling actually adds power. Equipped armor and nodes add rawItemVit directly to VIT.
+        val vit = (10.0 + 5.0 * rank("vit_bonus") + 0.5 * (lvl - 1) + rawItemVit) * bonusMult
         val intVal = (10.0 + 5.0 * rank("int_bonus") + 0.5 * (lvl - 1)) * bonusMult
 
         // Struggle passives scale with damage endured.
@@ -85,17 +95,12 @@ object DerivedStats {
         val extraCrit = if (isEnchant) 0.25 * (1.0 + 0.1 * (enchantRank - 1)) else 0.0
         val extraCritDmg = if (isEnchant) 0.50 * (1.0 + 0.1 * (enchantRank - 1)) else 0.0
 
-        val weapon = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_WEAPON }
-        val armor = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_ARMOR }
         val ring = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_RING }
         val amulet = s.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_AMULET }
 
         // forge_quality is applied here and nowhere else (craftEquipment bakes in no multiplier).
         val forgeQualityRank = s.armory.upgrades.firstOrNull { it.id == "forge_quality" }?.rank ?: 0
         val gearMult = 1.0 + (0.12 * forgeQualityRank)
-
-        val rawWeaponDmg = weapon?.let { if (it.atk > 0.0) it.atk else it.tier * 12.0 } ?: 2.0
-        val rawArmorDef = armor?.let { if (it.def > 0.0) it.def else it.tier * 8.0 } ?: 0.0
 
         val weaponDmg = rawWeaponDmg * gearMult * bonusMult
         val armorDef = (rawArmorDef + struggleDef) * gearMult * bonusMult
@@ -133,7 +138,7 @@ object DerivedStats {
             critDamage = critDamage
         )
         val computedGearScore = 1200 + (lvl * 15) + (weaponDmg * 20).toInt() +
-            (armorDef * 20).toInt() + ((ringBonus + amuletBonus) * 15).toInt()
+            (armorDef * 20).toInt() + (((ringBonus + amuletBonus) * 15) + (rawItemVit * 10)).toInt()
 
         return Derived(
             str = str,

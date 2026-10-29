@@ -32,6 +32,7 @@ import kotlin.math.max
 enum class SkillSubSection(val label: String, val icon: String, val color: Color) {
     OVERVIEW("OVERVIEW", "[+]", PrimaryNeon),
     HARVEST("HARVEST", "[H]", GreenSuccess),
+    FORGE("FORGE", "[F]", SecondaryGold),
     ARMORY("ARMORY", "[A]", SecondaryGold),
     GENESIS("GENESIS", "[G]", NecroPurple),
     ESSENCE("ESSENCE", "[E]", ManaTeal),
@@ -61,6 +62,8 @@ fun SkillsScreen(
     onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     onActivateTalent: (String) -> Unit = {},
     onUpgradeTalent: (String) -> Unit = {},
+    onUnequipItem: (String) -> Unit = {},
+    onAutoEquip: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -96,6 +99,7 @@ fun SkillsScreen(
                 val level = when (section) {
                     SkillSubSection.OVERVIEW -> ""
                     SkillSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
+                    SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
                     SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
                     SkillSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
                     SkillSubSection.ESSENCE -> "LV ${state.essence.lvl}"
@@ -149,13 +153,24 @@ fun SkillsScreen(
                     onUpgradeDiscipline = onUpgradeDiscipline
                 )
             }
+            SkillSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
+                SubSectionHeader("SKILLS // FORGE FABRICATION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ForgeScreen(
+                    state = state,
+                    onCraftEquipment = onCraftEquipment,
+                    onBrewPotion = onBrewPotion
+                )
+            }
             SkillSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // ARMORY & FABRICATION BAY") { onSectionChange(SkillSubSection.OVERVIEW) }
+                SubSectionHeader("SKILLS // ARMORY & TACTICAL LOADOUT") { onSectionChange(SkillSubSection.OVERVIEW) }
                 ArmoryScreen(
                     state = state,
                     onCraftEquipment = onCraftEquipment,
                     onBrewPotion = onBrewPotion,
-                    onUpgradeDiscipline = onUpgradeDiscipline
+                    onUpgradeDiscipline = onUpgradeDiscipline,
+                    onUnequipItem = onUnequipItem,
+                    onAutoEquip = onAutoEquip,
+                    onOpenForge = { onSectionChange(SkillSubSection.FORGE) }
                 )
             }
             SkillSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
@@ -316,22 +331,38 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             XpProgressBar("ORE MINING", state.harvest.miningLvl, state.harvest.miningXp, XpCurves.skill(state.harvest.miningLvl), SecondaryGold)
         }
 
-        // 03 ARMORY
+        // 03 FORGE
         SkillCategoryCard(
-            title = "03 // ARMORY",
+            title = "03 // FORGE",
+            icon = "[F]",
+            accentColor = SecondaryGold,
+            quickSummary = "13 EQUIPMENT GROUPS · 20 ALCHEMY POTIONS",
+            actionLabel = "OPEN",
+            onAction = { onNavigate(SkillSubSection.FORGE) },
+            level = state.armory.smithingLvl,
+            xp = state.armory.smithingXp,
+            requiredXp = XpCurves.skill(state.armory.smithingLvl),
+            status = "FABRICATION MATRIX"
+        ) {
+            XpProgressBar("SMITHING FORGE", state.armory.smithingLvl, state.armory.smithingXp, XpCurves.skill(state.armory.smithingLvl), SecondaryGold)
+            Spacer(Modifier.height(3.dp))
+            XpProgressBar("HERB SYNTHESIS", state.armory.herbloreLvl, state.armory.herbloreXp, XpCurves.skill(state.armory.herbloreLvl), GreenSuccess)
+        }
+
+        // 04 ARMORY
+        SkillCategoryCard(
+            title = "04 // ARMORY",
             icon = "[A]",
             accentColor = SecondaryGold,
-            quickSummary = "$ores RAW ORES · $potions CHEMICALS IN STORE",
+            quickSummary = "13 GEAR SLOTS · TACTICAL LOADOUT & ENHANCEMENTS",
             actionLabel = "OPEN",
             onAction = { onNavigate(SkillSubSection.ARMORY) },
             level = max(state.armory.smithingLvl, state.armory.herbloreLvl),
             xp = max(state.armory.smithingXp, state.armory.herbloreXp),
             requiredXp = XpCurves.skill(max(state.armory.smithingLvl, state.armory.herbloreLvl)),
-            status = "FABRICATION BAY"
+            status = "TACTICAL LOADOUT"
         ) {
-            XpProgressBar("SMITHING", state.armory.smithingLvl, state.armory.smithingXp, XpCurves.skill(state.armory.smithingLvl), SecondaryGold)
-            Spacer(Modifier.height(3.dp))
-            XpProgressBar("HERBLORE", state.armory.herbloreLvl, state.armory.herbloreXp, XpCurves.skill(state.armory.herbloreLvl), GreenSuccess)
+            XpProgressBar("ARMORY MASTERY", max(state.armory.smithingLvl, state.armory.herbloreLvl), max(state.armory.smithingXp, state.armory.herbloreXp), XpCurves.skill(max(state.armory.smithingLvl, state.armory.herbloreLvl)), SecondaryGold)
         }
 
         // 04 GENESIS

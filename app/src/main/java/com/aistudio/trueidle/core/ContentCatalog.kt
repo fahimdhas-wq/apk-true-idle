@@ -30,33 +30,28 @@ object ContentCatalog {
         val statPreview: String
     )
 
-    /** Weapons show tier*12 ATK and armor tier*8 DEF, which is exactly what craftEquipment bakes in. */
-    val FORGE_RECIPES = listOf(
-        ForgeRecipe("Bronze Glaive", 1, Equipment.SLOT_WEAPON, ItemCatalog.COPPER_ORE, 6, "+12 ATK"),
-        ForgeRecipe("Heavy Plate", 1, Equipment.SLOT_ARMOR, ItemCatalog.COPPER_ORE, 8, "+8 DEF"),
-        ForgeRecipe("Titan Edge", 2, Equipment.SLOT_WEAPON, ItemCatalog.TIN_ORE, 10, "+24 ATK"),
-        ForgeRecipe("Cobalt Cuirass", 2, Equipment.SLOT_ARMOR, ItemCatalog.TIN_ORE, 12, "+16 DEF"),
-        ForgeRecipe("Plasma Cleaver", 3, Equipment.SLOT_WEAPON, ItemCatalog.IRON_ORE, 15, "+36 ATK"),
-        ForgeRecipe("Aegis Carapace", 3, Equipment.SLOT_ARMOR, ItemCatalog.IRON_ORE, 18, "+24 DEF"),
-        ForgeRecipe("Silver Warblade", 4, Equipment.SLOT_WEAPON, ItemCatalog.SILVER_ORE, 18, "+48 ATK"),
-        ForgeRecipe("Silver Bulwark", 4, Equipment.SLOT_ARMOR, ItemCatalog.SILVER_ORE, 22, "+32 DEF"),
-        ForgeRecipe("Obsidian Reaver", 5, Equipment.SLOT_WEAPON, ItemCatalog.OBSIDIAN_ORE, 26, "+60 ATK"),
-        ForgeRecipe("Obsidian Bastion", 5, Equipment.SLOT_ARMOR, ItemCatalog.OBSIDIAN_ORE, 30, "+40 DEF"),
-        ForgeRecipe("Voidsteel Edge", 6, Equipment.SLOT_WEAPON, ItemCatalog.OBSIDIAN_ORE, 34, "+72 ATK"),
-        ForgeRecipe("Voidsteel Aegis", 6, Equipment.SLOT_ARMOR, ItemCatalog.OBSIDIAN_ORE, 38, "+48 DEF")
-    )
+    val RECIPES_BY_GROUP: Map<String, List<ForgeRecipe>> = Equipment.GROUPS.associateWith { group ->
+        (1..TierConfig.size).map { tier ->
+            val tierInfo = TierConfig.forOrdinal(tier)
+            val name = "${tierInfo.id} $group"
+            val oreIdx = ((tier - 1) * ItemCatalog.ORES.size / TierConfig.size).coerceIn(0, ItemCatalog.ORES.size - 1)
+            val reqOre = ItemCatalog.ORES[oreIdx]
+            val reqQty = 4 + ((tier - 1) % 4) * 2
+            val statPreview = if (Equipment.isWeapon(group)) {
+                "+${tier * 12} ATK"
+            } else {
+                "+${tier * 8} DEF, +${tier * 4} VIT"
+            }
+            ForgeRecipe(name, tier, group, reqOre, reqQty, statPreview)
+        }
+    }
+
+    val FORGE_RECIPES: List<ForgeRecipe> = RECIPES_BY_GROUP.values.flatten()
 
     // ---- Harvest ------------------------------------------------------------
-
-    val EXTRA_PLOTS = listOf(
-        Plot(id = 3, herbName = ItemCatalog.STARBLOOM, growthProgress = 0f, durationSeconds = 20f),
-        Plot(id = 4, herbName = ItemCatalog.VOIDCAP, growthProgress = 0f, durationSeconds = 26f)
-    )
-
-    val EXTRA_VEINS = listOf(
-        MiningVein(id = 3, oreName = ItemCatalog.SILVER_ORE, reqLvl = 1, miningProgress = 0f, durationSeconds = 14f),
-        MiningVein(id = 4, oreName = ItemCatalog.OBSIDIAN_ORE, reqLvl = 1, miningProgress = 0f, durationSeconds = 20f)
-    )
+    // Plots and veins are now canonically 20 plots (Herbs 0..19) and 20 veins (Ores 0..19)
+    val EXTRA_PLOTS = emptyList<Plot>()
+    val EXTRA_VEINS = emptyList<MiningVein>()
 
     val EXTRA_HARVEST_UPGRADES = listOf(
         DisciplineUpgrade(

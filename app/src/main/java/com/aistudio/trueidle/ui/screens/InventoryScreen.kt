@@ -92,8 +92,7 @@ fun InventoryScreen(
         // Gear Compare Card (§4.8 / §7.7)
         inspectingItem?.let { item ->
             if (item.category == "Equipment" && !item.isEquipped) {
-                // Rings compare on ATK and amulets on DEF, matching how DerivedStats reads them.
-                val usesAttack = item.slot == Equipment.SLOT_WEAPON || item.slot == Equipment.SLOT_RING
+                val usesAttack = Equipment.isWeapon(item.slot)
                 val currentEquipped = state.inventory.firstOrNull {
                     it.isEquipped && it.slot.equals(item.slot, ignoreCase = true)
                 }

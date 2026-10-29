@@ -13,42 +13,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.aistudio.trueidle.core.ContentCatalog
-import com.aistudio.trueidle.core.ItemCatalog
+import com.aistudio.trueidle.core.DisciplineCategory
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
-import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
+import com.aistudio.trueidle.model.DisciplineUpgrade
 import com.aistudio.trueidle.model.GameState
-import com.aistudio.trueidle.ui.components.SciFiBadge
-import com.aistudio.trueidle.ui.components.SciFiIconType
+import com.aistudio.trueidle.ui.TierColors
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 
-private data class AlchemyRecipe(val name: String, val reqHerb: String, val reqQty: Int, val effectDesc: String)
-
 @Composable
 fun ArmoryScreen(
     state: GameState,
-    onCraftEquipment: (String, Int, String, String, Int) -> Unit,
-    onBrewPotion: (String, String, Int) -> Unit,
+    onCraftEquipment: (String, Int, String, String, Int) -> Unit = { _, _, _, _, _ -> },
+    onBrewPotion: (String, String, Int) -> Unit = { _, _, _ -> },
     onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
+    onUnequipItem: (String) -> Unit = {},
+    onAutoEquip: () -> Unit = {},
+    onOpenForge: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val armory = state.armory
     val scrollState = rememberScrollState()
 
-    // Rendered from the shared catalog so the tier and stat preview cannot drift from the recipe.
-    val forgeRecipes = ContentCatalog.FORGE_RECIPES
-
-    // Rendered from the catalog the engine charges against, so the two cannot drift.
-    val alchemyRecipes = ItemCatalog.POTIONS.map { potion ->
-        AlchemyRecipe(potion.name, potion.herb, potion.herbCost, "Restores ${com.aistudio.trueidle.core.NumberFormatter.short(potion.heal)} HP")
-    }
+    val equippedWeapons = state.inventory.filter { it.isEquipped && Equipment.isWeapon(it.slot) }
+    val equippedArmorAndNodes = state.inventory.filter { it.isEquipped && Equipment.isArmorOrNode(it.slot) }
+    val totalWepAtk = equippedWeapons.sumOf { Equipment.baseAttack(it) }
+    val totalArmorDef = equippedArmorAndNodes.sumOf { Equipment.baseDefense(it) }
+    val totalItemVit = equippedArmorAndNodes.sumOf { Equipment.baseVit(it) }
 
     Column(
         modifier = modifier
@@ -72,14 +69,18 @@ fun ArmoryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ARMORY & FABRICATION BAY", style = TrueIdleType.title, color = SecondaryGold)
-                    Box(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                            .border(1.dp, SecondaryGold)
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    Text("ARMORY & TACTICAL LOADOUT", style = TrueIdleType.title, color = SecondaryGold)
+                    Button(
+                        onClick = onAutoEquip,
+                        shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SecondaryGold.copy(alpha = 0.2f),
+                            contentColor = SecondaryGold
+                        ),
+                        border = BorderStroke(1.dp, SecondaryGold),
+                        modifier = Modifier.testTag("armory_auto_equip_btn")
                     ) {
-                        Text("FORGE ACTIVE", style = TrueIdleType.tag, color = SecondaryGold)
+                        Text("AUTO-EQUIP BEST", style = TrueIdleType.tag)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -101,172 +102,269 @@ fun ArmoryScreen(
             }
         }
 
-        // 2. CYBERNETIC FORGE (Equipment Crafting)
+        // 2. LOADOUT SUMMARY STATS
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, HpRed)
+            ) {
+                Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("WEAPON ATK", style = TrueIdleType.tag, color = HpRed)
+                    Text("+${NumberFormatter.short(totalWepAtk)}", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                    Text("STR SCALED", style = TrueIdleType.meta, color = TextMuted)
+                }
+            }
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, SecondaryGold)
+            ) {
+                Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("ARMOR DEF", style = TrueIdleType.tag, color = SecondaryGold)
+                    Text("+${NumberFormatter.short(totalArmorDef)}", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                    Text("DMG MITIGATION", style = TrueIdleType.meta, color = TextMuted)
+                }
+            }
+            Card(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RectangleShape,
+                border = BorderStroke(1.dp, GreenSuccess)
+            ) {
+                Column(modifier = Modifier.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("GEAR VIT", style = TrueIdleType.tag, color = GreenSuccess)
+                    Text("+${NumberFormatter.short(totalItemVit)}", style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                    Text("MAX HP & REGEN", style = TrueIdleType.meta, color = TextMuted)
+                }
+            }
+        }
+
+        // 3. WEAPONS SECTION (3 GROUPS: RIFLE, SIDEARM, BLADE)
         SciFiPanel(
-            title = "CYBER FORGE (WEAPONS & ARMOR)",
+            title = "WEAPON SLOTS (STR SCALED)",
+            accent = HpRed,
+            tag = "${equippedWeapons.size}/${Equipment.WEAPON_SLOTS.size} EQUIPPED"
+        ) {
+            Equipment.WEAPON_SLOTS.forEach { slot ->
+                val equipped = Equipment.equipped(state, slot)
+                val slotDesc = when (slot) {
+                    Equipment.SLOT_RIFLE -> "PRIMARY RANGED WEAPON · STR DAMAGE"
+                    Equipment.SLOT_SIDEARM -> "BACKUP RANGED WEAPON · STR DAMAGE"
+                    Equipment.SLOT_BLADE -> "MELEE CLOSE-COMBAT WEAPON · STR DAMAGE"
+                    else -> "WEAPON"
+                }
+                SlotCard(
+                    slotName = slot,
+                    slotRole = slotDesc,
+                    equippedItem = equipped,
+                    accent = HpRed,
+                    onUnequip = { equipped?.let { onUnequipItem(it.id) } }
+                )
+            }
+        }
+
+        // 4. ARMOR SLOTS (7 GROUPS: VISOR, VEST, GRIPS, PANTS, BOOTS, DUSTER, RIG)
+        SciFiPanel(
+            title = "ARMOR PLATING (DEF & VIT)",
             accent = SecondaryGold,
-            tag = "TIER 1-6"
+            tag = "${state.inventory.count { it.isEquipped && Equipment.ARMOR_SLOTS.any { s -> s.equals(it.slot, ignoreCase = true) } }}/${Equipment.ARMOR_SLOTS.size} EQUIPPED"
         ) {
-            forgeRecipes.forEach { recipe ->
-                val have = state.inventory.find { it.name == recipe.reqOre }?.count ?: 0.0
-                val canCraft = have >= recipe.reqQty
-
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, if (canCraft) SecondaryGold.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(recipe.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                // Forge grade shown with the canonical tier colour and name.
-                                Text(
-                                    text = "[T${recipe.tier} ${com.aistudio.trueidle.core.TierConfig.forOrdinal(recipe.tier).id}]",
-                                    style = TrueIdleType.tag,
-                                    color = com.aistudio.trueidle.ui.TierColors.colorForOrdinal(recipe.tier)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${recipe.statPreview} · Requires: ${recipe.reqQty}x ${recipe.reqOre} (Have ${NumberFormatter.short(have)})",
-                                style = TrueIdleType.meta,
-                                color = if (canCraft) GreenSuccess else TextMuted
-                            )
-                        }
-                        Button(
-                            onClick = { onCraftEquipment(recipe.name, recipe.tier, recipe.slot, recipe.reqOre, recipe.reqQty) },
-                            enabled = canCraft,
-                            shape = RectangleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (canCraft) SecondaryGold else MaterialTheme.colorScheme.surface,
-                                contentColor = if (canCraft) Color.Black else TextMuted
-                            ),
-                            border = BorderStroke(1.dp, if (canCraft) SecondaryGold else MaterialTheme.colorScheme.outline)
-                        ) {
-                            Text("FORGE", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                        }
-                    }
+            Equipment.ARMOR_SLOTS.forEach { slot ->
+                val equipped = Equipment.equipped(state, slot)
+                val slotDesc = when (slot) {
+                    Equipment.SLOT_VISOR -> "HEAD SENSORS · DEF & VIT"
+                    Equipment.SLOT_VEST -> "CHEST CHASSIS · DEF & VIT"
+                    Equipment.SLOT_GRIPS -> "GAUNTLETS · DEF & VIT"
+                    Equipment.SLOT_PANTS -> "LEG REINFORCEMENTS · DEF & VIT"
+                    Equipment.SLOT_BOOTS -> "FOOT STABILIZERS · DEF & VIT"
+                    Equipment.SLOT_DUSTER -> "CLOAK / MANTLE · DEF & VIT"
+                    Equipment.SLOT_RIG -> "TACTICAL BELT · DEF & VIT"
+                    else -> "ARMOR"
                 }
+                SlotCard(
+                    slotName = slot,
+                    slotRole = slotDesc,
+                    equippedItem = equipped,
+                    accent = SecondaryGold,
+                    onUnequip = { equipped?.let { onUnequipItem(it.id) } }
+                )
             }
         }
 
-        // 3. ALCHEMY SYNTHESIS BAY
+        // 5. NODE SLOTS (3 GROUPS: NODE I, NODE II, NODE III)
         SciFiPanel(
-            title = "BIO-CHEMICAL SYNTHESIZER",
-            accent = GreenSuccess,
-            tag = "POTIONS"
+            title = "BIO-NEURAL NODES (DEF & VIT)",
+            accent = ManaTeal,
+            tag = "${state.inventory.count { it.isEquipped && Equipment.NODE_SLOTS.any { s -> s.equals(it.slot, ignoreCase = true) } }}/${Equipment.NODE_SLOTS.size} EQUIPPED"
         ) {
-            alchemyRecipes.forEach { recipe ->
-                val have = state.inventory.find { it.name == recipe.reqHerb }?.count ?: 0.0
-                val canBrew = have >= recipe.reqQty
-
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, if (canBrew) GreenSuccess.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(recipe.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${recipe.effectDesc} · Requires: ${recipe.reqQty}x ${recipe.reqHerb} (Have ${NumberFormatter.short(have)})",
-                                style = TrueIdleType.meta,
-                                color = if (canBrew) GreenSuccess else TextMuted
-                            )
-                        }
-                        Button(
-                            onClick = { onBrewPotion(recipe.name, recipe.reqHerb, recipe.reqQty) },
-                            enabled = canBrew,
-                            shape = RectangleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (canBrew) GreenSuccess else MaterialTheme.colorScheme.surface,
-                                contentColor = if (canBrew) Color.Black else TextMuted
-                            ),
-                            border = BorderStroke(1.dp, if (canBrew) GreenSuccess else MaterialTheme.colorScheme.outline)
-                        ) {
-                            Text("SYNTHESIZE", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                        }
-                    }
+            Equipment.NODE_SLOTS.forEach { slot ->
+                val equipped = Equipment.equipped(state, slot)
+                val slotDesc = when (slot) {
+                    Equipment.SLOT_NODE_I -> "RING NODE I · DEF & VIT"
+                    Equipment.SLOT_NODE_II -> "RING NODE II · DEF & VIT"
+                    Equipment.SLOT_NODE_III -> "RING NODE III · DEF & VIT"
+                    else -> "RING NODE"
                 }
+                SlotCard(
+                    slotName = slot,
+                    slotRole = slotDesc,
+                    equippedItem = equipped,
+                    accent = ManaTeal,
+                    onUnequip = { equipped?.let { onUnequipItem(it.id) } }
+                )
             }
         }
 
-        // 4. ARMORY UPGRADES BAY
+        // 6. ARMORY DISCIPLINE UPGRADES
         SciFiPanel(
-            title = "ARMORY PROTOCOL UPGRADES",
-            accent = PrimaryNeon,
-            tag = "MODIFICATIONS"
+            title = "ARMORY PROTOCOLS",
+            accent = SecondaryGold,
+            tag = "FABRICATION TECH"
         ) {
-            armory.upgrades.forEach { upg ->
-                val cost = UpgradeCosts.nextRank(upg.baseCost, upg.rank, upg.costMultiplier)
-                val canAfford = state.player.gold >= cost
-                val isMax = upg.rank >= upg.maxRank
+            armory.upgrades.forEach { upgrade ->
+                ArmoryUpgradeCard(
+                    upgrade = upgrade,
+                    playerCredits = state.player.gold,
+                    onUpgrade = { onUpgradeDiscipline(DisciplineCategory.ARMORY, upgrade.id) }
+                )
+            }
+        }
+    }
+}
 
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    shape = RectangleShape,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+@Composable
+private fun SlotCard(
+    slotName: String,
+    slotRole: String,
+    equippedItem: com.aistudio.trueidle.model.InventoryItem?,
+    accent: Color,
+    onUnequip: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .testTag("slot_card_${slotName.replace(" ", "_").lowercase()}"),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, if (equippedItem != null) accent.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(upg.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.surface, RectangleShape)
-                                        .border(1.dp, PrimaryNeon)
-                                        .padding(horizontal = 3.dp, vertical = 1.dp)
-                                ) {
-                                    Text("RANK ${upg.rank}/${upg.maxRank}", style = TrueIdleType.numberSmall, color = PrimaryNeon)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(upg.description, style = TrueIdleType.meta, color = TextMuted)
-                        }
-
-                        Button(
-                            onClick = { onUpgradeDiscipline(DisciplineCategory.ARMORY, upg.id) },
-                            enabled = canAfford && !isMax,
-                            shape = RectangleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (canAfford) PrimaryNeon else MaterialTheme.colorScheme.surface,
-                                contentColor = if (canAfford) Color.Black else TextMuted
-                            ),
-                            border = BorderStroke(1.dp, if (canAfford) PrimaryNeon else MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.testTag("upgrade_armory_${upg.id}")
-                        ) {
-                            if (isMax) {
-                                Text("MAX", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
-                            } else {
-                                SciFiBadge(
-                                    type = SciFiIconType.CREDIT,
-                                    label = NumberFormatter.short(cost),
-                                    iconTint = if (canAfford) Color.Black else TextMuted,
-                                    textColor = if (canAfford) Color.Black else TextMuted
-                                )
-                            }
-                        }
+                    Text(
+                        text = slotName.uppercase(),
+                        style = TrueIdleType.tag,
+                        color = accent
+                    )
+                    if (equippedItem != null) {
+                        val tierInfo = TierConfig.forOrdinal(equippedItem.tier)
+                        Text(
+                            text = "[${tierInfo.id}]",
+                            style = TrueIdleType.tag,
+                            color = TierColors.colorForOrdinal(equippedItem.tier)
+                        )
                     }
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                if (equippedItem != null) {
+                    Text(
+                        text = equippedItem.name,
+                        style = TrueIdleType.title,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${equippedItem.statDesc} · $slotRole",
+                        style = TrueIdleType.meta,
+                        color = TextMuted
+                    )
+                } else {
+                    Text(
+                        text = "[EMPTY SLOT]",
+                        style = TrueIdleType.title,
+                        color = TextMuted
+                    )
+                    Text(
+                        text = slotRole,
+                        style = TrueIdleType.meta,
+                        color = TextMuted.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            if (equippedItem != null) {
+                Button(
+                    onClick = onUnequip,
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = HpRed
+                    ),
+                    border = BorderStroke(1.dp, HpRed),
+                    modifier = Modifier.testTag("unequip_btn_${slotName.replace(" ", "_").lowercase()}")
+                ) {
+                    Text("UNEQUIP", style = TrueIdleType.tag)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArmoryUpgradeCard(
+    upgrade: DisciplineUpgrade,
+    playerCredits: Long,
+    onUpgrade: () -> Unit
+) {
+    val cost = UpgradeCosts.nextRank(upgrade.baseCost, upgrade.rank)
+    val maxed = upgrade.rank >= upgrade.maxRank
+    val canAfford = !maxed && playerCredits >= cost
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(upgrade.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                Text(upgrade.description, style = TrueIdleType.meta, color = TextMuted)
+                Text("RANK ${upgrade.rank}/${upgrade.maxRank}", style = TrueIdleType.tag, color = SecondaryGold)
+            }
+            Button(
+                onClick = onUpgrade,
+                enabled = canAfford,
+                shape = RectangleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SecondaryGold,
+                    contentColor = Color.Black,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = TextMuted
+                ),
+                border = BorderStroke(1.dp, if (canAfford) SecondaryGold else MaterialTheme.colorScheme.outline)
+            ) {
+                Text(
+                    text = if (maxed) "MAX" else "${NumberFormatter.short(cost)} CR",
+                    style = TrueIdleType.tag
+                )
             }
         }
     }

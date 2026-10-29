@@ -309,7 +309,9 @@ fun TrueIdleApp(
                     onRerollSlayerTask = { viewModel.rerollSlayerTask() },
                     onUpgradeDiscipline = { cat, id -> viewModel.upgradeDiscipline(cat, id) },
                     onActivateTalent = { id -> viewModel.activateTalent(id) },
-                    onUpgradeTalent = { id -> viewModel.upgradeTalent(id) }
+                    onUpgradeTalent = { id -> viewModel.upgradeTalent(id) },
+                    onUnequipItem = { id -> viewModel.unequipItem(id) },
+                    onAutoEquip = { viewModel.toggleAutoEquipBestGear() }
                 )
                 TrueIdleTab.STATS -> StatsScreen(
                     state = state

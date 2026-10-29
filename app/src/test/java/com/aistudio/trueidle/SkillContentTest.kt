@@ -29,46 +29,46 @@ class SkillContentTest {
 
     @Test
     fun `expanded harvest content is present`() {
-        assertEquals(5, reconciled.harvest.plots.size)
-        assertEquals(5, reconciled.harvest.veins.size)
-        assertEquals(5, reconciled.harvest.veins.map { it.id }.toSet().size)
-        assertEquals(listOf("Starbloom", "Voidcap"), reconciled.harvest.plots.map { it.herbName }.drop(3))
-        assertEquals(listOf("Silver Ore", "Obsidian Ore"), reconciled.harvest.veins.map { it.oreName }.drop(3))
+        assertEquals(20, reconciled.harvest.plots.size)
+        assertEquals(20, reconciled.harvest.veins.size)
+        assertEquals(20, reconciled.harvest.veins.map { it.id }.toSet().size)
+        assertEquals(ItemCatalog.HEALING_HERB, reconciled.harvest.plots.first().herbName)
+        assertEquals(ItemCatalog.WORLDTREE_LEAF, reconciled.harvest.plots.last().herbName)
+        assertEquals(ItemCatalog.STONE, reconciled.harvest.veins.first().oreName)
+        assertEquals(ItemCatalog.MITHRIL_ORE, reconciled.harvest.veins.last().oreName)
     }
 
     @Test
     fun `each new herb and ore has a real sell value`() {
-        assertTrue(ItemCatalog.ORES.containsAll(listOf(ItemCatalog.SILVER_ORE, ItemCatalog.OBSIDIAN_ORE)))
-        assertTrue(ItemCatalog.HERBS.containsAll(listOf(ItemCatalog.STARBLOOM, ItemCatalog.VOIDCAP)))
+        assertTrue(ItemCatalog.ORES.containsAll(listOf(ItemCatalog.SILVER_ORE, ItemCatalog.OBSIDIAN)))
+        assertTrue(ItemCatalog.HERBS.containsAll(listOf(ItemCatalog.HEALING_HERB, ItemCatalog.WORLDTREE_LEAF)))
         assertTrue(ItemCatalog.resource(ItemCatalog.SILVER_ORE).sellValue > 0L)
-        assertTrue(ItemCatalog.resource(ItemCatalog.OBSIDIAN_ORE).sellValue > 0L)
-        assertTrue(ItemCatalog.resource(ItemCatalog.STARBLOOM).sellValue > 0L)
-        assertTrue(ItemCatalog.resource(ItemCatalog.VOIDCAP).sellValue > 0L)
+        assertTrue(ItemCatalog.resource(ItemCatalog.OBSIDIAN).sellValue > 0L)
+        assertTrue(ItemCatalog.resource(ItemCatalog.HEALING_HERB).sellValue > 0L)
+        assertTrue(ItemCatalog.resource(ItemCatalog.WORLDTREE_LEAF).sellValue > 0L)
         assertTrue(ItemCatalog.resource("Unknown Salvage").sellValue > 0L)
     }
 
     @Test
-    fun `forge recipes cover tiers one to six and quote the stats the engine forges`() {
-        assertEquals(12, ContentCatalog.FORGE_RECIPES.size)
-        assertEquals(12, ContentCatalog.FORGE_RECIPES.map { it.name }.toSet().size)
+    fun `forge recipes cover all groups and tiers`() {
+        assertEquals(Equipment.GROUPS.size * com.aistudio.trueidle.core.TierConfig.size, ContentCatalog.FORGE_RECIPES.size)
         ContentCatalog.FORGE_RECIPES.forEach { recipe ->
             assertTrue("${recipe.reqOre} is not a known ore", ItemCatalog.ORES.contains(recipe.reqOre))
-            val expected = if (recipe.slot == Equipment.SLOT_WEAPON) {
+            val expected = if (Equipment.isWeapon(recipe.slot)) {
                 "+${recipe.tier * 12} ATK"
             } else {
-                "+${recipe.tier * 8} DEF"
+                "+${recipe.tier * 8} DEF, +${recipe.tier * 4} VIT"
             }
             assertEquals(recipe.name, expected, recipe.statPreview)
         }
-        assertEquals((1..6).toSet(), ContentCatalog.FORGE_RECIPES.map { it.tier }.toSet())
     }
 
     @Test
     fun `potion table grows and stays unique`() {
-        assertEquals(5, ItemCatalog.POTIONS.size)
-        assertEquals(5, ItemCatalog.POTIONS.map { it.name }.toSet().size)
+        assertEquals(20, ItemCatalog.POTIONS.size)
+        assertEquals(20, ItemCatalog.POTIONS.map { it.name }.toSet().size)
         assertTrue(ItemCatalog.POTIONS.all { it.herbCost > 0 && it.heal > 0.0 })
-        assertTrue(ItemCatalog.potionHeal("Voidcap Draught") > ItemCatalog.potionHeal("Starbloom Elixir"))
+        assertTrue(ItemCatalog.potionHeal("Worldtree Dew") > ItemCatalog.potionHeal("Minor Health Flask"))
     }
 
     @Test
@@ -97,8 +97,8 @@ class SkillContentTest {
     @Test
     fun `an old save gains the new content on load`() {
         val engine = GameEngine(GameState())
-        assertEquals(5, engine.state.harvest.plots.size)
-        assertEquals(5, engine.state.harvest.veins.size)
+        assertEquals(20, engine.state.harvest.plots.size)
+        assertEquals(20, engine.state.harvest.veins.size)
         assertEquals(9, engine.state.training.nodes.size)
         assertEquals(8, engine.state.talent.activeTalents.size)
         assertEquals(5, engine.state.talent.struggleTalents.size)
@@ -109,15 +109,17 @@ class SkillContentTest {
 
     @Test
     fun `mining yield upgrade raises ore per extraction`() {
+        val copperVeinId = GameState().harvest.veins.indexOfFirst { it.oreName == ItemCatalog.COPPER_ORE }
         val base = GameState().copy(
             harvest = GameState().harvest.copy(
-                veins = listOf(
-                    MiningVein(id = 0, oreName = ItemCatalog.COPPER_ORE, isReady = true, durationSeconds = 5f)
-                )
+                veins = GameState().harvest.veins.map {
+                    if (it.oreName == ItemCatalog.COPPER_ORE) it.copy(isReady = true) else it
+                }
             )
         )
-        val plain = GameEngine(base).mineVein(0)
-        assertEquals(12.0 + 3.0, plain.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-9)
+        val initialCopper = base.inventory.firstOrNull { it.name == ItemCatalog.COPPER_ORE }?.count ?: 0.0
+        val plain = GameEngine(base).mineVein(copperVeinId)
+        assertEquals(initialCopper + 3.0, plain.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-9)
 
         val seeded = GameEngine(base).state
         val upgraded = seeded.copy(
@@ -127,8 +129,8 @@ class SkillContentTest {
                 }
             )
         )
-        val rich = GameEngine(upgraded).mineVein(0)
-        assertEquals(12.0 + 4.0, rich.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-9)
+        val rich = GameEngine(upgraded).mineVein(copperVeinId)
+        assertEquals(initialCopper + 4.0, rich.inventory.first { it.name == ItemCatalog.COPPER_ORE }.count, 1e-9)
     }
 
     @Test

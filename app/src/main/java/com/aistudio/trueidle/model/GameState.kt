@@ -143,14 +143,48 @@ data class HarvestState(
     val miningLvl: Int = 1,
     val miningXp: Long = 0L,
     val plots: List<Plot> = listOf(
-        Plot(id = 0, herbName = "Felweed", growthProgress = 0.4f, durationSeconds = 8f),
-        Plot(id = 1, herbName = "Bloodroot", growthProgress = 0.1f, durationSeconds = 12f),
-        Plot(id = 2, herbName = "Moonflower", growthProgress = 0f, durationSeconds = 15f)
+        Plot(id = 0, herbName = "Healing Herb", durationSeconds = 4f),
+        Plot(id = 1, herbName = "Lesser Healing Herb", durationSeconds = 5f),
+        Plot(id = 2, herbName = "Mana Herb", durationSeconds = 6f),
+        Plot(id = 3, herbName = "Antidote Herb", durationSeconds = 7f),
+        Plot(id = 4, herbName = "Vitality Herb", durationSeconds = 8f),
+        Plot(id = 5, herbName = "Spirit Grass", durationSeconds = 10f),
+        Plot(id = 6, herbName = "Moonshade Herb", durationSeconds = 12f),
+        Plot(id = 7, herbName = "Sunroot Herb", durationSeconds = 14f),
+        Plot(id = 8, herbName = "Silverleaf Herb", durationSeconds = 16f),
+        Plot(id = 9, herbName = "Windwhisper Grass", durationSeconds = 18f),
+        Plot(id = 10, herbName = "Bloodroot", durationSeconds = 20f),
+        Plot(id = 11, herbName = "Frostbloom", durationSeconds = 22f),
+        Plot(id = 12, herbName = "Emberleaf", durationSeconds = 24f),
+        Plot(id = 13, herbName = "Dreamer's Sage", durationSeconds = 26f),
+        Plot(id = 14, herbName = "Golden Ginseng", durationSeconds = 28f),
+        Plot(id = 15, herbName = "Moonlight Blossom", durationSeconds = 30f),
+        Plot(id = 16, herbName = "Sacred Lotus", durationSeconds = 32f),
+        Plot(id = 17, herbName = "Mandrake Root", durationSeconds = 35f),
+        Plot(id = 18, herbName = "Spiritbloom", durationSeconds = 38f),
+        Plot(id = 19, herbName = "Worldtree Leaf", durationSeconds = 42f)
     ),
     val veins: List<MiningVein> = listOf(
-        MiningVein(id = 0, oreName = "Copper Ore", reqLvl = 1, miningProgress = 0.3f, durationSeconds = 5f),
-        MiningVein(id = 1, oreName = "Tin Ore", reqLvl = 1, miningProgress = 0.1f, durationSeconds = 7f),
-        MiningVein(id = 2, oreName = "Iron Ore", reqLvl = 1, miningProgress = 0f, durationSeconds = 10f)
+        MiningVein(id = 0, oreName = "Stone", reqLvl = 1, durationSeconds = 3f),
+        MiningVein(id = 1, oreName = "Coal", reqLvl = 1, durationSeconds = 4f),
+        MiningVein(id = 2, oreName = "Copper Ore", reqLvl = 1, durationSeconds = 5f),
+        MiningVein(id = 3, oreName = "Iron Ore", reqLvl = 2, durationSeconds = 6f),
+        MiningVein(id = 4, oreName = "Tin Ore", reqLvl = 3, durationSeconds = 7f),
+        MiningVein(id = 5, oreName = "Silver Ore", reqLvl = 5, durationSeconds = 8f),
+        MiningVein(id = 6, oreName = "Gold Ore", reqLvl = 7, durationSeconds = 10f),
+        MiningVein(id = 7, oreName = "Quartz", reqLvl = 10, durationSeconds = 12f),
+        MiningVein(id = 8, oreName = "Diamond", reqLvl = 13, durationSeconds = 14f),
+        MiningVein(id = 9, oreName = "Emerald", reqLvl = 16, durationSeconds = 16f),
+        MiningVein(id = 10, oreName = "Ruby", reqLvl = 20, durationSeconds = 18f),
+        MiningVein(id = 11, oreName = "Sapphire", reqLvl = 24, durationSeconds = 20f),
+        MiningVein(id = 12, oreName = "Lapis Lazuli", reqLvl = 28, durationSeconds = 22f),
+        MiningVein(id = 13, oreName = "Redstone", reqLvl = 32, durationSeconds = 24f),
+        MiningVein(id = 14, oreName = "Obsidian", reqLvl = 36, durationSeconds = 26f),
+        MiningVein(id = 15, oreName = "Platinum Ore", reqLvl = 40, durationSeconds = 28f),
+        MiningVein(id = 16, oreName = "Titanium Ore", reqLvl = 45, durationSeconds = 30f),
+        MiningVein(id = 17, oreName = "Cobalt Ore", reqLvl = 50, durationSeconds = 32f),
+        MiningVein(id = 18, oreName = "Uranium Ore", reqLvl = 55, durationSeconds = 35f),
+        MiningVein(id = 19, oreName = "Mithril Ore", reqLvl = 60, durationSeconds = 40f)
     ),
     val autoCollectUnlocked: Boolean = false,
     val autoCollectEnabled: Boolean = true,
@@ -281,12 +315,13 @@ data class InventoryItem(
     val category: String = "Resource", // "Equipment", "Potion", "Resource", "Trophy"
     val count: Double = 1.0,
     val tier: Int = 1,
-    val slot: String = "", // "Weapon", "Armor", "Ring", "Amulet"
+    val slot: String = "", // "Rifle", "Sidearm", "Blade", "Visor", "Vest", "Grips", "Pants", "Boots", "Duster", "Rig", "Node I", "Node II", "Node III"
     val statDesc: String = "",
     val sellValue: Long = 10L,
     val isEquipped: Boolean = false,
     val atk: Double = 0.0,
-    val def: Double = 0.0
+    val def: Double = 0.0,
+    val vit: Double = 0.0
 ) {
     constructor(
         id: String,
@@ -299,8 +334,23 @@ data class InventoryItem(
         sellValue: Long = 10L,
         isEquipped: Boolean = false,
         atk: Double = 0.0,
-        def: Double = 0.0
-    ) : this(id, name, category, count.toDouble(), tier, slot, statDesc, sellValue, isEquipped, atk, def)
+        def: Double = 0.0,
+        vit: Double = 0.0
+    ) : this(id, name, category, count.toDouble(), tier, slot, statDesc, sellValue, isEquipped, atk, def, vit)
+
+    constructor(
+        id: String,
+        name: String,
+        category: String,
+        count: Double,
+        tier: Int,
+        slot: String,
+        statDesc: String,
+        sellValue: Long,
+        isEquipped: Boolean,
+        atk: Double,
+        def: Double
+    ) : this(id, name, category, count, tier, slot, statDesc, sellValue, isEquipped, atk, def, 0.0)
 }
 
 @Serializable

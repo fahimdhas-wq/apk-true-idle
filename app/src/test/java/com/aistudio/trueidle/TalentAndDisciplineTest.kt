@@ -104,12 +104,12 @@ class TalentAndDisciplineTest {
         for (i in 1..25) {
             engine.tick(0.25f)
         }
-        val copper = engine.state.harvest.veins[0]
-        assertTrue("Copper vein should be ready after 25 ticks (6.25s)", copper.isReady)
-        val initialOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0.0
+        val stone = engine.state.harvest.veins[0]
+        assertTrue("Stone vein should be ready after 25 ticks (6.25s)", stone.isReady)
+        val initialOres = engine.state.inventory.find { it.name == "Stone" }?.count ?: 0.0
         engine.mineVein(0)
-        val afterOres = engine.state.inventory.find { it.name == "Copper Ore" }?.count ?: 0.0
-        assertTrue("Should have collected copper ore", afterOres > initialOres)
+        val afterOres = engine.state.inventory.find { it.name == "Stone" }?.count ?: 0.0
+        assertTrue("Should have collected stone", afterOres > initialOres)
     }
 
     @Test
