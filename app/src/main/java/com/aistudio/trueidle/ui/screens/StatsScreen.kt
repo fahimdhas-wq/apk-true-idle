@@ -99,7 +99,7 @@ fun StatsScreen(
         SciFiPanel(
             title = "EQUIPMENT",
             accent = PrimaryNeon,
-            tag = "GS ${d.gearScore}"
+            tag = "GS ${NumberFormatter.short(d.gearScore)}"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Top Row: Weapon & Armor
