@@ -59,12 +59,12 @@ class HarvestArmoryForgeUpdateTest {
     }
 
     // -------------------------------------------------------------------------
-    // ITEM 2: REWARD MATH (XP AND PROFICIENCY GRANTED IN EQUAL AMOUNTS TO YIELD)
+    // ITEM 2: TIER-WEIGHTED XP AND PROFICIENCY REWARDS
     // -------------------------------------------------------------------------
     @Test
     fun testEqualRewardMathForFarming() {
         // Base plot yield = 2.0. With proficiency lvl 1, multiplier = 1.0 -> yield = 2.0 items.
-        // Gaining 2 items must grant exactly 2 Farming XP and 2 Proficiency XP.
+        // Two tier-1 herb units grant 24 Farming XP (12 per unit) and 2 Proficiency XP.
         val baseState = GameState().copy(
             harvest = GameState().harvest.copy(
                 plots = GameState().harvest.plots.map {
@@ -85,16 +85,16 @@ class HarvestArmoryForgeUpdateTest {
 
         // Yield is 2.0
         assertEquals(2.0, itemsGained, 1e-6)
-        // Farming XP gained is 2L (equal to items gained)
-        assertEquals(2L, engine.state.harvest.farmingXp)
-        // Proficiency XP gained is 2L (equal to items gained and equal to skill XP)
+        // Farming XP is 24L (12 XP per item x 2 items)
+        assertEquals(24L, engine.state.harvest.farmingXp)
+        // Proficiency XP remains tied to the actual proficiency-adjusted yield.
         assertEquals(2L, plot.proficiencyXp)
     }
 
     @Test
     fun testEqualRewardMathForMining() {
         // Base vein yield = 3.0. With proficiency lvl 1, multiplier = 1.0 -> yield = 3.0 items.
-        // Gaining 3 items must grant exactly 3 Mining XP and 3 Proficiency XP.
+        // Three Stone units grant 36 Mining XP (12 per unit) and 3 Proficiency XP.
         val baseState = GameState().copy(
             harvest = GameState().harvest.copy(
                 veins = GameState().harvest.veins.map {
@@ -115,9 +115,9 @@ class HarvestArmoryForgeUpdateTest {
 
         // Yield is 3.0
         assertEquals(3.0, itemsGained, 1e-6)
-        // Mining XP gained is 3L (equal to items gained)
-        assertEquals(3L, engine.state.harvest.miningXp)
-        // Proficiency XP gained is 3L (equal to items gained and equal to skill XP)
+        // Mining XP is 36L (12 XP per Stone x 3 Stone)
+        assertEquals(36L, engine.state.harvest.miningXp)
+        // Proficiency XP remains tied to the actual proficiency-adjusted yield.
         assertEquals(3L, vein.proficiencyXp)
     }
 
