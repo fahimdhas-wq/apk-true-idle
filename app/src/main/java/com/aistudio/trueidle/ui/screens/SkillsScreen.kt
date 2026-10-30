@@ -323,12 +323,12 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             onAction = { onNavigate(SkillSubSection.HARVEST) },
             level = max(state.harvest.farmingLvl, state.harvest.miningLvl),
             xp = max(state.harvest.farmingXp, state.harvest.miningXp),
-            requiredXp = XpCurves.skill(max(state.harvest.farmingLvl, state.harvest.miningLvl)),
+            requiredXp = XpCurves.gatheringSkill(max(state.harvest.farmingLvl, state.harvest.miningLvl)),
             status = "EXTRACTION PROTOCOL"
         ) {
-            XpProgressBar("BIO-FARMING", state.harvest.farmingLvl, state.harvest.farmingXp, XpCurves.skill(state.harvest.farmingLvl), GreenSuccess)
+            XpProgressBar("BIO-FARMING", state.harvest.farmingLvl, state.harvest.farmingXp, XpCurves.gatheringSkill(state.harvest.farmingLvl), GreenSuccess)
             Spacer(Modifier.height(3.dp))
-            XpProgressBar("ORE MINING", state.harvest.miningLvl, state.harvest.miningXp, XpCurves.skill(state.harvest.miningLvl), SecondaryGold)
+            XpProgressBar("ORE MINING", state.harvest.miningLvl, state.harvest.miningXp, XpCurves.gatheringSkill(state.harvest.miningLvl), SecondaryGold)
         }
 
         // 03 FORGE
