@@ -157,7 +157,6 @@ class TalentAndDisciplineTest {
     }
 
     @Test
-    fun testProficiencyYieldScaling()    @Test
     fun testProficiencyYieldScaling() {
         // Level 1 multiplier = 1.0 (2^0)
         assertEquals(1.0, XpCurves.proficiencyYieldMultiplier(1), 1e-6)
