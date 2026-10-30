@@ -203,8 +203,11 @@ class HarvestXpTest {
             }
         }
 
-        val requirement: (Int) -> Double =
-            if (isMining) XpCurves::miningSkillXp else XpCurves::farmingSkillXp
+        val requirement: (Int) -> Double = if (isMining) {
+            { level -> XpCurves.miningSkillXp(level) }
+        } else {
+            { level -> XpCurves.farmingSkillXp(level) }
+        }
 
         var elapsedSeconds = 0.0
         for (level in 1 until XpCurves.GATHERING_SKILL_MAX_LEVEL) {
