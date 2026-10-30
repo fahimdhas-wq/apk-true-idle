@@ -24,7 +24,7 @@ fun CombatTelemetryCard(
     state: GameState,
     modifier: Modifier = Modifier
 ) {
-    val d = com.aistudio.trueidle.ui.LocalDerived.current
+    val d = com.aistudio.trueidle.ui.state.LocalDerived.current
     val playerDps = CombatMath.heroDps(d)
     val beastDps = CombatMath.beastDps(state.beasts)
     val armyDps = CombatMath.armyDps(state.necro)

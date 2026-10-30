@@ -22,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.BuildConfig
 import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.Derived
+import com.aistudio.trueidle.ui.state.LocalDerived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
 import com.aistudio.trueidle.ui.components.DevPanel
@@ -55,11 +55,9 @@ import com.aistudio.trueidle.ui.screens.*
 import com.aistudio.trueidle.ui.theme.*
 import com.aistudio.trueidle.viewmodel.GameViewModel
 
-val LocalDerived = compositionLocalOf<Derived> { error("Derived not provided") }
-
 enum class TrueIdleTab(@StringRes val labelRes: Int, val icon: ImageVector) {
     COMBAT(R.string.tab_combat, Icons.Default.PlayArrow),
-    SKILLS(R.string.tab_skills, Icons.Default.Build),
+    CLASS(R.string.tab_class, Icons.Default.Build),
     STATS(R.string.tab_stats, Icons.Default.Star),
     INVENTORY(R.string.tab_arsenal, Icons.Default.ShoppingCart),
     SETTINGS(R.string.tab_system, Icons.Default.Settings)
@@ -76,7 +74,7 @@ fun TrueIdleApp(
     val recoveryReason by viewModel.recoveryReason.collectAsStateWithLifecycle()
     var currentTab by rememberSaveable { mutableStateOf(TrueIdleTab.COMBAT) }
     // Hoisted so the Support module can open Genesis directly instead of the overview.
-    var skillsSection by rememberSaveable { mutableStateOf(SkillSubSection.OVERVIEW) }
+    var classSection by rememberSaveable { mutableStateOf(ClassSubSection.OVERVIEW) }
 
     // System back returns to Combat rather than dropping out of the app from any tab.
     BackHandler(enabled = currentTab != TrueIdleTab.COMBAT) {
@@ -296,9 +294,9 @@ fun TrueIdleApp(
                     onSelectLogFilter = { filter -> viewModel.setLogFilter(filter) },
                     onClearLogs = { viewModel.clearLogs() },
                     // Both squads are managed on the Genesis screen, so this navigates there
-                    // rather than to the Skills overview. The kind is kept for the component
+                    // rather than to the Class overview. The kind is kept for the component
                     // contract; per-squad deep links would need the Genesis sub-tab hoisted too.
-                    onManageSupport = { skillsSection = SkillSubSection.GENESIS; currentTab = TrueIdleTab.SKILLS },
+                    onManageSupport = { classSection = ClassSubSection.GENESIS; currentTab = TrueIdleTab.CLASS },
                     onUseHpPotion = { viewModel.usePotionByName(state.potionSettings.selectedHpPotion) },
                     onUseMpPotion = { viewModel.usePotionByName(state.potionSettings.selectedMpPotion) },
                     onSetHpThreshold = { viewModel.setHpAutoThreshold(it) },
@@ -306,10 +304,10 @@ fun TrueIdleApp(
                     onSelectHpPotion = { viewModel.selectHpPotion(it) },
                     onSelectMpPotion = { viewModel.selectMpPotion(it) }
                 )
-                TrueIdleTab.SKILLS -> SkillsScreen(
+                TrueIdleTab.CLASS -> ClassScreen(
                     state = state,
-                    currentSection = skillsSection,
-                    onSectionChange = { skillsSection = it },
+                    currentSection = classSection,
+                    onSectionChange = { classSection = it },
                     onHarvestPlot = { id -> viewModel.harvestPlot(id) },
                     onMineVein = { id -> viewModel.mineVein(id) },
                     onTogglePlotAutoQueue = { id -> viewModel.togglePlotAutoQueue(id) },

@@ -224,7 +224,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
+                                    text = "CLASS +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
@@ -443,7 +443,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
+                                    text = "CLASS +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )

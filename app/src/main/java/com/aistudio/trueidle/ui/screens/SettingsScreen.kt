@@ -49,7 +49,7 @@ import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.runtime.ResourceProbe
 import com.aistudio.trueidle.runtime.ResourceSample
-import com.aistudio.trueidle.ui.LocalDerived
+import com.aistudio.trueidle.ui.state.LocalDerived
 import com.aistudio.trueidle.ui.components.SciFiButton
 import com.aistudio.trueidle.ui.components.SciFiDialog
 import com.aistudio.trueidle.ui.components.SciFiGauge

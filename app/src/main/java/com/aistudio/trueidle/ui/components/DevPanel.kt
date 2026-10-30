@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.model.GameState
-import com.aistudio.trueidle.ui.LocalDerived
+import com.aistudio.trueidle.ui.state.LocalDerived
 import com.aistudio.trueidle.ui.theme.BorderDark
 import com.aistudio.trueidle.ui.theme.GreenSuccess
 import com.aistudio.trueidle.ui.theme.HpRed
@@ -176,7 +176,7 @@ fun DevPanel(
 
                 DevSectionTitle("UNLOCKS")
                 DevActionButton(
-                    label = "UNLOCK EVERYTHING (STAGES · ACHIEVEMENTS · SKILLS)",
+                    label = "UNLOCK EVERYTHING (STAGES · ACHIEVEMENTS · CLASSES)",
                     accent = GreenSuccess,
                     testTag = "dev_unlock_all",
                     onClick = onUnlockAll

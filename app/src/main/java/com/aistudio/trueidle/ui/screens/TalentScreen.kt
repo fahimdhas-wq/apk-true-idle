@@ -29,7 +29,7 @@ fun TalentScreen(
     modifier: Modifier = Modifier
 ) {
     val talent = state.talent
-    val derived = com.aistudio.trueidle.ui.LocalDerived.current
+    val derived = com.aistudio.trueidle.ui.state.LocalDerived.current
     val scrollState = rememberScrollState()
 
     Column(

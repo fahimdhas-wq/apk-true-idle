@@ -120,7 +120,7 @@ fun LogView(
                     "all" to "ALL",
                     "combat" to "COMBAT",
                     "loot" to "LOOT",
-                    "skills" to "SKILLS",
+                    "skills" to "CLASS",
                     "system" to "SYSTEM"
                 ).forEach { (key, label) ->
                     val isSelected = (currentFilter == key)
@@ -207,7 +207,7 @@ fun LogView(
                             val (badgeLabel, accentColor) = when (log.type) {
                                 LogType.COMBAT -> "CMB" to HpRed
                                 LogType.LOOT, LogType.GAIN -> "LOT" to SecondaryGold
-                                LogType.SKILL -> "SKL" to GreenSuccess
+                                LogType.SKILL -> "CLS" to GreenSuccess
                                 LogType.SYSTEM, LogType.MILESTONE -> "SYS" to PrimaryNeon
                                 else -> "INFO" to MaterialTheme.colorScheme.onSurface
                             }

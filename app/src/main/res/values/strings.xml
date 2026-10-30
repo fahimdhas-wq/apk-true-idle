@@ -3,7 +3,7 @@
 
     <!-- Bottom navigation labels. These must match the tabs defined in TrueIdleTab. -->
     <string name="tab_combat">COMBAT</string>
-    <string name="tab_skills">SKILLS</string>
+    <string name="tab_class">CLASS</string>
     <string name="tab_stats">STATS</string>
     <string name="tab_arsenal">ARSENAL</string>
     <string name="tab_system">SYSTEM</string>

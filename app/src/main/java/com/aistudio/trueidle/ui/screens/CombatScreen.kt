@@ -54,7 +54,7 @@ fun CombatScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val m = state.monster
-    val derived = com.aistudio.trueidle.ui.LocalDerived.current
+    val derived = com.aistudio.trueidle.ui.state.LocalDerived.current
     val totalDps = CombatMath.totalDps(state, derived)
     val mitigation = CombatMath.mitigation(m.armor)
     val effDps = totalDps * mitigation
@@ -295,15 +295,21 @@ fun CombatScreen(
         }
 
         // 4b. STACKED HEALTH / MANA QUICK-DEPLOY POTS
-        PotionQuickBar(
-            state = state,
-            onUseHp = onUseHpPotion,
-            onUseMp = onUseMpPotion,
-            onSetHpThreshold = onSetHpThreshold,
-            onSetMpThreshold = onSetMpThreshold,
-            onSelectHp = onSelectHpPotion,
-            onSelectMp = onSelectMpPotion
-        )
+        SciFiPanel(
+            title = "POTION QUICK-DEPLOY",
+            accent = ManaTeal,
+            tag = "AUTO-USE"
+        ) {
+            PotionQuickBar(
+                state = state,
+                onUseHp = onUseHpPotion,
+                onUseMp = onUseMpPotion,
+                onSetHpThreshold = onSetHpThreshold,
+                onSetMpThreshold = onSetMpThreshold,
+                onSelectHp = onSelectHpPotion,
+                onSelectMp = onSelectMpPotion
+            )
+        }
 
         // 5. SUPPORT SQUAD MODULE (§7.5, §7.6)
         SupportModule(
@@ -383,30 +389,38 @@ private fun PotionRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(SurfaceDark, RectangleShape)
-            .border(1.dp, accent, RectangleShape)
-            .padding(6.dp)
+            .border(1.dp, accent.copy(alpha = 0.55f), RectangleShape)
+            .padding(5.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 48.dp)
-                .background(accent.copy(alpha = 0.18f), RectangleShape)
-                .border(1.dp, accent, RectangleShape)
+                .background(accent.copy(alpha = 0.12f), RectangleShape)
+                .border(1.dp, accent.copy(alpha = 0.7f), RectangleShape)
                 .clickable(role = Role.Button, onClick = onUse)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (label.startsWith("HEALTH")) "♥" else "◆", color = accent, style = TrueIdleType.title)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(label, style = TrueIdleType.tag, color = accent, fontWeight = FontWeight.Bold)
-                }
+            Text(
+                text = if (label.startsWith("HEALTH")) "♥" else "◆",
+                color = accent,
+                style = TrueIdleType.title
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = TrueIdleType.tag.copy(fontSize = 9.sp, letterSpacing = 0.4.sp),
+                    color = accent,
+                    maxLines = 1
+                )
                 Text(
                     text = potionName.uppercase(),
-                    style = TrueIdleType.value,
+                    style = TrueIdleType.value.copy(fontSize = 11.sp),
                     color = TextLight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -414,30 +428,39 @@ private fun PotionRow(
             }
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .background(accent.copy(alpha = 0.25f), RectangleShape)
-                    .border(1.dp, accent, RectangleShape)
+                    .background(accent.copy(alpha = 0.22f), RectangleShape)
+                    .border(1.dp, accent.copy(alpha = 0.7f), RectangleShape)
                     .padding(horizontal = 5.dp, vertical = 2.dp)
             ) {
-                Text("×$count", style = TrueIdleType.tag, color = accent)
+                Text(
+                    text = "×$count",
+                    style = TrueIdleType.tag.copy(fontSize = 10.sp),
+                    color = accent,
+                    maxLines = 1
+                )
             }
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.width(54.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .background(SurfaceVariantDark, RectangleShape)
-                    .border(1.dp, accent, RectangleShape)
+                    .border(1.dp, accent.copy(alpha = 0.7f), RectangleShape)
                     .clickable(role = Role.Button, onClick = onSettings)
                     .testTag("${testTag}_settings"),
                 contentAlignment = Alignment.Center
             ) {
                 Text("⚙", color = accent, style = TrueIdleType.title)
             }
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = if (threshold == 0) "AUTO OFF" else "AUTO $threshold%",
-                style = TrueIdleType.meta,
-                color = TextMuted
+                style = TrueIdleType.meta.copy(fontSize = 8.sp, lineHeight = 10.sp, letterSpacing = 0.2.sp),
+                color = if (threshold == 0) TextMuted else accent,
+                maxLines = 1
             )
         }
     }

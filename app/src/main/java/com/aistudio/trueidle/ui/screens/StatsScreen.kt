@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
@@ -38,7 +40,7 @@ fun StatsScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val reqXp = XpCurves.player(p.lvl)
-    val d = com.aistudio.trueidle.ui.LocalDerived.current
+    val d = com.aistudio.trueidle.ui.state.LocalDerived.current
 
     // Equipped weapons
     val rifle = Equipment.equipped(state, Equipment.SLOT_RIFLE)
@@ -111,7 +113,8 @@ fun StatsScreen(
                     Text(
                         text = "HERO PROTOCOL",
                         style = TrueIdleType.title,
-                        color = PrimaryNeon
+                        color = PrimaryNeon,
+                        modifier = Modifier.weight(1f)
                     )
                     Box(
                         modifier = Modifier
@@ -147,19 +150,53 @@ fun StatsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column {
-                        Text("TOTAL WEAPON ATK", style = TrueIdleType.meta, color = TextMuted)
-                        Text("+${NumberFormatter.short(totalWeaponAtk)} ATK", style = TrueIdleType.value, color = PrimaryNeon)
+                    // Equal-weight columns give the three readouts one shared baseline and gutter.
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "TOTAL WEAPON ATK",
+                            style = TrueIdleType.meta.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                            color = TextMuted,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "+${NumberFormatter.short(totalWeaponAtk)} ATK",
+                            style = TrueIdleType.value.copy(fontSize = 11.sp),
+                            color = PrimaryNeon,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("TOTAL ARMOR DEF", style = TrueIdleType.meta, color = TextMuted)
-                        Text("+${NumberFormatter.short(totalArmorDef + totalNodeDef)} DEF", style = TrueIdleType.value, color = ShieldBlue)
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "TOTAL ARMOR DEF",
+                            style = TrueIdleType.meta.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                            color = TextMuted,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "+${NumberFormatter.short(totalArmorDef + totalNodeDef)} DEF",
+                            style = TrueIdleType.value.copy(fontSize = 11.sp),
+                            color = ShieldBlue,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("TOTAL VITALITY", style = TrueIdleType.meta, color = TextMuted)
-                        Text("+${NumberFormatter.short(totalArmorVit + totalNodeVit)} VIT", style = TrueIdleType.value, color = GreenSuccess)
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "TOTAL VITALITY",
+                            style = TrueIdleType.meta.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                            color = TextMuted,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "+${NumberFormatter.short(totalArmorVit + totalNodeVit)} VIT",
+                            style = TrueIdleType.value.copy(fontSize = 11.sp),
+                            color = GreenSuccess,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -353,9 +390,9 @@ fun StatsScreen(
             }
         }
 
-        // 7. SKILL MASTERIES BREAKDOWN
+        // 7. CLASS MASTERIES BREAKDOWN
         SciFiPanel(
-            title = "SKILL MASTERIES",
+            title = "CLASS MASTERIES",
             accent = PrimaryNeon,
             tag = "ACADEMY"
         ) {
@@ -411,6 +448,7 @@ private fun EquipmentItemRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
+            modifier = Modifier.weight(1f).padding(end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -427,13 +465,19 @@ private fun EquipmentItemRow(
                     fontWeight = FontWeight.Bold
                 )
             }
-            Column {
-                Text(slotLabel, style = TrueIdleType.meta, color = TextMuted)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = slotLabel,
+                    style = TrueIdleType.meta,
+                    color = TextMuted,
+                    maxLines = 1
+                )
                 Text(
                     text = item?.name?.uppercase() ?: "EMPTY SLOT",
                     style = TrueIdleType.label,
                     color = if (item != null) TextLight else TextMuted,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -441,6 +485,7 @@ private fun EquipmentItemRow(
         // Stats readout
         if (item != null) {
             val isWeapon = Equipment.isWeapon(slotName)
+            // Readouts keep their own column, so +ATK / +DEF never slide around per row.
             if (isWeapon) {
                 val atk = Equipment.baseAttack(item)
                 Text(
@@ -484,20 +529,40 @@ fun StatDotRow(
             .fillMaxWidth()
             .border(BorderStroke(1.dp, BorderDark))
             .background(Color(0xFF000000))
-            .padding(horizontal = 8.dp, vertical = 7.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .heightIn(min = 30.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.weight(1f).padding(end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Reserve the dot gutter on dotless rows so every label starts on the same x.
             if (dotColor != null) {
                 Box(
                     modifier = Modifier
                         .size(5.dp)
                         .background(dotColor)
                 )
+            } else {
+                Spacer(modifier = Modifier.width(11.dp))
             }
-            Text(label, style = TrueIdleType.label, color = TextMuted)
+            Text(
+                text = label,
+                style = TrueIdleType.label.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                color = TextMuted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
-        Text(value, style = TrueIdleType.value, color = valueColor)
+        Text(
+            text = value,
+            style = TrueIdleType.value.copy(fontSize = 10.sp, lineHeight = 13.sp),
+            color = valueColor,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

@@ -32,7 +32,7 @@ import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
 import kotlin.math.max
 
-enum class SkillSubSection(val label: String, val icon: String, val color: Color) {
+enum class ClassSubSection(val label: String, val icon: String, val color: Color) {
     OVERVIEW("OVERVIEW", "[+]", PrimaryNeon),
     HARVEST("HARVEST", "[H]", GreenSuccess),
     FORGE("FORGE", "[F]", SecondaryGold),
@@ -45,11 +45,11 @@ enum class SkillSubSection(val label: String, val icon: String, val color: Color
 }
 
 @Composable
-fun SkillsScreen(
+fun ClassScreen(
     state: GameState,
     /** Hoisted so a tab switch can open the right sub-section (e.g. MANAGE SQUAD). */
-    currentSection: SkillSubSection,
-    onSectionChange: (SkillSubSection) -> Unit,
+    currentSection: ClassSubSection,
+    onSectionChange: (ClassSubSection) -> Unit,
     onHarvestPlot: (Int) -> Unit,
     onMineVein: (Int) -> Unit,
     onTogglePlotAutoQueue: (Int) -> Unit = {},
@@ -72,8 +72,8 @@ fun SkillsScreen(
     var isDrawerOpen by remember { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Single top-left skill menu trigger. The old CR/FA/SP/TP readout strip was removed so the
-        // header holds exactly one control; the drawer lists every skill with its level.
+        // Single top-left class menu trigger. The old CR/FA/SP/TP readout strip was removed so the
+        // header holds exactly one control; the drawer lists every section with its level.
         Row(
             Modifier
                 .fillMaxWidth()
@@ -89,12 +89,12 @@ fun SkillsScreen(
                     .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                     .border(1.dp, PrimaryNeon, RectangleShape)
                     .padding(horizontal = 10.dp, vertical = 6.dp)
-                    .testTag("skills_menu_button"),
+                    .testTag("class_menu_button"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = if (isDrawerOpen) "✕ SKILLS" else "☰ SKILLS",
+                    text = if (isDrawerOpen) "✕ CLASS" else "☰ CLASS",
                     style = TrueIdleType.tag,
                     color = PrimaryNeon,
                     fontWeight = FontWeight.Bold
@@ -122,9 +122,9 @@ fun SkillsScreen(
         Box(Modifier.fillMaxSize()) {
             // Main content area taking full space
             when (currentSection) {
-                SkillSubSection.OVERVIEW -> SkillsOverviewPage(state) { onSectionChange(it) }
-                SkillSubSection.HARVEST -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // HARVEST & EXTRACTION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.OVERVIEW -> ClassOverviewPage(state) { onSectionChange(it) }
+                ClassSubSection.HARVEST -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // HARVEST & EXTRACTION MATRIX") { onSectionChange(ClassSubSection.OVERVIEW) }
                     HarvestScreen(
                         state = state,
                         onHarvestPlot = onHarvestPlot,
@@ -134,16 +134,16 @@ fun SkillsScreen(
                         onUpgradeDiscipline = onUpgradeDiscipline
                     )
                 }
-                SkillSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // FORGE FABRICATION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // FORGE FABRICATION MATRIX") { onSectionChange(ClassSubSection.OVERVIEW) }
                     ForgeScreen(
                         state = state,
                         onCraftEquipment = onCraftEquipment,
                         onBrewPotion = onBrewPotion
                     )
                 }
-                SkillSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // ARMORY & TACTICAL LOADOUT") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // ARMORY & TACTICAL LOADOUT") { onSectionChange(ClassSubSection.OVERVIEW) }
                     ArmoryScreen(
                         state = state,
                         onCraftEquipment = onCraftEquipment,
@@ -151,11 +151,11 @@ fun SkillsScreen(
                         onUpgradeDiscipline = onUpgradeDiscipline,
                         onUnequipItem = onUnequipItem,
                         onAutoEquip = onAutoEquip,
-                        onOpenForge = { onSectionChange(SkillSubSection.FORGE) }
+                        onOpenForge = { onSectionChange(ClassSubSection.FORGE) }
                     )
                 }
-                SkillSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // GENESIS BIO-REANIMATION") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // GENESIS BIO-REANIMATION") { onSectionChange(ClassSubSection.OVERVIEW) }
                     GenesisScreen(
                         state = state,
                         onMergeBeasts = onMergeBeasts,
@@ -163,8 +163,8 @@ fun SkillsScreen(
                         onUpgradeDiscipline = onUpgradeDiscipline
                     )
                 }
-                SkillSubSection.ESSENCE -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // ESSENCE PROTOCOL") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.ESSENCE -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // ESSENCE PROTOCOL") { onSectionChange(ClassSubSection.OVERVIEW) }
                     EssenceScreen(
                         state = state,
                         onToggleAegis = onToggleSanctifiedAegis,
@@ -172,16 +172,16 @@ fun SkillsScreen(
                         onUpgradeDiscipline = onUpgradeDiscipline
                     )
                 }
-                SkillSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // NEURAL ENHANCEMENT BAY") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // NEURAL ENHANCEMENT BAY") { onSectionChange(ClassSubSection.OVERVIEW) }
                     TrainingScreen(state = state, onTrainNode = onTrainNode)
                 }
-                SkillSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // TARGETING DIRECTIVES") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // TARGETING DIRECTIVES") { onSectionChange(ClassSubSection.OVERVIEW) }
                     SlayerScreen(state = state, onRerollTask = onRerollSlayerTask)
                 }
-                SkillSubSection.TALENTS -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("SKILLS // TACTICAL & STRUGGLE TALENTS") { onSectionChange(SkillSubSection.OVERVIEW) }
+                ClassSubSection.TALENTS -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("CLASS // TACTICAL & STRUGGLE TALENTS") { onSectionChange(ClassSubSection.OVERVIEW) }
                     TalentScreen(
                         state = state,
                         onActivateTalent = onActivateTalent,
@@ -204,10 +204,10 @@ fun SkillsScreen(
                             .fillMaxSize()
                             .background(Color(0x99000000))
                             .clickable { isDrawerOpen = false }
-                            .testTag("skills_drawer_scrim")
+                            .testTag("class_drawer_scrim")
                     )
 
-                    // Vertical skills column
+                    // Vertical class column
                     Column(
                         Modifier
                             .width(260.dp)
@@ -216,7 +216,7 @@ fun SkillsScreen(
                             .border(BorderStroke(1.dp, PrimaryNeon))
                             .verticalScroll(rememberScrollState())
                             .padding(12.dp)
-                            .testTag("skills_vertical_drawer"),
+                            .testTag("class_vertical_drawer"),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Row(
@@ -224,33 +224,33 @@ fun SkillsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("SKILLS", style = TrueIdleType.title, color = PrimaryNeon)
+                            Text("CLASS", style = TrueIdleType.title, color = PrimaryNeon)
                             IconButton(
                                 onClick = { isDrawerOpen = false },
-                                modifier = Modifier.size(36.dp).testTag("close_skills_drawer_button")
+                                modifier = Modifier.size(36.dp).testTag("close_class_drawer_button")
                             ) {
                                 Text("✕", style = TrueIdleType.tag, color = TextLight, fontSize = 16.sp)
                             }
                         }
                         Text(
-                            text = "Select a skill below:",
+                            text = "Select a section below:",
                             style = TrueIdleType.body,
                             color = TextMuted
                         )
                         Spacer(Modifier.height(4.dp))
 
-                        SkillSubSection.entries.forEach { section ->
+                        ClassSubSection.entries.forEach { section ->
                             val selected = currentSection == section
                             val level = when (section) {
-                                SkillSubSection.OVERVIEW -> ""
-                                SkillSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
-                                SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
-                                SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
-                                SkillSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
-                                SkillSubSection.ESSENCE -> "LV ${state.essence.lvl}"
-                                SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
-                                SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
-                                SkillSubSection.TALENTS -> "${state.talent.talentPoints} TP"
+                                ClassSubSection.OVERVIEW -> ""
+                                ClassSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
+                                ClassSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
+                                ClassSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
+                                ClassSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
+                                ClassSubSection.ESSENCE -> "LV ${state.essence.lvl}"
+                                ClassSubSection.TRAINING -> "LV ${state.training.lvl}"
+                                ClassSubSection.SLAYER -> "LV ${state.slayer.lvl}"
+                                ClassSubSection.TALENTS -> "${state.talent.talentPoints} TP"
                             }
                             Row(
                                 Modifier
@@ -270,7 +270,7 @@ fun SkillsScreen(
                                         RectangleShape
                                     )
                                     .padding(horizontal = 10.dp, vertical = 8.dp)
-                                    .testTag("skills_vertical_tab_${section.name.lowercase()}"),
+                                    .testTag("class_vertical_tab_${section.name.lowercase()}"),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -351,9 +351,9 @@ fun SubSectionHeader(title: String, onBackToOverview: () -> Unit) {
 }
 
 @Composable
-fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) {
+fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
     val scrollState = rememberScrollState()
-    val derived = com.aistudio.trueidle.ui.LocalDerived.current
+    val derived = com.aistudio.trueidle.ui.state.LocalDerived.current
     val totalLevel = state.player.lvl + state.harvest.farmingLvl + state.harvest.miningLvl +
         state.armory.smithingLvl + state.armory.herbloreLvl + state.beasts.lvl + state.necro.lvl +
         state.training.lvl + state.essence.lvl + state.slayer.lvl
@@ -378,24 +378,24 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
     ) {
         // High-level Telemetry Tiles
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MetricTile("SKILLS", "$active/6 OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
+            MetricTile("CLASS", "$active/6 OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
             MetricTile("TOTAL LEVEL", totalLevel.toString(), SecondaryGold, Modifier.weight(1f))
         }
 
         Card(
-            Modifier.fillMaxWidth().testTag("skills_master_card"),
+            Modifier.fillMaxWidth().testTag("class_master_card"),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
             Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("SKILL NETWORK // AUTONOMOUS MATRIX", style = TrueIdleType.title, color = PrimaryNeon)
+                Text("CLASS NETWORK // AUTONOMOUS MATRIX", style = TrueIdleType.title, color = PrimaryNeon)
                 Text("NEURAL PROGRESSION ACTIVE · ALL TELEMETRY SYNCHRONIZED", style = TrueIdleType.meta, color = TextMuted)
             }
         }
 
         // 01 COMBAT
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "01 // COMBAT",
             icon = "[C]",
             accentColor = PrimaryNeon,
@@ -411,13 +411,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 02 HARVEST
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "02 // HARVEST",
             icon = "[H]",
             accentColor = GreenSuccess,
             quickSummary = "${state.harvest.plots.count { !it.isReady }} PLOTS · ${state.harvest.veins.count { !it.isReady }} VEINS ACTIVE",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.HARVEST) },
+            onAction = { onNavigate(ClassSubSection.HARVEST) },
             level = max(state.harvest.farmingLvl, state.harvest.miningLvl),
             xp = max(state.harvest.farmingXp, state.harvest.miningXp),
             requiredXp = max(
@@ -446,13 +446,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 03 FORGE
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "03 // FORGE",
             icon = "[F]",
             accentColor = SecondaryGold,
             quickSummary = "13 EQUIPMENT GROUPS · 20 ALCHEMY POTIONS",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.FORGE) },
+            onAction = { onNavigate(ClassSubSection.FORGE) },
             level = state.armory.smithingLvl,
             xp = state.armory.smithingXp,
             requiredXp = XpCurves.skill(state.armory.smithingLvl),
@@ -464,13 +464,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 04 ARMORY
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "04 // ARMORY",
             icon = "[A]",
             accentColor = SecondaryGold,
             quickSummary = "13 GEAR SLOTS · TACTICAL LOADOUT & ENHANCEMENTS",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.ARMORY) },
+            onAction = { onNavigate(ClassSubSection.ARMORY) },
             level = max(state.armory.smithingLvl, state.armory.herbloreLvl),
             xp = max(state.armory.smithingXp, state.armory.herbloreXp),
             requiredXp = XpCurves.skill(max(state.armory.smithingLvl, state.armory.herbloreLvl)),
@@ -480,13 +480,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 04 GENESIS
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "04 // GENESIS",
             icon = "[G]",
             accentColor = NecroPurple,
             quickSummary = "${state.beasts.beasts.size}/${GameCaps.BEAST} BEASTS · ${NumberFormatter.short(state.necro.boneEssence)} ESSENCE · ${NumberFormatter.short(beastDps + armyDps)} TOTAL DPS",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.GENESIS) },
+            onAction = { onNavigate(ClassSubSection.GENESIS) },
             level = max(state.beasts.lvl, state.necro.lvl),
             xp = max(state.beasts.xp, state.necro.xp),
             requiredXp = XpCurves.skill(max(state.beasts.lvl, state.necro.lvl)),
@@ -498,13 +498,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 05 ESSENCE
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "05 // ESSENCE",
             icon = "[E]",
             accentColor = ManaTeal,
             quickSummary = "${NumberFormatter.short(state.essence.faith)} FAITH · SMITE LV ${state.essence.smiteLevel} · ${if (state.essence.aegisActive) "AEGIS ONLINE" else "AEGIS OFFLINE"}",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.ESSENCE) },
+            onAction = { onNavigate(ClassSubSection.ESSENCE) },
             level = state.essence.lvl,
             xp = state.essence.xp,
             requiredXp = XpCurves.skill(state.essence.lvl),
@@ -514,13 +514,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 06 ENHANCEMENT
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "06 // TRAINING",
             icon = "[T]",
             accentColor = PrimaryNeon,
             quickSummary = "$ranks DOJO RANKS INSTALLED · PERMANENT BUFFS",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.TRAINING) },
+            onAction = { onNavigate(ClassSubSection.TRAINING) },
             level = state.training.lvl,
             xp = state.training.xp,
             requiredXp = XpCurves.skill(state.training.lvl),
@@ -530,13 +530,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 07 SLAYER
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "07 // SLAYER",
             icon = "[S]",
             accentColor = HpRed,
             quickSummary = "TARGET: ${state.slayer.currentTask.targetName.uppercase()} (${state.slayer.currentTask.currentKills}/${state.slayer.currentTask.requiredKills}) · ${NumberFormatter.short(state.slayer.slayerPoints)} PTS",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.SLAYER) },
+            onAction = { onNavigate(ClassSubSection.SLAYER) },
             level = state.slayer.lvl,
             xp = state.slayer.xp,
             requiredXp = XpCurves.skill(state.slayer.lvl),
@@ -546,13 +546,13 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
         }
 
         // 08 TALENTS
-        SkillCategoryCard(
+        ClassCategoryCard(
             title = "08 // TALENTS & STRUGGLE",
             icon = "[★]",
             accentColor = SecondaryGold,
             quickSummary = "${state.talent.talentPoints} TP AVAILABLE · ${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG ENDURED",
             actionLabel = "OPEN",
-            onAction = { onNavigate(SkillSubSection.TALENTS) },
+            onAction = { onNavigate(ClassSubSection.TALENTS) },
             level = state.talent.activeTalents.sumOf { it.rank },
             xp = state.talent.struggleDamageTaken,
             requiredXp = XpCurves.skill(state.talent.activeTalents.sumOf { it.rank }.coerceAtLeast(1)),
@@ -584,7 +584,7 @@ private fun MetricTile(label: String, value: String, color: Color, modifier: Mod
 }
 
 @Composable
-private fun SkillCategoryCard(
+private fun ClassCategoryCard(
     title: String,
     icon: String,
     accentColor: Color,
