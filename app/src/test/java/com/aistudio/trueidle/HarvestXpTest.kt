@@ -9,20 +9,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.ceil
-import kotlin.math.min
+import kotlin.math.max
 import kotlin.math.pow
 
 class HarvestXpTest {
 
     @Test
-    fun tierOneStoneBatchRewardsTwelveXpPerItem() {
-        assertEquals(12L, HarvestXp.xpPerItem(ItemCatalog.STONE))
-        assertEquals(36L, HarvestXp.forBaseBatch(ItemCatalog.STONE, 3L))
-        assertEquals(48L, HarvestXp.forBaseBatch(ItemCatalog.STONE, 4L))
+    fun actualYieldIsTheSkillXpMultiplier() {
+        assertEquals(12.0, HarvestXp.forYield(ItemCatalog.STONE, 1.0), 0.0)
+        assertEquals(24.0, HarvestXp.forYield(ItemCatalog.STONE, 2.0), 0.0)
+        assertEquals(36.0, HarvestXp.forYield(ItemCatalog.STONE, 3.0), 0.0)
+        assertEquals(48.0, HarvestXp.forYield(ItemCatalog.STONE, 4.0), 0.0)
+    }
+
+    @Test
+    fun suffixScaleYieldMultipliesTheDefaultTierXpWithoutLongOverflow() {
+        val oneFItems = 1.0E27
+        assertEquals(1.2E28, HarvestXp.forYield(ItemCatalog.STONE, oneFItems), 1.0E13)
+        assertEquals(2.4E28, HarvestXp.forYield(ItemCatalog.COAL, oneFItems), 1.0E13)
+        assertTrue(HarvestXp.forYield(ItemCatalog.STONE, oneFItems) > Long.MAX_VALUE.toDouble())
     }
 
     @Test
     fun higherTierResourcesGrantMoreXpPerItem() {
+        assertEquals(12L, HarvestXp.xpPerItem(ItemCatalog.STONE))
         assertEquals(24L, HarvestXp.xpPerItem(ItemCatalog.COAL))
         assertEquals(36L, HarvestXp.xpPerItem(ItemCatalog.COPPER_ORE))
         assertEquals(12L, HarvestXp.xpPerItem(ItemCatalog.HEALING_HERB))
@@ -41,13 +51,15 @@ class HarvestXpTest {
     }
 
     @Test
-    fun batchXpSaturatesInsteadOfOverflowingNegative() {
-        assertEquals(Long.MAX_VALUE, HarvestXp.forBaseBatch(ItemCatalog.MITHRIL_ORE, Long.MAX_VALUE))
-        assertEquals(0L, HarvestXp.forBaseBatch(ItemCatalog.STONE, -5L))
+    fun invalidAndNonFiniteYieldsCannotCreateNegativeXp() {
+        assertEquals(0.0, HarvestXp.forYield(ItemCatalog.STONE, -5.0), 0.0)
+        assertEquals(0.0, HarvestXp.forYield(ItemCatalog.STONE, Double.NaN), 0.0)
+        assertEquals(Double.MAX_VALUE, HarvestXp.forYield(ItemCatalog.STONE, Double.POSITIVE_INFINITY), 0.0)
+        assertEquals(Double.MAX_VALUE, HarvestXp.forYield(ItemCatalog.MITHRIL_ORE, Double.MAX_VALUE), 0.0)
     }
 
     @Test
-    fun manualMiningAwardsTierAndBatchAdjustedXp() {
+    fun manualMiningAwardsXpForActualYieldAndOreTier() {
         val base = GameState()
         val readyCoal = base.copy(
             harvest = base.harvest.copy(
@@ -57,12 +69,12 @@ class HarvestXpTest {
 
         val after = GameEngine(readyCoal).mineVein(1)
 
-        // Coal is tier 2: 24 XP per unit x the vein's guaranteed 3-unit batch.
-        assertEquals(72L, after.harvest.miningXp)
+        // Coal is tier 2: 3 actual items x (12 x tier 2) XP per item.
+        assertEquals(72.0, after.harvest.miningXp, 0.0)
     }
 
     @Test
-    fun manualFarmingAwardsXpForEveryGuaranteedHerbUnit() {
+    fun manualFarmingAwardsXpForEveryActualHerbUnit() {
         val base = GameState()
         val readyHerb = base.copy(
             harvest = base.harvest.copy(
@@ -72,13 +84,12 @@ class HarvestXpTest {
 
         val after = GameEngine(readyHerb).harvestPlot(0)
 
-        // Healing Herb is tier 1: 12 XP x 2 guaranteed herb units.
-        assertEquals(24L, after.harvest.farmingXp)
+        // Healing Herb is tier 1: 2 actual items x 12 XP per item.
+        assertEquals(24.0, after.harvest.farmingXp, 0.0)
     }
 
     @Test
-    fun explicitYieldUpgradesIncreaseSkillXpWithTheBatchSize() {
-        // GameEngine reconciles the catalog on load; begin with that same complete upgrade list.
+    fun explicitYieldUpgradesIncreaseXpWithTheActualBatch() {
         val base = GameEngine().state
         val upgradedHarvest = base.harvest.copy(
             upgrades = base.harvest.upgrades.map {
@@ -92,12 +103,12 @@ class HarvestXpTest {
 
         val after = GameEngine(base.copy(harvest = upgradedHarvest)).mineVein(0)
 
-        // Stone batch rises from 3 to 5 units: 12 XP x 5 = 60 XP.
-        assertEquals(60L, after.harvest.miningXp)
+        // Stone batch rises from 3 to 5 actual items: 5 x 12 = 60 XP.
+        assertEquals(60.0, after.harvest.miningXp, 0.0)
     }
 
     @Test
-    fun proficiencyYieldDoesNotMultiplyTheLongTermSkillXpAgain() {
+    fun proficiencyYieldMultipliesGlobalSkillXpByTheActualItemCount() {
         val base = GameState()
         val state = base.copy(
             harvest = base.harvest.copy(
@@ -111,14 +122,14 @@ class HarvestXpTest {
         val after = GameEngine(state).harvestPlot(0)
         val harvestedPlot = after.harvest.plots.first { it.id == 0 }
 
-        // The level-5 proficiency multiplier increases the 2-unit inventory/proficiency yield to
-        // 32, but global Farming XP remains 12 x the guaranteed 2-unit base batch.
-        assertEquals(24L, after.harvest.farmingXp)
+        // Proficiency level 5 gives 16x yield: 2 base items become 32 actual items.
+        // Every actual item contributes the tier-1 rate of 12 XP: 32 x 12 = 384 XP.
+        assertEquals(384.0, after.harvest.farmingXp, 0.0)
         assertEquals(32L, harvestedPlot.proficiencyXp)
     }
 
     @Test
-    fun autoCollectionUsesTheSameTierAndBatchXpRules() {
+    fun autoCollectionUsesTheSameActualYieldXpRule() {
         val base = GameState()
         val harvest = base.harvest.copy(
             autoCollectUnlocked = true,
@@ -129,118 +140,85 @@ class HarvestXpTest {
 
         val after = GameEngine(base.copy(harvest = harvest)).tick(0f)
 
-        assertEquals(24L, after.harvest.farmingXp)
-        assertEquals(72L, after.harvest.miningXp)
+        assertEquals(24.0, after.harvest.farmingXp, 0.0)
+        assertEquals(72.0, after.harvest.miningXp, 0.0)
     }
 
     @Test
-    fun gatheringCurveIsMonotonicAndStopsAtLevelOneHundred() {
+    fun gatheringCurvesAreMonotonicAndStopAtLevelOneHundred() {
         assertEquals(100, XpCurves.GATHERING_SKILL_MAX_LEVEL)
-        assertEquals(XpCurves.gatheringSkill(1), XpCurves.gatheringSkill(0))
-        assertEquals(XpCurves.gatheringSkill(100), XpCurves.gatheringSkill(101))
+        assertEquals(XpCurves.farmingSkillXp(1), XpCurves.farmingSkillXp(0), 0.0)
+        assertEquals(XpCurves.miningSkillXp(1), XpCurves.miningSkillXp(0), 0.0)
+        assertEquals(XpCurves.farmingSkillXp(100), XpCurves.farmingSkillXp(101), 0.0)
+        assertEquals(XpCurves.miningSkillXp(100), XpCurves.miningSkillXp(101), 0.0)
 
         for (level in 1 until XpCurves.GATHERING_SKILL_MAX_LEVEL) {
-            assertTrue(
-                "Gathering XP must increase between levels $level and ${level + 1}",
-                XpCurves.gatheringSkill(level + 1) > XpCurves.gatheringSkill(level)
-            )
+            assertTrue(XpCurves.farmingSkillXp(level + 1) > XpCurves.farmingSkillXp(level))
+            assertTrue(XpCurves.miningSkillXp(level + 1) > XpCurves.miningSkillXp(level))
         }
     }
 
     @Test
-    fun gatheringProgressionModelTargetsFourToFiveContinuousYears() {
-        val years = estimateOptimizedContinuousHarvestYears()
-        assertTrue("Expected 4-5 years, got $years", years in 4.0..5.0)
+    fun maximumProficiencyYieldModelTargetsFourToFiveContinuousYears() {
+        val farmingYears = estimateOptimizedContinuousHarvestYears(isMining = false)
+        val miningYears = estimateOptimizedContinuousHarvestYears(isMining = true)
+
+        assertTrue("Expected 4-5 Farming years, got $farmingYears", farmingYears in 4.0..5.0)
+        assertTrue("Expected 4-5 Mining years, got $miningYears", miningYears in 4.0..5.0)
     }
 
     /**
-     * Models the current game loop's 250 ms harvest step, the default 20 plots/veins and unlock
-     * requirements, and the actual XP returned by HarvestXp. Before global auto-collect unlocks,
-     * it assumes one best-XP-per-second auto-queued resource per skill. From level 10 onward, the
-     * game's default-enabled auto-collect runs every unlocked resource. Yield/speed upgrade ranks
-     * are zero and proficiency's exponential output multiplier is excluded from skill XP.
+     * Models the fastest sustained-output case for the current 250 ms game loop:
+     * - every plot/vein is already at proficiency 100 (2^99 item yield);
+     * - one best-XP-per-second node is manually queued before auto-collect unlocks at skill level 10;
+     * - all plots or all currently level-unlocked veins auto-collect from level 10 onward;
+     * - speed/yield upgrade ranks are zero and every loop uses the game's tick-rounded durations.
+     *
+     * Coefficients are tuned so even this maximum-yield production model takes about 4.5 years.
+     * Fresh saves start at proficiency 1, so their actual initial time will be longer.
      */
-    private fun estimateOptimizedContinuousHarvestYears(): Double {
+    private fun estimateOptimizedContinuousHarvestYears(isMining: Boolean): Double {
         val harvest = GameState().harvest
-        val farmingNodes = harvest.plots.map { plot ->
-            HarvestNode(
-                xpPerAction = HarvestXp.forBaseBatch(plot.herbName, 2L).toDouble(),
-                durationSeconds = plot.durationSeconds.toDouble(),
-                requiredLevel = 1
-            )
-        }
-        val miningNodes = harvest.veins.map { vein ->
-            HarvestNode(
-                xpPerAction = HarvestXp.forBaseBatch(vein.oreName, 3L).toDouble(),
-                durationSeconds = vein.durationSeconds.toDouble(),
-                requiredLevel = vein.reqLvl
-            )
+        val nodes = if (isMining) {
+            harvest.veins.map { vein ->
+                HarvestNode(
+                    xpPerAction = HarvestXp.forYield(
+                        vein.oreName,
+                        (3.0 * XpCurves.proficiencyYieldMultiplier(100))
+                    ),
+                    durationSeconds = vein.durationSeconds.toDouble(),
+                    requiredLevel = vein.reqLvl
+                )
+            }
+        } else {
+            harvest.plots.map { plot ->
+                HarvestNode(
+                    xpPerAction = HarvestXp.forYield(
+                        plot.herbName,
+                        (2.0 * XpCurves.proficiencyYieldMultiplier(100))
+                    ),
+                    durationSeconds = plot.durationSeconds.toDouble(),
+                    requiredLevel = 1
+                )
+            }
         }
 
-        var farmingLevel = 1
-        var miningLevel = 1
-        var farmingXp = 0.0
-        var miningXp = 0.0
+        val requirement: (Int) -> Double =
+            if (isMining) XpCurves::miningSkillXp else XpCurves::farmingSkillXp
+
         var elapsedSeconds = 0.0
-        var events = 0
-
-        while (
-            farmingLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL ||
-            miningLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL
-        ) {
-            val autoCollect = farmingLevel >= 10 || miningLevel >= 10
-            val farmingSpeed = 0.97.pow((farmingLevel - 1).toDouble()).coerceAtLeast(0.20).toFloat()
-            val miningSpeed = 0.97.pow((miningLevel - 1).toDouble()).coerceAtLeast(0.20).toFloat()
-
-            val farmingRates = if (farmingLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
-                farmingNodes.map { node -> node.xpPerAction / tickAlignedPeriod(node.durationSeconds, farmingSpeed) }
-            } else emptyList()
-            val eligibleMiningNodes = miningNodes.filter { it.requiredLevel <= miningLevel }
-            val miningRates = if (miningLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
-                eligibleMiningNodes.map { node -> node.xpPerAction / tickAlignedPeriod(node.durationSeconds, miningSpeed) }
-            } else emptyList()
-
-            val farmingRate = when {
-                farmingRates.isEmpty() -> 0.0
-                autoCollect -> farmingRates.sum()
-                else -> farmingRates.maxOrNull() ?: 0.0
+        for (level in 1 until XpCurves.GATHERING_SKILL_MAX_LEVEL) {
+            val speed = 0.97.pow((level - 1).toDouble()).coerceAtLeast(0.20).toFloat()
+            val eligibleRates = nodes
+                .filter { it.requiredLevel <= level }
+                .map { node -> node.xpPerAction / tickAlignedPeriod(node.durationSeconds, speed) }
+            val xpPerSecond = when {
+                eligibleRates.isEmpty() -> 0.0
+                level >= 10 -> eligibleRates.sum()
+                else -> eligibleRates.maxOrNull() ?: 0.0
             }
-            val miningRate = when {
-                miningRates.isEmpty() -> 0.0
-                autoCollect -> miningRates.sum()
-                else -> miningRates.maxOrNull() ?: 0.0
-            }
-
-            val farmingTimeToLevel = if (farmingRate > 0.0) {
-                (XpCurves.gatheringSkill(farmingLevel).toDouble() - farmingXp) / farmingRate
-            } else Double.POSITIVE_INFINITY
-            val miningTimeToLevel = if (miningRate > 0.0) {
-                (XpCurves.gatheringSkill(miningLevel).toDouble() - miningXp) / miningRate
-            } else Double.POSITIVE_INFINITY
-            val stepSeconds = min(farmingTimeToLevel, miningTimeToLevel)
-            check(stepSeconds.isFinite() && stepSeconds >= 0.0)
-
-            farmingXp += farmingRate * stepSeconds
-            miningXp += miningRate * stepSeconds
-            elapsedSeconds += stepSeconds
-
-            while (
-                farmingLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL &&
-                farmingXp >= XpCurves.gatheringSkill(farmingLevel).toDouble()
-            ) {
-                farmingXp -= XpCurves.gatheringSkill(farmingLevel).toDouble()
-                farmingLevel++
-            }
-            while (
-                miningLevel < XpCurves.GATHERING_SKILL_MAX_LEVEL &&
-                miningXp >= XpCurves.gatheringSkill(miningLevel).toDouble()
-            ) {
-                miningXp -= XpCurves.gatheringSkill(miningLevel).toDouble()
-                miningLevel++
-            }
-
-            events++
-            check(events < 1_000) { "Progression model failed to converge" }
+            check(xpPerSecond > 0.0)
+            elapsedSeconds += requirement(level) / xpPerSecond
         }
 
         return elapsedSeconds / (365.25 * 24.0 * 60.0 * 60.0)
