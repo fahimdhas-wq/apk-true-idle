@@ -3,13 +3,12 @@ package com.aistudio.trueidle.core
 import java.util.Locale
 
 /**
- * Skill XP paid by gathered resource units.
+ * XP awarded for the actual quantity of a harvested resource.
  *
- * XP is calculated from the guaranteed extraction batch (2 herbs or 3 ores, plus explicit
- * yield-upgrade bonuses), before the per-item proficiency multiplier is applied. Proficiency
- * continues to multiply inventory yield and its own proficiency XP; it does not recursively
- * multiply the global skill XP reward. This keeps the 2x-per-proficiency-level economy from
- * making a gathering skill jump to its cap in a handful of actions.
+ * Resource tier determines XP per item; the actual yielded quantity (including proficiency and
+ * yield upgrades) is multiplied by that per-item value. Double is intentional here: a level-100
+ * proficiency yield can exceed Long.MAX_VALUE, and the game's alphabetic number formatter supports
+ * values such as 1F and far beyond.
  */
 object HarvestXp {
     const val XP_PER_TIER_UNIT: Long = 12L
@@ -24,10 +23,9 @@ object HarvestXp {
             name.lowercase(Locale.ROOT) to index + 1
         }.toMap()
 
-    /** Tier 1 Stone / first herb gives 12 XP per guaranteed item; each higher tier gives more. */
+    /** Tier 1 Stone / first herb gives 12 XP per item; each higher tier gives 12 more XP. */
     fun xpPerItem(resourceName: String): Long {
         val rawKey = resourceName.lowercase(Locale.ROOT)
-        // Normalize resource names retained by older saves before looking up their current tier.
         val key = when (rawKey) {
             "felweed" -> ItemCatalog.HEALING_HERB.lowercase(Locale.ROOT)
             "moonflower" -> ItemCatalog.MOONLIGHT_BLOSSOM.lowercase(Locale.ROOT)
@@ -41,12 +39,15 @@ object HarvestXp {
     }
 
     /**
-     * XP for the guaranteed base batch. E.g. 3 Stone = 36 XP; 4 Stone = 48 XP;
-     * 3 Coal = 72 XP. Multiplication saturates instead of wrapping negative.
+     * Global skill XP is based on the complete item quantity actually awarded.
+     *
+     * Examples: 3 Stone = 36 XP, 4 Stone = 48 XP, 3 Coal = 72 XP, and 1F Stone = 12F XP.
+     * Invalid or non-positive quantities award zero; multiplication saturates at Double.MAX_VALUE.
      */
-    fun forBaseBatch(resourceName: String, itemCount: Long): Long {
-        val count = itemCount.coerceAtLeast(0L)
-        val perItem = xpPerItem(resourceName)
-        return if (count > Long.MAX_VALUE / perItem) Long.MAX_VALUE else count * perItem
+    fun forYield(resourceName: String, actualItemYield: Double): Double {
+        if (actualItemYield.isNaN() || actualItemYield <= 0.0) return 0.0
+        if (actualItemYield.isInfinite()) return Double.MAX_VALUE
+        val xp = actualItemYield * xpPerItem(resourceName).toDouble()
+        return if (xp.isFinite()) xp else Double.MAX_VALUE
     }
 }
