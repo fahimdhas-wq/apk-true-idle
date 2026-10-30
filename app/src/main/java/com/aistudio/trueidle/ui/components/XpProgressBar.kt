@@ -28,9 +28,10 @@ fun XpProgressBar(
     currentXp: Long,
     requiredXp: Long,
     barColor: Color = PrimaryNeon,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isMaxLevel: Boolean = false
 ) {
-    val progress = if (requiredXp > 0) (currentXp.toFloat() / requiredXp.toFloat()).coerceIn(0f, 1f) else 0f
+    val progress = if (isMaxLevel) 1f else if (requiredXp > 0) (currentXp.toFloat() / requiredXp.toFloat()).coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "XpAnim")
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -67,7 +68,7 @@ fun XpProgressBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "LVL $level",
+                    text = if (isMaxLevel) "MAX" else "LVL $level",
                     style = TrueIdleType.tag,
                     color = barColor
                 )
@@ -79,7 +80,7 @@ fun XpProgressBar(
             // label row is the weighted child, so an over-long readout can no longer push the
             // discipline name off a 360dp screen.
             Text(
-                text = "${NumberFormatter.short(currentXp)} / ${NumberFormatter.short(requiredXp)} (${(progress * 100).toInt()}%)",
+                text = if (isMaxLevel) "MAX LEVEL" else "${NumberFormatter.short(currentXp)} / ${NumberFormatter.short(requiredXp)} (${(progress * 100).toInt()}%)",
                 style = TrueIdleType.meta,
                 color = TextMuted,
                 textAlign = TextAlign.End,
