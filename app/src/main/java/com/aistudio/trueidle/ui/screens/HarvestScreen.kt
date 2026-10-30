@@ -131,7 +131,7 @@ fun HarvestScreen(
                         skillName = "BIO-FARMING",
                         level = harvest.farmingLvl,
                         currentXp = harvest.farmingXp,
-                        requiredXp = XpCurves.gatheringSkill(harvest.farmingLvl),
+                        requiredXp = XpCurves.farmingSkillXp(harvest.farmingLvl),
                         barColor = GreenSuccess,
                         isMaxLevel = harvest.farmingLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
@@ -169,11 +169,10 @@ fun HarvestScreen(
                     val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
                     val reqProfXp = XpCurves.proficiency(plot.proficiencyLevel)
                     val profRatio = if (plot.proficiencyLevel >= 100) 1f else (plot.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
-                    val baseSkillYield = (2.0 + extraYield).toLong().coerceAtLeast(1L)
-                    val skillXpReward = if (harvest.farmingLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
-                        HarvestXp.forBaseBatch(plot.herbName, baseSkillYield)
-                    } else 0L
                     val totalYield = (2.0 + extraYield) * profMult
+                    val skillXpReward = if (harvest.farmingLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
+                        HarvestXp.forYield(plot.herbName, totalYield)
+                    } else 0.0
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
                     Card(
@@ -338,7 +337,7 @@ fun HarvestScreen(
                         skillName = "PLASMA MINING",
                         level = harvest.miningLvl,
                         currentXp = harvest.miningXp,
-                        requiredXp = XpCurves.gatheringSkill(harvest.miningLvl),
+                        requiredXp = XpCurves.miningSkillXp(harvest.miningLvl),
                         barColor = SecondaryGold,
                         isMaxLevel = harvest.miningLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
@@ -381,11 +380,10 @@ fun HarvestScreen(
                     val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
                     val reqProfXp = XpCurves.proficiency(vein.proficiencyLevel)
                     val profRatio = if (vein.proficiencyLevel >= 100) 1f else (vein.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
-                    val baseSkillYield = (3.0 + extraYield + extraOreYield).toLong().coerceAtLeast(1L)
-                    val skillXpReward = if (harvest.miningLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
-                        HarvestXp.forBaseBatch(vein.oreName, baseSkillYield)
-                    } else 0L
                     val totalYield = (3.0 + extraYield + extraOreYield) * profMult
+                    val skillXpReward = if (harvest.miningLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
+                        HarvestXp.forYield(vein.oreName, totalYield)
+                    } else 0.0
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
                     Card(
