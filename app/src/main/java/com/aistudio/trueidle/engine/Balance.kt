@@ -66,8 +66,10 @@ object Balance {
      */
     fun skillXpReq(lvl: Int): Long = XpCurves.skill(lvl)
 
-    /** Dedicated long-term curve for Farming and Mining. */
-    fun gatheringSkillXpReq(lvl: Int): Long = XpCurves.gatheringSkill(lvl)
+    /** Dedicated large-yield progression curves for the two gathering disciplines. */
+    fun farmingSkillXpReq(lvl: Int): Double = XpCurves.farmingSkillXp(lvl)
+
+    fun miningSkillXpReq(lvl: Int): Double = XpCurves.miningSkillXp(lvl)
 
     fun slayerXpReq(lvl: Int): Long = XpCurves.slayer(lvl)
 
