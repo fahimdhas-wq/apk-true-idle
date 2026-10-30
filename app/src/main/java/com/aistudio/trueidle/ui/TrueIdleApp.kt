@@ -42,10 +42,12 @@ import com.aistudio.trueidle.ui.components.SciFiBadge
 import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.rememberStableShort
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.aistudio.trueidle.BuildConfig
 import com.aistudio.trueidle.R
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.ui.components.OfflineLootDialog
+import com.aistudio.trueidle.ui.components.DevPanel
 import com.aistudio.trueidle.ui.components.SciFiButton
 import com.aistudio.trueidle.ui.components.SciFiDialog
 import com.aistudio.trueidle.ui.components.SupportKind
@@ -296,7 +298,13 @@ fun TrueIdleApp(
                     // Both squads are managed on the Genesis screen, so this navigates there
                     // rather than to the Skills overview. The kind is kept for the component
                     // contract; per-squad deep links would need the Genesis sub-tab hoisted too.
-                    onManageSupport = { skillsSection = SkillSubSection.GENESIS; currentTab = TrueIdleTab.SKILLS }
+                    onManageSupport = { skillsSection = SkillSubSection.GENESIS; currentTab = TrueIdleTab.SKILLS },
+                    onUseHpPotion = { viewModel.usePotionByName(state.potionSettings.selectedHpPotion) },
+                    onUseMpPotion = { viewModel.usePotionByName(state.potionSettings.selectedMpPotion) },
+                    onSetHpThreshold = { viewModel.setHpAutoThreshold(it) },
+                    onSetMpThreshold = { viewModel.setMpAutoThreshold(it) },
+                    onSelectHpPotion = { viewModel.selectHpPotion(it) },
+                    onSelectMpPotion = { viewModel.selectMpPotion(it) }
                 )
                 TrueIdleTab.SKILLS -> SkillsScreen(
                     state = state,
@@ -342,6 +350,18 @@ fun TrueIdleApp(
                     onSetCraftUsage = { viewModel.setCraftMaterialUsage(it) },
                     onFightPromotionBoss = { viewModel.fightPromotionBoss() },
                     onExportTelemetryLog = { viewModel.buildTelemetryReport() }
+                )
+            }
+
+            // Debug builds only: no dev code path, no toggle, no recomposition cost in release.
+            if (BuildConfig.DEBUG) {
+                DevPanel(
+                    state = state,
+                    onAddCurrency = { kind, amount -> viewModel.devAddCurrency(kind, amount) },
+                    onMaxCurrency = { kind -> viewModel.devMaxCurrency(kind) },
+                    onSetGameSpeed = { speed -> viewModel.setGameSpeed(speed) },
+                    onUnlockAll = { viewModel.devUnlockAll() },
+                    onHardReset = { viewModel.devHardReset() }
                 )
             }
         }

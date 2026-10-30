@@ -388,7 +388,10 @@ class GameEngine(
     }
 
     fun tick(deltaSeconds: Float): GameState {
-        val dt = deltaSeconds.toDouble()
+        // Dev speed scales simulated time for every subsystem (combat, regeneration, harvesting).
+        val speed = state.dev.gameSpeed.coerceIn(DEV_MIN_SPEED, DEV_MAX_SPEED)
+        val scaledSeconds = deltaSeconds * speed
+        val dt = scaledSeconds.toDouble()
         val frame = Frame(state)
         var derivedCache: Derived? = null
 
@@ -399,7 +402,7 @@ class GameEngine(
         autoTriggerTalents(frame)
         tickRegeneration(frame, dt)
         tickAegisDrain(frame, dt)
-        tickHarvest(frame, deltaSeconds)
+        tickHarvest(frame, scaledSeconds)
 
         if (frame.player.recoverLeft > 0.0) {
             tickRecovery(frame, dt)
@@ -1618,34 +1621,65 @@ class GameEngine(
     }
 
     fun usePotion(itemId: String): GameState {
-        val inventory = state.inventory.toMutableList()
-        val idx = inventory.indexOfFirst { it.id == itemId }
-        if (idx < 0) return state
-        val item = inventory[idx]
+        val item = state.inventory.firstOrNull { it.id == itemId } ?: return state
         if (item.category != ItemCatalog.CATEGORY_POTION) return state
-        // A downed hero cannot drink, and a potion must not be consumed at full health.
+        return usePotionByName(item.name)
+    }
+
+    /**
+     * Consumes one potion called [name] using the full 20-herb table: direct percentage heals of the
+     * missing pool, timed regeneration, temporary shields, damage reduction, lifesteal and heals.
+     * Auto-deploy and the combat quick buttons share this path, so manual and automatic use match.
+     */
+    fun usePotionByName(name: String): GameState {
+        // A downed hero cannot drink.
         if (state.player.recoverLeft > 0.0) return state
+        val def = ItemCatalog.potion(name) ?: return state
         val derived = DerivedStats.of(state)
-        if (state.player.hp >= derived.maxHp) {
+        val atFull = state.player.hp >= derived.maxHp && state.player.mana >= derived.maxMana
+        if (atFull) {
             state = state.copy(
                 logs = (state.logs + log(LogType.SYSTEM, "POTION HELD: already at full health."))
                     .takeLast(Balance.LOG_CAP)
             )
             return state
         }
-        val potencyRank = state.armory.upgrades.firstOrNull { it.id == "alchemy_potency" }?.rank ?: 0
-        val potency = 1.0 + 0.25 * potencyRank
-        val heal = ItemCatalog.potionHeal(item.name) * potency
-        val healed = (state.player.hp + heal).coerceAtMost(derived.maxHp)
-        if (item.count > 1) inventory[idx] = item.copy(count = item.count - 1)
-        else inventory.removeAt(idx)
-
-        state = state.copy(
-            player = state.player.copy(hp = healed),
-            inventory = inventory,
-            logs = (state.logs + log(LogType.GAIN, "POTION DEPLOYED: restored ${heal.toInt()} HP."))
-                .takeLast(Balance.LOG_CAP)
+        val frame = Frame(state)
+        if (!deployPotionInFrame(frame, def.name)) return state
+        val next = frame.view()
+        state = next.copy(
+            logs = (state.logs + log(
+                LogType.GAIN,
+                "POTION DEPLOYED: ${def.name} — ${def.effectDesc}"
+            )).takeLast(Balance.LOG_CAP)
         )
+        return state
+    }
+
+    /** 0 turns auto-deploy off; the UI also offers 30/50/75 percent. */
+    fun setHpAutoThreshold(pct: Int): GameState {
+        state = state.copy(
+            potionSettings = state.potionSettings.copy(hpAutoThresholdPct = pct.coerceIn(0, 100))
+        )
+        return state
+    }
+
+    fun setMpAutoThreshold(pct: Int): GameState {
+        state = state.copy(
+            potionSettings = state.potionSettings.copy(mpAutoThresholdPct = pct.coerceIn(0, 100))
+        )
+        return state
+    }
+
+    fun selectHpPotion(name: String): GameState {
+        if (ItemCatalog.potion(name) == null) return state
+        state = state.copy(potionSettings = state.potionSettings.copy(selectedHpPotion = name))
+        return state
+    }
+
+    fun selectMpPotion(name: String): GameState {
+        if (ItemCatalog.potion(name) == null) return state
+        state = state.copy(potionSettings = state.potionSettings.copy(selectedMpPotion = name))
         return state
     }
 
@@ -2024,25 +2058,29 @@ class GameEngine(
         val minFloor = maxOf(1, currentFloor - 5)
         val maxFloor = currentFloor.coerceAtMost(reachable).coerceAtLeast(minFloor)
         val floor = floorOverride ?: if (maxFloor > minFloor) random.nextInt(minFloor, maxFloor + 1) else minFloor
-        val monster = Balance.generateMonsterForFloor(floor)
 
         val maxRank = SlayerMath.maxTierRankForLevel(state.slayer.lvl)
         val minRank = maxOf(0, maxRank - 4)
         val tierRank = if (maxRank > minRank) random.nextInt(minRank, maxRank + 1) else minRank
         val tierId = TierConfig.idAt(tierRank) ?: "F-"
 
-        val requiredKills = 10 + (tierRank % 5) * 2
+        // Kill-count bounties against any hostile: a contract never sends the player back to an
+        // earlier sector hunting one species. Bigger totals roll in at higher tiers.
+        val requiredKills = SlayerMath.killCountPool(tierRank).random(random)
         val tierMultiplier = 1.0 + (tierRank * 0.35)
-        val rawBaseGold = ((floor * 35L + 100L) * tierMultiplier).toLong()
+        val killMultiplier = 1.0 + requiredKills / 100.0
+        val rawBaseGold = ((floor * 35L + 100L) * tierMultiplier * killMultiplier).toLong()
         val rewardGold = SlayerMath.scaledGold(rawBaseGold, state.slayer.lvl)
-        val basePoints = (3 + (floor / 5) + (tierRank / 3)).coerceIn(3, 500)
+        val basePoints = ((3 + (floor / 5) + (tierRank / 3)) * (1.0 + requiredKills / 250.0))
+            .toInt()
+            .coerceIn(3, 500)
         val rewardPoints = SlayerMath.scaledPoints(basePoints, state.slayer.lvl)
 
         val bonus = SlayerMath.rollBonusRewards(tierRank, rewardGold, random)
 
         return com.aistudio.trueidle.model.SlayerTask(
             id = slotId,
-            targetName = monster.name,
+            targetName = SlayerMath.ANY_HOSTILE,
             tier = tierId,
             targetFloor = floor,
             currentKills = 0,
@@ -2230,6 +2268,87 @@ class GameEngine(
         return state
     }
 
+    // ------------------------------------------------------------------ dev panel
+
+    fun setGameSpeed(multiplier: Int): GameState {
+        state = state.copy(
+            dev = state.dev.copy(gameSpeed = multiplier.coerceIn(DEV_MIN_SPEED, DEV_MAX_SPEED))
+        )
+        return state
+    }
+
+    /** Grants [amount] of a dev resource: GOLD, DIAMONDS, FAITH, BONES, SLAYER or TALENT. */
+    fun devAddCurrency(kind: String, amount: Long): GameState {
+        val delta = amount.coerceAtLeast(0L)
+        if (delta == 0L) return state
+        state = when (kind.uppercase()) {
+            "GOLD" -> state.copy(player = state.player.copy(gold = state.player.gold + delta))
+            "DIAMONDS" -> state.copy(player = state.player.copy(diamonds = state.player.diamonds + delta))
+            "FAITH" -> state.copy(
+                essence = state.essence.copy(
+                    faith = state.essence.faith + delta,
+                    aegisActive = true
+                )
+            )
+            "BONES" -> state.copy(necro = state.necro.copy(boneEssence = state.necro.boneEssence + delta))
+            "SLAYER" -> state.copy(slayer = state.slayer.copy(slayerPoints = state.slayer.slayerPoints + delta.toInt()))
+            "TALENT" -> state.copy(talent = state.talent.copy(talentPoints = state.talent.talentPoints + delta.toInt()))
+            else -> state
+        }
+        return state
+    }
+
+    fun devMaxCurrency(kind: String): GameState = devAddCurrency(kind, DEV_MAX_CURRENCY)
+
+    /** Unlocks every sector, achievement, discipline rank, talent and skill tier for testing. */
+    fun devUnlockAll(): GameState {
+        fun maxed(list: List<DisciplineUpgrade>) = list.map { it.copy(rank = it.maxRank) }
+        val skillLevel = DEV_MAX_SKILL_LEVEL
+        state = state.copy(
+            player = state.player.copy(maxUnlockedFloor = Balance.MAX_FLOOR),
+            harvest = state.harvest.copy(
+                farmingLvl = maxOf(state.harvest.farmingLvl, skillLevel),
+                miningLvl = maxOf(state.harvest.miningLvl, skillLevel),
+                plots = state.harvest.plots.map { it.copy(reqLvl = 1, isReady = true) },
+                veins = state.harvest.veins.map { it.copy(reqLvl = 1, isReady = true) },
+                upgrades = maxed(state.harvest.upgrades)
+            ),
+            armory = state.armory.copy(
+                smithingLvl = maxOf(state.armory.smithingLvl, skillLevel),
+                herbloreLvl = maxOf(state.armory.herbloreLvl, skillLevel),
+                upgrades = maxed(state.armory.upgrades)
+            ),
+            training = state.training.copy(
+                nodes = state.training.nodes.map { it.copy(rank = it.maxRank) }
+            ),
+            essence = state.essence.copy(
+                smiteLevel = maxOf(state.essence.smiteLevel, skillLevel),
+                upgrades = maxed(state.essence.upgrades)
+            ),
+            beasts = state.beasts.copy(
+                lvl = maxOf(state.beasts.lvl, skillLevel),
+                upgrades = maxed(state.beasts.upgrades)
+            ),
+            necro = state.necro.copy(
+                lvl = maxOf(state.necro.lvl, skillLevel),
+                upgrades = maxed(state.necro.upgrades)
+            ),
+            slayer = state.slayer.copy(lvl = maxOf(state.slayer.lvl, skillLevel)),
+            talent = state.talent.copy(
+                activeTalents = state.talent.activeTalents.map {
+                    it.copy(rank = it.maxRank, cooldownRemaining = 0.0)
+                },
+                struggleTalents = state.talent.struggleTalents.map { it.copy(rank = it.maxRank) }
+            ),
+            achievements = state.achievements.map { it.copy(isUnlocked = true, isClaimed = false) },
+            dev = state.dev.copy(unlockedAll = true)
+        )
+        return state
+    }
+
+    /** Wipes the save and starts a clean game (the panel's hard reset). */
+    fun devHardReset(): GameState = resetGame()
+
     // ------------------------------------------------------------------ achievements
 
     /**
@@ -2275,6 +2394,19 @@ class GameEngine(
     // ------------------------------------------------------------------ save helpers
 
     companion object {
+        /** Dev speed bounds shared by the tick and the panel. */
+        const val DEV_MIN_SPEED = 1
+        const val DEV_MAX_SPEED = 50
+
+        /** The panel's MAX grant, large enough to exercise formatting without overflowing. */
+        const val DEV_MAX_CURRENCY = 999_999_999L
+
+        /** Skill level the unlock-everything cheat grants. */
+        const val DEV_MAX_SKILL_LEVEL = 100
+
+        /** Thresholds the potion auto-deploy control accepts (0 = off). */
+        val AUTO_POTION_THRESHOLDS = listOf(0, 30, 50, 75)
+
         private val ID_SUFFIX = Regex("""[_-](\d+)$""")
 
         /** Highest issued id across logs, inventory, beasts and minions, plus the reserved floor. */
@@ -2329,14 +2461,11 @@ class GameEngine(
             val sanitizedInventory = run {
                 val seenEquippedSlots = mutableSetOf<String>()
                 input.inventory.map { item ->
-                    val migratedSlot = when (item.slot) {
-                        Equipment.SLOT_WEAPON -> Equipment.SLOT_RIFLE
-                        Equipment.SLOT_ARMOR -> Equipment.SLOT_VEST
-                        Equipment.SLOT_RING -> Equipment.SLOT_NODE_I
-                        Equipment.SLOT_AMULET -> Equipment.SLOT_NODE_II
-                        else -> item.slot
-                    }
-                    val isEquip = Equipment.isEquipment(item) || Equipment.GROUPS.any { it.equals(migratedSlot, ignoreCase = true) }
+                    // Legacy names ("Iron Greatsword", "Steel Plate", ...) migrate to their group.
+                    val legacyGroup = Equipment.LEGACY_NAMES[item.name]
+                    val migratedSlot = Equipment.canonicalSlot(legacyGroup ?: item.slot, item.name)
+                    val isEquip = Equipment.isEquipment(item) || legacyGroup != null ||
+                        Equipment.GROUPS.any { it.equals(migratedSlot, ignoreCase = true) }
                     if (isEquip) {
                         val isWep = Equipment.isWeapon(migratedSlot)
                         val atk = if (isWep) (if (item.atk > 0.0) item.atk else item.tier * 18.0) else 0.0
@@ -2345,6 +2474,9 @@ class GameEngine(
                         val statDesc = if (isWep) "+${atk.toInt()} ATK" else "+${def.toInt()} DEF, +${vit.toInt()} VIT"
                         val equipped = item.isEquipped && seenEquippedSlots.add(migratedSlot.lowercase())
                         item.copy(
+                            name = if (legacyGroup != null) {
+                                "${TierConfig.forOrdinal(item.tier).id} $migratedSlot"
+                            } else item.name,
                             slot = migratedSlot,
                             atk = atk,
                             def = def,
@@ -2362,6 +2494,20 @@ class GameEngine(
                 player = player,
                 monster = if (input.monster.hp <= 0.0) Balance.generateMonsterForFloor(currentFloor) else input.monster,
                 inventory = sanitizedInventory,
+                potionSettings = input.potionSettings.copy(
+                    hpAutoThresholdPct = input.potionSettings.hpAutoThresholdPct
+                        .takeIf { it in AUTO_POTION_THRESHOLDS } ?: 0,
+                    mpAutoThresholdPct = input.potionSettings.mpAutoThresholdPct
+                        .takeIf { it in AUTO_POTION_THRESHOLDS } ?: 0,
+                    selectedHpPotion = input.potionSettings.selectedHpPotion
+                        .takeIf { ItemCatalog.potion(it) != null } ?: "Minor Health Flask",
+                    selectedMpPotion = input.potionSettings.selectedMpPotion
+                        .takeIf { ItemCatalog.potion(it) != null } ?: "Mana Infusion Tonic"
+                ),
+                activeBuffs = input.activeBuffs.filter { it.durationRemaining > 0.0 },
+                dev = input.dev.copy(
+                    gameSpeed = input.dev.gameSpeed.coerceIn(DEV_MIN_SPEED, DEV_MAX_SPEED)
+                ),
                 necro = input.necro.copy(
                     lvl = input.necro.lvl.coerceAtLeast(1),
                     xp = input.necro.xp.coerceAtLeast(0L),

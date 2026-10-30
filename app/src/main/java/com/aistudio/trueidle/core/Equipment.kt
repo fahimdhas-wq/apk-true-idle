@@ -50,6 +50,32 @@ object Equipment {
 
     val SLOTS = WEAPON_SLOTS + ARMOR_SLOTS + NODE_SLOTS
 
+    /**
+     * Legacy item names from builds before the canonical 13-group rename. Saves, starting loadouts
+     * and drop tables used these strings, so [com.aistudio.trueidle.engine.GameEngine.sanitize]
+     * migrates them onto the canonical group instead of leaving dead duplicates in the inventory.
+     */
+    val LEGACY_NAMES: Map<String, String> = mapOf(
+        "Iron Greatsword" to SLOT_BLADE,
+        "Steel Plate" to SLOT_VEST,
+        "Rusty Blade" to SLOT_BLADE,
+        "Tattered Leather" to SLOT_DUSTER,
+        "Ember Band" to SLOT_NODE_I,
+        "Warden Sigil" to SLOT_NODE_II
+    )
+
+    /** Canonical group for a legacy item name or old slot alias; otherwise [slot] unchanged. */
+    fun canonicalSlot(slot: String, name: String = ""): String {
+        LEGACY_NAMES[name]?.let { return it }
+        return when (slot) {
+            SLOT_WEAPON -> SLOT_RIFLE
+            SLOT_ARMOR -> SLOT_VEST
+            SLOT_RING -> SLOT_NODE_I
+            SLOT_AMULET -> SLOT_NODE_II
+            else -> slot
+        }
+    }
+
     fun equipped(state: GameState, slot: String): InventoryItem? =
         state.inventory.firstOrNull { it.isEquipped && it.slot.equals(slot, ignoreCase = true) }
 

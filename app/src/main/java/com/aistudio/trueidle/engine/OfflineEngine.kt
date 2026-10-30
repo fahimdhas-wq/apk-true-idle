@@ -109,7 +109,7 @@ object OfflineEngine {
             xp += k * maxOf(1L, (m.xpReward * d.xpGain).toLong())
             faith += k * (if (m.isBoss) 5L else 1L)
             if (m.isBoss) bossKills += k
-            if (slayerTarget != null && m.name.equals(slayerTarget, ignoreCase = true)) slayerKills += k
+            if (slayerTarget != null && com.aistudio.trueidle.core.SlayerMath.matchesTarget(slayerTarget, m.name)) slayerKills += k
             perFloorKills[f] = (perFloorKills[f] ?: 0) + k
         }
 

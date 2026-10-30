@@ -38,6 +38,10 @@ fun InventoryScreen(
     var selectedCategory by rememberSaveable { mutableStateOf("All") }
     // The id is stored, not the item: a stale snapshot showed outdated stats after equip/sell.
     var inspectingItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Batch sell multiplier and sort mode survive rotation and process recreation.
+    var sellMultiplier by rememberSaveable { mutableStateOf(1) }
+    var sortMode by rememberSaveable { mutableStateOf("RANK") }
+    var sortAscending by rememberSaveable { mutableStateOf(false) }
     val inspectingItem = inspectingItemId?.let { id -> state.inventory.firstOrNull { it.id == id } }
     val categories = listOf("All", "Equipment", "Potion", "Resource")
 
@@ -46,6 +50,16 @@ fun InventoryScreen(
         "Potion" -> state.inventory.filter { it.category == "Potion" }
         "Resource" -> state.inventory.filter { it.category == "Resource" || it.category == "Trophy" }
         else -> state.inventory
+    }
+
+    // Sorting never mutates the inventory, only the rendered order.
+    val sortedItems = remember(filteredItems, sortMode, sortAscending) {
+        val base = when (sortMode) {
+            "QTY" -> filteredItems.sortedBy { it.count }
+            "SLOT" -> filteredItems.sortedBy { if (it.slot.isBlank()) it.category else it.slot }
+            else -> filteredItems.sortedBy { it.tier }
+        }
+        if (sortAscending) base else base.reversed()
     }
 
     Column(
@@ -83,6 +97,70 @@ fun InventoryScreen(
                         text = cat.uppercase(),
                         style = TrueIdleType.tag,
                         color = if (isSelected) PrimaryNeon else TextMuted
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Batch sell multipliers
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            listOf(1, 100, 1000).forEach { mult ->
+                val active = sellMultiplier == mult
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp)
+                        .clickable { sellMultiplier = mult }
+                        .background(if (active) SecondaryGold.copy(alpha = 0.18f) else SurfaceDark, RectangleShape)
+                        .border(1.dp, if (active) SecondaryGold else BorderDark, RectangleShape)
+                        .padding(vertical = 5.dp)
+                        .testTag("sell_multiplier_$mult"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SELL ×${mult}",
+                        style = TrueIdleType.tag,
+                        color = if (active) SecondaryGold else TextMuted
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Sort toggles: tap the active mode again to flip the direction.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            listOf("RANK", "QTY", "SLOT").forEach { mode ->
+                val active = sortMode == mode
+                val arrow = if (active) (if (sortAscending) " ▲" else " ▼") else ""
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 40.dp)
+                        .clickable {
+                            if (active) sortAscending = !sortAscending else {
+                                sortMode = mode
+                                sortAscending = false
+                            }
+                        }
+                        .background(if (active) PrimaryNeon.copy(alpha = 0.15f) else SurfaceDark, RectangleShape)
+                        .border(1.dp, if (active) PrimaryNeon else BorderDark, RectangleShape)
+                        .padding(vertical = 5.dp)
+                        .testTag("sort_${mode.lowercase()}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = mode + arrow,
+                        style = TrueIdleType.tag,
+                        color = if (active) PrimaryNeon else TextMuted
                     )
                 }
             }
@@ -155,7 +233,7 @@ fun InventoryScreen(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                itemsIndexed(filteredItems, key = { _, item -> item.id }) { _, item ->
+                itemsIndexed(sortedItems, key = { _, item -> item.id }) { _, item ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -299,7 +377,7 @@ fun InventoryScreen(
                                         }
                                         if (onSellItem != null) {
                                             OutlinedButton(
-                                                onClick = { onSellItem(item.id, 1) },
+                                                onClick = { onSellItem(item.id, sellMultiplier) },
                                                 shape = RectangleShape,
                                                 border = BorderStroke(1.dp, SecondaryGold),
                                                 colors = ButtonDefaults.outlinedButtonColors(
@@ -330,7 +408,7 @@ fun InventoryScreen(
                                 } else if (item.category == "Resource" || item.category == "Trophy") {
                                     if (onSellItem != null) {
                                         OutlinedButton(
-                                            onClick = { onSellItem(item.id, 1) },
+                                            onClick = { onSellItem(item.id, sellMultiplier) },
                                             shape = RectangleShape,
                                             border = BorderStroke(1.dp, SecondaryGold),
                                             colors = ButtonDefaults.outlinedButtonColors(
@@ -339,7 +417,7 @@ fun InventoryScreen(
                                             ),
                                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
                                         ) {
-                                            Text("SELL (1)", style = TrueIdleType.tag)
+                                            Text("SELL (${sellMultiplier}X)", style = TrueIdleType.tag)
                                         }
                                     }
                                 }

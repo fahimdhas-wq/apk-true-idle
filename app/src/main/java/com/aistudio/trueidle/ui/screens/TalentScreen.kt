@@ -78,6 +78,39 @@ fun TalentScreen(
             }
         }
 
+        // 1b. AUTOMATED SIMULTANEOUS EXECUTION STATUS
+        SciFiPanel(
+            title = "AUTO-EXECUTION PROTOCOL",
+            accent = GreenSuccess,
+            tag = "${talent.activeTalents.count { it.rank > 0 }}/${talent.activeTalents.size} POWERS ONLINE"
+        ) {
+            Text(
+                text = "Every unlocked power (rank > 0) fires automatically the moment its cooldown expires. Abilities run on independent timers, so several effects can be active at the same time.",
+                style = TrueIdleType.body,
+                color = TextMuted
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            talent.activeTalents.filter { it.rank > 0 }.forEach { act ->
+                val status = when {
+                    act.isActive -> "ACTIVE ${act.durationRemaining.toInt()}s"
+                    act.cooldownRemaining > 0.0 -> "CD ${act.cooldownRemaining.toInt()}s"
+                    else -> "FIRING"
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(act.name.uppercase(), style = TrueIdleType.label, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        text = status,
+                        style = TrueIdleType.tag,
+                        color = if (act.isActive) GreenSuccess else PrimaryNeon
+                    )
+                }
+            }
+        }
+
         // 2. THE STRUGGLE - KINETIC ADAPTATION PASSIVES
         SciFiPanel(
             title = "THE STRUGGLE // ADAPTIVE PASSIVES",

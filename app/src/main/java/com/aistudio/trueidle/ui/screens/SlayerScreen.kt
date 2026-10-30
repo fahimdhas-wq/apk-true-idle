@@ -97,7 +97,7 @@ fun SlayerScreen(
             tag = "${slayer.slayerPoints} POINTS"
         ) {
             Text(
-                text = "Targeted eradication contracts awarded by the Tactical Command. Up to 10 missions are tracked simultaneously, granting gold, points, and bonus spoils with automatic claims on completion.",
+                text = "Kill-count directives issued by the Tactical Command. Every directive names a randomized hostile total and accepts kills of any species in any sector, so a contract never forces backtracking. Up to 10 missions run simultaneously with automatic claims on completion.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
@@ -229,10 +229,17 @@ private fun SlayerTaskCard(
                 )
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "DIRECTIVE: ELIMINATE ${task.requiredKills} HOSTILES · ANY SPECIES · ANY SECTOR",
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+
             Spacer(modifier = Modifier.height(6.dp))
 
             SciFiGauge(
-                label = "ELIMINATION PROGRESS",
+                label = "HOSTILES ELIMINATED",
                 valueText = "${task.currentKills} / ${task.requiredKills}",
                 ratio = taskProgressRatio.coerceIn(0f, 1f),
                 color = tierColor

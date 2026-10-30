@@ -9,6 +9,25 @@ object SlayerMath {
     /** Every this many Slayer levels grants one extra bounty point per contract. */
     const val LEVELS_PER_BONUS_POINT = 10
 
+    /** Directives accept a kill of any hostile species; no sector backtracking is required. */
+    const val ANY_HOSTILE = "Any Hostile"
+
+    /** The only kill totals a directive may roll (thematic random targets). */
+    val KILL_COUNTS = listOf(5, 7, 11, 25, 50, 111, 333, 777, 1111)
+
+    /** Kill-count pool for a contract tier: low tiers stay short, high tiers roll long hunts. */
+    fun killCountPool(tierRank: Int): List<Int> = when {
+        tierRank >= 24 -> listOf(333, 777, 1111)
+        tierRank >= 8 -> listOf(25, 50, 111, 333)
+        else -> listOf(5, 7, 11, 25)
+    }
+
+    /** Whether a defeated hostile named [monsterName] satisfies [targetName]. */
+    fun matchesTarget(targetName: String, monsterName: String): Boolean =
+        targetName.isBlank() ||
+            targetName.equals(ANY_HOSTILE, ignoreCase = true) ||
+            targetName.equals(monsterName, ignoreCase = true)
+
     fun bonusPoints(level: Int): Int = (level.coerceAtLeast(1) - 1) / LEVELS_PER_BONUS_POINT
 
     /** Credits bonus in percent: +2% per Slayer level above 1. */

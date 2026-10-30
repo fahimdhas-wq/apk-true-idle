@@ -495,6 +495,16 @@ data class PotionSettings(
     val selectedMpPotion: String = "Mana Infusion Tonic"
 )
 
+/**
+ * Dev-only overrides used by the debug Dev Panel. Persisted so a tester's game speed survives a
+ * restart; release builds never expose the panel that writes them.
+ */
+@Serializable
+data class DevSettings(
+    val gameSpeed: Int = 1,
+    val unlockedAll: Boolean = false
+)
+
 @Serializable
 data class GameState(
     val meta: SaveMeta = SaveMeta(),
@@ -514,6 +524,7 @@ data class GameState(
     val promotion: PromotionState = PromotionState(),
     val potionSettings: PotionSettings = PotionSettings(),
     val activeBuffs: List<ActiveBuff> = emptyList(),
+    val dev: DevSettings = DevSettings(),
     val inventory: List<InventoryItem> = listOf(
         InventoryItem(id = "item_rifle_f", name = "F- Rifle", category = "Equipment", count = 1, tier = 1, slot = "Rifle", statDesc = "+12 ATK", sellValue = 35L, isEquipped = true, atk = 12.0),
         InventoryItem(id = "item_vest_f", name = "F- Vest", category = "Equipment", count = 1, tier = 1, slot = "Vest", statDesc = "+8 DEF, +4 VIT", sellValue = 35L, isEquipped = true, def = 8.0, vit = 4.0),

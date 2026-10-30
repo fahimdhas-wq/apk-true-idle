@@ -1,6 +1,10 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -20,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.GameCaps
+import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
@@ -36,6 +42,13 @@ fun CombatScreen(
     onSelectLogFilter: (String) -> Unit,
     onClearLogs: () -> Unit,
     onManageSupport: ((SupportKind) -> Unit)? = null,
+    // Stacked combat potion quick actions: one-tap deploy plus a popover for loadout/thresholds.
+    onUseHpPotion: () -> Unit = {},
+    onUseMpPotion: () -> Unit = {},
+    onSetHpThreshold: (Int) -> Unit = {},
+    onSetMpThreshold: (Int) -> Unit = {},
+    onSelectHpPotion: (String) -> Unit = {},
+    onSelectMpPotion: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -281,6 +294,17 @@ fun CombatScreen(
             }
         }
 
+        // 4b. STACKED HEALTH / MANA QUICK-DEPLOY POTS
+        PotionQuickBar(
+            state = state,
+            onUseHp = onUseHpPotion,
+            onUseMp = onUseMpPotion,
+            onSetHpThreshold = onSetHpThreshold,
+            onSetMpThreshold = onSetMpThreshold,
+            onSelectHp = onSelectHpPotion,
+            onSelectMp = onSelectMpPotion
+        )
+
         // 5. SUPPORT SQUAD MODULE (§7.5, §7.6)
         SupportModule(
             beasts = beastsGroup,
@@ -340,5 +364,206 @@ fun CombatScreen(
             playTimeSeconds = state.lifetime.playTimeSeconds,
             onExport = { com.aistudio.trueidle.core.Telemetry.report(state, state.logs) }
         )
+    }
+}
+
+/** One potion row: tap the flask to deploy immediately, tap the cog to configure. */
+@Composable
+private fun PotionRow(
+    label: String,
+    potionName: String,
+    count: Int,
+    threshold: Int,
+    accent: Color,
+    onUse: () -> Unit,
+    onSettings: () -> Unit,
+    testTag: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceDark, RectangleShape)
+            .border(1.dp, accent, RectangleShape)
+            .padding(6.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp)
+                .background(accent.copy(alpha = 0.18f), RectangleShape)
+                .border(1.dp, accent, RectangleShape)
+                .clickable(role = Role.Button, onClick = onUse)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (label.startsWith("HEALTH")) "♥" else "◆", color = accent, style = TrueIdleType.title)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(label, style = TrueIdleType.tag, color = accent, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    text = potionName.uppercase(),
+                    style = TrueIdleType.value,
+                    color = TextLight,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .background(accent.copy(alpha = 0.25f), RectangleShape)
+                    .border(1.dp, accent, RectangleShape)
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            ) {
+                Text("×$count", style = TrueIdleType.tag, color = accent)
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(SurfaceVariantDark, RectangleShape)
+                    .border(1.dp, accent, RectangleShape)
+                    .clickable(role = Role.Button, onClick = onSettings)
+                    .testTag("${testTag}_settings"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("⚙", color = accent, style = TrueIdleType.title)
+            }
+            Text(
+                text = if (threshold == 0) "AUTO OFF" else "AUTO $threshold%",
+                style = TrueIdleType.meta,
+                color = TextMuted
+            )
+        }
+    }
+}
+
+/**
+ * Vertically stacked Health and Mana quick actions on the combat HUD, each with a remaining-count
+ * badge and an auto-deploy settings sheet.
+ */
+@Composable
+private fun PotionQuickBar(
+    state: GameState,
+    onUseHp: () -> Unit,
+    onUseMp: () -> Unit,
+    onSetHpThreshold: (Int) -> Unit,
+    onSetMpThreshold: (Int) -> Unit,
+    onSelectHp: (String) -> Unit,
+    onSelectMp: (String) -> Unit
+) {
+    var sheet by remember { mutableStateOf<String?>(null) }
+    val settings = state.potionSettings
+    fun owned(name: String): Int = state.inventory.firstOrNull {
+        it.category == ItemCatalog.CATEGORY_POTION && it.name.equals(name, ignoreCase = true)
+    }?.count?.toInt() ?: 0
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        PotionRow(
+            label = "HEALTH POTION",
+            potionName = settings.selectedHpPotion,
+            count = owned(settings.selectedHpPotion),
+            threshold = settings.hpAutoThresholdPct,
+            accent = HpRed,
+            onUse = onUseHp,
+            onSettings = { sheet = "HP" },
+            testTag = "combat_hp_potion"
+        )
+        PotionRow(
+            label = "MANA POTION",
+            potionName = settings.selectedMpPotion,
+            count = owned(settings.selectedMpPotion),
+            threshold = settings.mpAutoThresholdPct,
+            accent = ManaTeal,
+            onUse = onUseMp,
+            onSettings = { sheet = "MP" },
+            testTag = "combat_mp_potion"
+        )
+    }
+
+    sheet?.let { kind ->
+        val isHp = kind == "HP"
+        val accent = if (isHp) HpRed else ManaTeal
+        val selected = if (isHp) settings.selectedHpPotion else settings.selectedMpPotion
+        val threshold = if (isHp) settings.hpAutoThresholdPct else settings.mpAutoThresholdPct
+        val options = if (isHp) ItemCatalog.HP_POTIONS else ItemCatalog.MANA_POTIONS
+        SciFiDialog(
+            title = if (isHp) "HEALTH POTION CONTROL" else "MANA POTION CONTROL",
+            accent = accent,
+            onDismiss = { sheet = null },
+            actions = {
+                SciFiButton(label = "CLOSE", onClick = { sheet = null }, modifier = Modifier.weight(1f), color = accent)
+            }
+        ) {
+            Text("AUTO-DEPLOY THRESHOLD", style = TrueIdleType.meta, color = TextMuted)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf(0, 30, 50, 75).forEach { pct ->
+                    val active = threshold == pct
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 40.dp)
+                            .background(
+                                if (active) accent.copy(alpha = 0.2f) else SurfaceVariantDark,
+                                RectangleShape
+                            )
+                            .border(1.dp, if (active) accent else BorderDark, RectangleShape)
+                            .clickable {
+                                if (isHp) onSetHpThreshold(pct) else onSetMpThreshold(pct)
+                            }
+                            .testTag("potion_threshold_${kind.lowercase()}_$pct"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (pct == 0) "OFF" else "$pct%",
+                            style = TrueIdleType.tag,
+                            color = if (active) accent else TextMuted
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("POTION LOADOUT", style = TrueIdleType.meta, color = TextMuted)
+            Spacer(modifier = Modifier.height(4.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                options.forEach { def ->
+                    val ownedCount = owned(def.name)
+                    val active = def.name.equals(selected, ignoreCase = true)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (active) accent.copy(alpha = 0.15f) else SurfaceVariantDark,
+                                RectangleShape
+                            )
+                            .border(1.dp, if (active) accent else BorderDark, RectangleShape)
+                            .clickable { if (isHp) onSelectHp(def.name) else onSelectMp(def.name) }
+                            .padding(8.dp)
+                            .testTag("potion_option_${kind.lowercase()}_${def.herb.lowercase().replace(' ', '_')}"),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(def.name.uppercase(), style = TrueIdleType.label, color = TextLight)
+                            Text(def.effectDesc, style = TrueIdleType.meta, color = TextMuted)
+                        }
+                        Text(
+                            text = "×$ownedCount",
+                            style = TrueIdleType.value,
+                            color = if (ownedCount > 0) GreenSuccess else TextMuted
+                        )
+                    }
+                }
+            }
+        }
     }
 }

@@ -68,6 +68,24 @@ fun StatsScreen(
     val totalNodeDef = nodeList.sumOf { Equipment.baseDefense(it) }
     val totalNodeVit = nodeList.sumOf { Equipment.baseVit(it) }
 
+    // Telemetry derived from the exact combat formulas so the screen quotes real numbers.
+    val mitigation = CombatMath.mitigation(d.armorDef)
+    val rawPool = d.maxHp + d.maxShield
+    val effectiveHp = if (mitigation >= 1.0) rawPool else rawPool / (1.0 - mitigation)
+    val heroDps = CombatMath.heroDps(d)
+    val companionDps = CombatMath.beastDps(state.beasts)
+    val corpsDps = CombatMath.armyDps(state.necro)
+    val trueDps = CombatMath.totalDps(state, d)
+    val effectiveDps = trueDps * CombatMath.mitigation(state.monster.armor)
+    val incomingDps = CombatMath.incomingPerSec(
+        state.monster,
+        d,
+        CombatMath.aegisReduction(state.essence)
+    )
+    val incomingRaw = state.monster.damage
+    val secondsToDeath = if (incomingDps > 0.0) rawPool / incomingDps else 0.0
+    val weaponSharePct = (d.weaponDmg / (d.str * 1.2 + d.weaponDmg).coerceAtLeast(1.0) * 100.0).toInt()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -144,6 +162,103 @@ fun StatsScreen(
                         Text("+${NumberFormatter.short(totalArmorVit + totalNodeVit)} VIT", style = TrueIdleType.value, color = GreenSuccess)
                     }
                 }
+            }
+        }
+
+        // 1b. EFFECTIVE HEALTH POOL (EHP)
+        SciFiPanel(
+            title = "EFFECTIVE HEALTH POOL (EHP)",
+            accent = GreenSuccess,
+            tag = "SURVIVABILITY"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatDotRow("RAW HP + SHIELD POOL", NumberFormatter.short(rawPool), GreenSuccess, GreenSuccess)
+                StatDotRow(
+                    "ARMOR MITIGATION",
+                    "${String.format(Locale.ROOT, "%.1f", mitigation * 100)}% ABSORBED",
+                    ShieldBlue,
+                    ShieldBlue
+                )
+                StatDotRow("EFFECTIVE HP VS PHYSICAL", NumberFormatter.short(effectiveHp), null, PrimaryNeon)
+                StatDotRow(
+                    "INCOMING ${state.monster.name.uppercase()} DPS",
+                    "${NumberFormatter.short(incomingRaw)} RAW ➔ ${NumberFormatter.short(incomingDps)} MITIGATED",
+                    HpRed,
+                    HpRed
+                )
+                StatDotRow(
+                    "SECONDS TO DEATH",
+                    "${String.format(Locale.ROOT, "%.1f", secondsToDeath)}s",
+                    null,
+                    Warn
+                )
+            }
+        }
+
+        // 1c. TRUE DPS BREAKDOWN
+        SciFiPanel(
+            title = "TRUE DPS BREAKDOWN",
+            accent = HpRed,
+            tag = "${NumberFormatter.short(trueDps)} DPS"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatDotRow("HERO DPS", NumberFormatter.short(heroDps), PrimaryNeon, PrimaryNeon)
+                StatDotRow("COMPANION BEAST DPS", NumberFormatter.short(companionDps), SecondaryGold, SecondaryGold)
+                StatDotRow("UNDEAD CORPS DPS", NumberFormatter.short(corpsDps), NecroPurple, NecroPurple)
+                StatDotRow("TOTAL TRUE DPS", NumberFormatter.short(trueDps), null, TextLight)
+                StatDotRow(
+                    "VS ${state.monster.name.uppercase()} ARMOR",
+                    NumberFormatter.short(effectiveDps),
+                    null,
+                    HpRed
+                )
+                StatDotRow(
+                    "ATTACKS PER SECOND",
+                    String.format(Locale.ROOT, "%.2f", d.atkSpeed),
+                    null,
+                    PrimaryNeon
+                )
+                StatDotRow(
+                    "CRIT EXPECTATION",
+                    "${(CombatMath.critMultiplier(d.critChance, d.critDamage) * 100).toInt()}% AVG",
+                    null,
+                    SecondaryGold
+                )
+            }
+        }
+
+        // 1d. GEAR CONTRIBUTION MATRIX ACROSS ALL 13 GROUPS
+        SciFiPanel(
+            title = "GEAR CONTRIBUTION MATRIX",
+            accent = SecondaryGold,
+            tag = "${Equipment.GROUPS.size} GROUPS"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatDotRow(
+                    "WEAPONS (3) · ATK",
+                    "+${NumberFormatter.short(totalWeaponAtk)} RAW ➔ ${NumberFormatter.short(d.weaponDmg)} EFFECTIVE",
+                    PrimaryNeon,
+                    PrimaryNeon
+                )
+                StatDotRow(
+                    "ARMOR (7) · DEF / VIT",
+                    "+${NumberFormatter.short(totalArmorDef)} DEF · +${NumberFormatter.short(totalArmorVit)} VIT",
+                    ShieldBlue,
+                    ShieldBlue
+                )
+                StatDotRow(
+                    "NODES (3) · DEF / VIT",
+                    "+${NumberFormatter.short(totalNodeDef)} DEF · +${NumberFormatter.short(totalNodeVit)} VIT",
+                    NecroPurple,
+                    NecroPurple
+                )
+                StatDotRow("WEAPON SHARE OF HERO BASE", "$weaponSharePct%", null, TextLight)
+                StatDotRow(
+                    "MITIGATION CURVE",
+                    "ARMOR ${NumberFormatter.short(d.armorDef)} ➔ ${String.format(Locale.ROOT, "%.1f", mitigation * 100)}%",
+                    null,
+                    SecondaryGold
+                )
             }
         }
 
@@ -238,9 +353,9 @@ fun StatsScreen(
             }
         }
 
-        // 7. DISCIPLINE MASTERIES BREAKDOWN
+        // 7. SKILL MASTERIES BREAKDOWN
         SciFiPanel(
-            title = "DISCIPLINE MASTERIES",
+            title = "SKILL MASTERIES",
             accent = PrimaryNeon,
             tag = "ACADEMY"
         ) {

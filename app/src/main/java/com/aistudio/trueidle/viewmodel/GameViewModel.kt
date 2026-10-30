@@ -263,6 +263,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun equipItem(itemId: String) = mutate { engine.equipItem(itemId) }
     fun unequipItem(itemId: String) = mutate { engine.unequipItem(itemId) }
     fun usePotion(itemId: String) = mutate { engine.usePotion(itemId) }
+    fun usePotionByName(potionName: String) = mutate { engine.usePotionByName(potionName) }
+    fun setHpAutoThreshold(pct: Int) = mutate { engine.setHpAutoThreshold(pct) }
+    fun setMpAutoThreshold(pct: Int) = mutate { engine.setMpAutoThreshold(pct) }
+    fun selectHpPotion(name: String) = mutate { engine.selectHpPotion(name) }
+    fun selectMpPotion(name: String) = mutate { engine.selectMpPotion(name) }
     fun sellItem(itemId: String, count: Int = 1) = mutate { engine.sellItem(itemId, count) }
     fun craftEquipment(name: String, tier: Int, slot: String, reqOre: String, reqQty: Int) =
         mutate { engine.craftEquipment(name, tier, slot, reqOre, reqQty) }
@@ -301,6 +306,14 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun setNotation(notation: String) = mutate { engine.setNotation(notation) }
     fun fightPromotionBoss() = mutate { engine.fightPromotionBoss() }
     fun clearLogs() = mutate { engine.clearLogs() }
+
+    // ------------------------------------------------------------- dev panel (debug builds)
+
+    fun setGameSpeed(multiplier: Int) = mutate { engine.setGameSpeed(multiplier) }
+    fun devAddCurrency(kind: String, amount: Long) = mutate { engine.devAddCurrency(kind, amount) }
+    fun devMaxCurrency(kind: String) = mutate { engine.devMaxCurrency(kind) }
+    fun devUnlockAll() = mutate { engine.devUnlockAll() }
+    fun devHardReset() { resetGame() }
 
     fun claimOfflineLoot() {
         _gameState.value = engine.claimOfflineLoot()

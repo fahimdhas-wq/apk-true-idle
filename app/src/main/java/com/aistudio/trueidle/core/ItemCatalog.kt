@@ -184,7 +184,15 @@ object ItemCatalog {
         val healBoostPct: Double = 0.0,
         val healBoostDurationSec: Double = 0.0,
         val grantsPermanentMaxHpWhileCarried: Boolean = false
-    )
+    ) {
+        /** True when the brew restores health in any form (direct, max-HP or regeneration). */
+        val restoresHp: Boolean
+            get() = directMissingHpPct > 0.0 || directMaxHpPct > 0.0 || regenHpPctPerSec > 0.0
+
+        /** True when the brew restores mana in any form. */
+        val restoresMana: Boolean
+            get() = directMissingManaPct > 0.0 || regenManaPctPerSec > 0.0
+    }
 
     val POTIONS = listOf(
         PotionDef(
@@ -367,6 +375,12 @@ object ItemCatalog {
             grantsPermanentMaxHpWhileCarried = true
         )
     )
+
+    /** Health brews offered by the combat quick-deploy selector, weakest first. */
+    val HP_POTIONS: List<PotionDef> = POTIONS.filter { it.restoresHp }
+
+    /** Mana brews offered by the combat quick-deploy selector, weakest first. */
+    val MANA_POTIONS: List<PotionDef> = POTIONS.filter { it.restoresMana }
 
     fun potion(name: String): PotionDef? = POTIONS.firstOrNull { it.name.equals(name, ignoreCase = true) }
 

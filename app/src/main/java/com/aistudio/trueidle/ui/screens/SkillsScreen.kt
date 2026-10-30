@@ -72,23 +72,8 @@ fun SkillsScreen(
     var isDrawerOpen by remember { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // High-Tech Cyber Header Strip
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface, RectangleShape)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ResourceReadout("CR", NumberFormatter.short(state.player.gold), SecondaryGold)
-            ResourceReadout("FA", NumberFormatter.short(state.essence.faith), ManaTeal)
-            ResourceReadout("SP", "${NumberFormatter.short(state.slayer.slayerPoints)} PTS", HpRed)
-            ResourceReadout("TP", "${state.talent.talentPoints} TP", PrimaryNeon)
-        }
-
-        // Cyber Discipline Bar with Menu Access Button
+        // Single top-left skill menu trigger. The old CR/FA/SP/TP readout strip was removed so the
+        // header holds exactly one control; the drawer lists every skill with its level.
         Row(
             Modifier
                 .fillMaxWidth()
@@ -109,7 +94,7 @@ fun SkillsScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = if (isDrawerOpen) "◄ CLOSE MENU" else "► DISCIPLINES MENU",
+                    text = if (isDrawerOpen) "✕ SKILLS" else "☰ SKILLS",
                     style = TrueIdleType.tag,
                     color = PrimaryNeon,
                     fontWeight = FontWeight.Bold
@@ -205,31 +190,6 @@ fun SkillsScreen(
                 }
             }
 
-            // Swipe/Tap Edge Handle on Left Edge
-            if (!isDrawerOpen) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .clickable { isDrawerOpen = true }
-                        .background(SurfaceDark.copy(alpha = 0.95f), RectangleShape)
-                        .border(BorderStroke(1.dp, PrimaryNeon), RectangleShape)
-                        .padding(horizontal = 4.dp, vertical = 14.dp)
-                        .testTag("skills_edge_swipe_handle"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text("►", color = PrimaryNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("M", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Text("E", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Text("N", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                        Text("U", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
             // Sliding Side Navigation Panel / Drawer
             this@Column.AnimatedVisibility(
                 visible = isDrawerOpen,
@@ -247,7 +207,7 @@ fun SkillsScreen(
                             .testTag("skills_drawer_scrim")
                     )
 
-                    // Vertical Disciplines Column
+                    // Vertical skills column
                     Column(
                         Modifier
                             .width(260.dp)
@@ -264,7 +224,7 @@ fun SkillsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("DISCIPLINES", style = TrueIdleType.title, color = PrimaryNeon)
+                            Text("SKILLS", style = TrueIdleType.title, color = PrimaryNeon)
                             IconButton(
                                 onClick = { isDrawerOpen = false },
                                 modifier = Modifier.size(36.dp).testTag("close_skills_drawer_button")
@@ -273,7 +233,7 @@ fun SkillsScreen(
                             }
                         }
                         Text(
-                            text = "Swipe or select a discipline below:",
+                            text = "Select a skill below:",
                             style = TrueIdleType.body,
                             color = TextMuted
                         )
@@ -418,7 +378,7 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
     ) {
         // High-level Telemetry Tiles
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MetricTile("DISCIPLINES", "$active/6 OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
+            MetricTile("SKILLS", "$active/6 OPERATIONAL", PrimaryNeon, Modifier.weight(1f))
             MetricTile("TOTAL LEVEL", totalLevel.toString(), SecondaryGold, Modifier.weight(1f))
         }
 
