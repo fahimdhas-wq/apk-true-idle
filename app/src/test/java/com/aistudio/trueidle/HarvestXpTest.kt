@@ -78,7 +78,8 @@ class HarvestXpTest {
 
     @Test
     fun explicitYieldUpgradesIncreaseSkillXpWithTheBatchSize() {
-        val base = GameState()
+        // GameEngine reconciles the catalog on load; begin with that same complete upgrade list.
+        val base = GameEngine().state
         val upgradedHarvest = base.harvest.copy(
             upgrades = base.harvest.upgrades.map {
                 when (it.id) {
