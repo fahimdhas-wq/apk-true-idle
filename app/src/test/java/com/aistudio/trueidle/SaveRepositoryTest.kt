@@ -5,7 +5,6 @@ import com.aistudio.trueidle.data.SaveStore
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.LifetimeStats
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -152,10 +151,9 @@ class SaveRepositoryTest {
             )
         )
 
-        val loaded = repo.decode(repo.encode(state))
+        val loaded = repo.decode(repo.encode(state)) ?: error("large XP save did not decode")
 
-        assertNotNull(loaded)
-        assertEquals(1.2E28, loaded!!.harvest.farmingXp, 1.0E13)
+        assertEquals(1.2E28, loaded.harvest.farmingXp, 1.0E13)
         assertEquals(2.4E28, loaded.harvest.miningXp, 1.0E13)
     }
 
@@ -164,10 +162,9 @@ class SaveRepositoryTest {
         val repo = SaveRepository(MemorySaveStore())
         val legacy = """{"player":{},"harvest":{"farmingXp":1250,"miningXp":2500}}"""
 
-        val loaded = repo.decode(legacy.toByteArray())
+        val loaded = repo.decode(legacy.toByteArray()) ?: error("legacy integer XP save did not migrate")
 
-        assertNotNull(loaded)
-        assertEquals(1250.0, loaded!!.harvest.farmingXp, 0.0)
+        assertEquals(1250.0, loaded.harvest.farmingXp, 0.0)
         assertEquals(2500.0, loaded.harvest.miningXp, 0.0)
     }
 
