@@ -1,5 +1,6 @@
 package com.aistudio.trueidle
 
+import com.aistudio.trueidle.core.ContentCatalog
 import com.aistudio.trueidle.core.GameClock
 import com.aistudio.trueidle.core.snapshot
 import com.aistudio.trueidle.engine.Balance
@@ -26,6 +27,16 @@ class FakeClock : GameClock {
 
 class GameEngineTest {
 
+    /**
+     * `ContentCatalog.reconcile` appends its extra powers with rank 1 after the engine is built, so
+     * zeroing only the six defaults would be undone (Phoenix Protocol refills HP to max and blocks
+     * the defeat path). Build the complete set at rank 0 for a true "nothing unlocked" state.
+     */
+    private fun noUnlockedTalents(): TalentState {
+        val all = TalentState().activeTalents + ContentCatalog.EXTRA_ACTIVE_TALENTS
+        return TalentState(activeTalents = all.map { it.copy(rank = 0) })
+    }
+
     @Test
     fun testBossSpawnEvery10thFloor() {
         val clock = FakeClock()
@@ -49,11 +60,8 @@ class GameEngineTest {
             initialState = GameState(
                 player = PlayerState(hp = 1.0, shield = 0.0),
                 monster = Monster(damage = 50.0, hp = 500.0),
-                // Automatic talents fire before combat now, and Nanite Repair would out-heal the
-                // blow. Zero their ranks so this test isolates the defeat/recovery path.
-                talent = TalentState(
-                    activeTalents = TalentState().activeTalents.map { it.copy(rank = 0) }
-                )
+                // Automatic talents fire before combat; isolate the defeat/recovery path.
+                talent = noUnlockedTalents()
             ),
             clock = clock,
             random = Random(1234)
@@ -75,9 +83,7 @@ class GameEngineTest {
                 player = PlayerState(currentFloor = 5, maxUnlockedFloor = 5, failuresInRow = 2, autoAdvance = true, hp = 1.0, shield = 0.0),
                 monster = Monster(damage = 50.0, hp = 500.0),
                 // Same isolation as above: automatic talents must not rescue the hero here.
-                talent = TalentState(
-                    activeTalents = TalentState().activeTalents.map { it.copy(rank = 0) }
-                )
+                talent = noUnlockedTalents()
             ),
             clock = clock,
             random = Random(1234)
