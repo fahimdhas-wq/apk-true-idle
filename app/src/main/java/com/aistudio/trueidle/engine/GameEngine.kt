@@ -782,7 +782,6 @@ class GameEngine(
             .coerceAtLeast(0.20).toFloat()
         val mineMult = (0.97.pow((frame.harvest.miningLvl - 1).toDouble()) * 0.92.pow(miningRank))
             .coerceAtLeast(0.20).toFloat()
-        val autoCollect = frame.harvest.autoCollectUnlocked && frame.harvest.autoCollectEnabled
 
         val herbGains = mutableMapOf<String, Double>()
         val oreGains = mutableMapOf<String, Double>()
@@ -790,8 +789,11 @@ class GameEngine(
         var miningXpGained = 0L
 
         val plots = frame.harvest.plots.map { plot ->
+            if (frame.harvest.farmingLvl < plot.reqLvl) {
+                return@map plot.copy(growthProgress = 0f, isReady = false, autoQueue = false)
+            }
             val duration = (plot.durationSeconds * farmMult).coerceAtLeast(0.1f)
-            val shouldAuto = plot.autoQueue || autoCollect
+            val shouldAuto = plot.autoQueue
             val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
             val baseYield = (2.0 + extraYield) * profMult
             val rewardAmt = baseYield.toLong().coerceAtLeast(1L)
@@ -822,10 +824,10 @@ class GameEngine(
         val veins = frame.harvest.veins.map { vein ->
             // Mining level gates the vein: Iron Ore must not be farmable at level 1.
             if (frame.harvest.miningLvl < vein.reqLvl) {
-                vein.copy(miningProgress = 0f, isReady = false)
+                vein.copy(miningProgress = 0f, isReady = false, autoQueue = false)
             } else {
                 val duration = (vein.durationSeconds * mineMult).coerceAtLeast(0.1f)
-                val shouldAuto = vein.autoQueue || autoCollect
+                val shouldAuto = vein.autoQueue
                 val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
                 val baseYield = (3.0 + extraYield + extraOreYield) * profMult
                 val rewardAmt = baseYield.toLong().coerceAtLeast(1L)
@@ -896,7 +898,7 @@ class GameEngine(
     fun harvestPlot(plotId: Int): GameState {
         val plots = state.harvest.plots.toMutableList()
         val idx = plots.indexOfFirst { it.id == plotId }
-        if (idx < 0 || !plots[idx].isReady) return state
+        if (idx < 0 || state.harvest.farmingLvl < plots[idx].reqLvl || !plots[idx].isReady) return state
 
         val plot = plots[idx]
         val herbName = plot.herbName
@@ -972,24 +974,32 @@ class GameEngine(
     }
 
     fun togglePlotAutoQueue(plotId: Int): GameState {
-        val current = state.harvest.plots.find { it.id == plotId }?.autoQueue ?: false
-        val newTarget = !current
-        val plots = state.harvest.plots.map {
-            if (it.id == plotId) it.copy(autoQueue = newTarget)
-            else it.copy(autoQueue = false)
+        val harvest = state.harvest
+        val target = harvest.plots.find { it.id == plotId } ?: return state
+        if (harvest.farmingLvl < target.reqLvl) return state
+        val enable = !target.autoQueue
+        val capacity = harvest.farmingLvl / 10
+        val active = harvest.plots.count { it.autoQueue }
+        if (enable && active >= capacity) return state
+        val plots = harvest.plots.map { plot ->
+            if (plot.id == plotId) plot.copy(autoQueue = enable) else plot
         }
-        state = state.copy(harvest = state.harvest.copy(plots = plots))
+        state = state.copy(harvest = harvest.copy(plots = plots))
         return state
     }
 
     fun toggleVeinAutoQueue(veinId: Int): GameState {
-        val current = state.harvest.veins.find { it.id == veinId }?.autoQueue ?: false
-        val newTarget = !current
-        val veins = state.harvest.veins.map {
-            if (it.id == veinId) it.copy(autoQueue = newTarget)
-            else it.copy(autoQueue = false)
+        val harvest = state.harvest
+        val target = harvest.veins.find { it.id == veinId } ?: return state
+        if (harvest.miningLvl < target.reqLvl) return state
+        val enable = !target.autoQueue
+        val capacity = harvest.miningLvl / 10
+        val active = harvest.veins.count { it.autoQueue }
+        if (enable && active >= capacity) return state
+        val veins = harvest.veins.map { vein ->
+            if (vein.id == veinId) vein.copy(autoQueue = enable) else vein
         }
-        state = state.copy(harvest = state.harvest.copy(veins = veins))
+        state = state.copy(harvest = harvest.copy(veins = veins))
         return state
     }
 
