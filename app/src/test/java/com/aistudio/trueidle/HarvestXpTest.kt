@@ -2,6 +2,7 @@ package com.aistudio.trueidle
 
 import com.aistudio.trueidle.core.HarvestXp
 import com.aistudio.trueidle.core.ItemCatalog
+import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
@@ -27,6 +28,7 @@ class HarvestXpTest {
         assertEquals(1.2E28, HarvestXp.forYield(ItemCatalog.STONE, oneFItems), 1.0E13)
         assertEquals(2.4E28, HarvestXp.forYield(ItemCatalog.COAL, oneFItems), 1.0E13)
         assertTrue(HarvestXp.forYield(ItemCatalog.STONE, oneFItems) > Long.MAX_VALUE.toDouble())
+        assertTrue(NumberFormatter.short(HarvestXp.forYield(ItemCatalog.STONE, oneFItems)).endsWith("F"))
     }
 
     @Test
