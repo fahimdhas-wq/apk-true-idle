@@ -31,6 +31,27 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
+    XpProgressBar(
+        skillName = skillName,
+        level = level,
+        currentXp = currentXp.toDouble(),
+        requiredXp = requiredXp.toDouble(),
+        barColor = barColor,
+        modifier = modifier,
+        isMaxLevel = isMaxLevel
+    )
+}
+
+@Composable
+fun XpProgressBar(
+    skillName: String,
+    level: Int,
+    currentXp: Double,
+    requiredXp: Double,
+    barColor: Color = PrimaryNeon,
+    modifier: Modifier = Modifier,
+    isMaxLevel: Boolean = false
+) {
     val progress = if (isMaxLevel) 1f else if (requiredXp > 0) (currentXp.toFloat() / requiredXp.toFloat()).coerceIn(0f, 1f) else 0f
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "XpAnim")
 
