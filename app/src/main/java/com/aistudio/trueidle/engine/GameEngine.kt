@@ -1941,7 +1941,6 @@ class GameEngine(
                     miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
                     miningXp = input.harvest.miningXp.coerceAtLeast(0L),
                     plots = run {
-                        val firstAuto = input.harvest.plots.indexOfFirst { it.autoQueue }
                         val basePlots = if (input.harvest.plots.size == ItemCatalog.HERBS.size &&
                             input.harvest.plots.map { it.herbName } == ItemCatalog.HERBS) {
                             input.harvest.plots
@@ -1951,6 +1950,7 @@ class GameEngine(
                                 Plot(
                                     id = idx,
                                     herbName = herb,
+                                    reqLvl = if (idx == 0) 1 else idx * 5,
                                     growthProgress = existing?.growthProgress ?: 0f,
                                     durationSeconds = 10f + idx * 3f,
                                     isReady = existing?.isReady ?: false,
@@ -1960,17 +1960,23 @@ class GameEngine(
                                 )
                             }
                         }
+                        var enabledQueues = 0
+                        val queueCapacity = input.harvest.farmingLvl.coerceAtLeast(1) / 10
                         basePlots.mapIndexed { idx, p ->
+                            val requiredLevel = if (idx == 0) 1 else idx * 5
+                            val queueAllowed = p.autoQueue && input.harvest.farmingLvl >= requiredLevel && enabledQueues < queueCapacity
+                            if (queueAllowed) enabledQueues++
                             p.copy(
+                                reqLvl = requiredLevel,
                                 growthProgress = p.growthProgress.coerceIn(0f, 1f),
-                                autoQueue = idx == firstAuto,
+                                isReady = p.isReady && input.harvest.farmingLvl >= requiredLevel,
+                                autoQueue = queueAllowed,
                                 proficiencyLevel = p.proficiencyLevel.coerceIn(1, 100),
                                 proficiencyXp = p.proficiencyXp.coerceAtLeast(0L)
                             )
                         }
                     },
                     veins = run {
-                        val firstAuto = input.harvest.veins.indexOfFirst { it.autoQueue }
                         val baseVeins = if (input.harvest.veins.size == ItemCatalog.ORES.size &&
                             input.harvest.veins.map { it.oreName } == ItemCatalog.ORES) {
                             input.harvest.veins
@@ -1980,7 +1986,7 @@ class GameEngine(
                                 MiningVein(
                                     id = idx,
                                     oreName = ore,
-                                    reqLvl = 1,
+                                    reqLvl = if (idx == 0) 1 else idx * 5,
                                     miningProgress = existing?.miningProgress ?: 0f,
                                     durationSeconds = 8f + idx * 2.5f,
                                     isReady = existing?.isReady ?: false,
@@ -1990,11 +1996,17 @@ class GameEngine(
                                 )
                             }
                         }
+                        var enabledQueues = 0
+                        val queueCapacity = input.harvest.miningLvl.coerceAtLeast(1) / 10
                         baseVeins.mapIndexed { idx, v ->
+                            val requiredLevel = if (idx == 0) 1 else idx * 5
+                            val queueAllowed = v.autoQueue && input.harvest.miningLvl >= requiredLevel && enabledQueues < queueCapacity
+                            if (queueAllowed) enabledQueues++
                             v.copy(
                                 miningProgress = v.miningProgress.coerceIn(0f, 1f),
-                                reqLvl = 1,
-                                autoQueue = idx == firstAuto,
+                                isReady = v.isReady && input.harvest.miningLvl >= requiredLevel,
+                                reqLvl = requiredLevel,
+                                autoQueue = queueAllowed,
                                 proficiencyLevel = v.proficiencyLevel.coerceIn(1, 100),
                                 proficiencyXp = v.proficiencyXp.coerceAtLeast(0L)
                             )
