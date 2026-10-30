@@ -70,7 +70,7 @@ class HarvestArmoryForgeUpdateTest {
                 plots = GameState().harvest.plots.map {
                     if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 1, proficiencyXp = 0L) else it
                 },
-                farmingXp = 0L,
+                farmingXp = 0.0,
                 farmingLvl = 1
             )
         )
@@ -86,7 +86,7 @@ class HarvestArmoryForgeUpdateTest {
         // Yield is 2.0
         assertEquals(2.0, itemsGained, 1e-6)
         // Farming XP is 24L (12 XP per item x 2 items)
-        assertEquals(24L, engine.state.harvest.farmingXp)
+        assertEquals(24.0, engine.state.harvest.farmingXp, 0.0)
         // Proficiency XP remains tied to the actual proficiency-adjusted yield.
         assertEquals(2L, plot.proficiencyXp)
     }
@@ -100,7 +100,7 @@ class HarvestArmoryForgeUpdateTest {
                 veins = GameState().harvest.veins.map {
                     if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 1, proficiencyXp = 0L) else it
                 },
-                miningXp = 0L,
+                miningXp = 0.0,
                 miningLvl = 1
             )
         )
@@ -116,7 +116,7 @@ class HarvestArmoryForgeUpdateTest {
         // Yield is 3.0
         assertEquals(3.0, itemsGained, 1e-6)
         // Mining XP is 36L (12 XP per Stone x 3 Stone)
-        assertEquals(36L, engine.state.harvest.miningXp)
+        assertEquals(36.0, engine.state.harvest.miningXp, 0.0)
         // Proficiency XP remains tied to the actual proficiency-adjusted yield.
         assertEquals(3L, vein.proficiencyXp)
     }
