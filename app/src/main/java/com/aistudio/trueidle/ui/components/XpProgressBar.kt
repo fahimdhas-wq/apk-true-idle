@@ -21,6 +21,7 @@ import com.aistudio.trueidle.ui.theme.TextLight
 import com.aistudio.trueidle.ui.theme.TextMuted
 import com.aistudio.trueidle.ui.theme.TrueIdleType
 
+/** Exact Long formatter path retained for all non-harvesting skills. */
 @Composable
 fun XpProgressBar(
     skillName: String,
@@ -31,17 +32,24 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
-    XpProgressBar(
+    val progress = when {
+        isMaxLevel -> 1f
+        requiredXp <= 0L -> 0f
+        else -> (currentXp.toDouble() / requiredXp.toDouble()).coerceIn(0.0, 1.0).toFloat()
+    }
+    XpProgressBarContent(
         skillName = skillName,
         level = level,
-        currentXp = currentXp.toDouble(),
-        requiredXp = requiredXp.toDouble(),
+        currentXpText = NumberFormatter.short(currentXp),
+        requiredXpText = NumberFormatter.short(requiredXp),
+        progress = progress,
         barColor = barColor,
         modifier = modifier,
         isMaxLevel = isMaxLevel
     )
 }
 
+/** Double precision path for the arbitrary-scale Farming and Mining XP banks. */
 @Composable
 fun XpProgressBar(
     skillName: String,
@@ -52,7 +60,6 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
-    // Divide as Double before narrowing: late-game XP thresholds exceed Float.MAX_VALUE.
     val progress = when {
         isMaxLevel -> 1f
         requiredXp <= 0.0 || !requiredXp.isFinite() -> 0f
@@ -65,6 +72,29 @@ fun XpProgressBar(
             (safeCurrentXp / requiredXp).coerceIn(0.0, 1.0).toFloat()
         }
     }
+    XpProgressBarContent(
+        skillName = skillName,
+        level = level,
+        currentXpText = NumberFormatter.short(currentXp),
+        requiredXpText = NumberFormatter.short(requiredXp),
+        progress = progress,
+        barColor = barColor,
+        modifier = modifier,
+        isMaxLevel = isMaxLevel
+    )
+}
+
+@Composable
+private fun XpProgressBarContent(
+    skillName: String,
+    level: Int,
+    currentXpText: String,
+    requiredXpText: String,
+    progress: Float,
+    barColor: Color,
+    modifier: Modifier,
+    isMaxLevel: Boolean
+) {
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "XpAnim")
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -75,7 +105,6 @@ fun XpProgressBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: Discipline name with consistent spacing and sci-fi prefix
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
@@ -91,7 +120,6 @@ fun XpProgressBar(
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // Center-Right: Strictly aligned fixed-width Level Box
             Box(
                 modifier = Modifier
                     .width(68.dp)
@@ -109,11 +137,8 @@ fun XpProgressBar(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Right: XP telemetry. The width is bounded rather than merely minimum-bounded: the
-            // label row is the weighted child, so an over-long readout can no longer push the
-            // discipline name off a 360dp screen.
             Text(
-                text = if (isMaxLevel) "MAX LEVEL" else "${NumberFormatter.short(currentXp)} / ${NumberFormatter.short(requiredXp)} (${(progress * 100).toInt()}%)",
+                text = if (isMaxLevel) "MAX LEVEL" else "$currentXpText / $requiredXpText (${(progress * 100).toInt()}%)",
                 style = TrueIdleType.meta,
                 color = TextMuted,
                 textAlign = TextAlign.End,
@@ -125,7 +150,6 @@ fun XpProgressBar(
 
         Spacer(modifier = Modifier.height(3.dp))
 
-        // High-Tech Cyber Bar with contrast background and precision borders
         Box(
             modifier = Modifier
                 .fillMaxWidth()
