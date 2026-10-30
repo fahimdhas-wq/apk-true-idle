@@ -829,7 +829,7 @@ class GameEngine(
                 if (shouldAuto) {
                     herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
                     farmingXpGained += (2L + extraYield)
-                    val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
+                    val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
                     plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                 } else plot
             } else {
@@ -838,7 +838,7 @@ class GameEngine(
                     if (shouldAuto) {
                         herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
                         farmingXpGained += (2L + extraYield)
-                        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
+                        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
                         plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else {
                         plot.copy(growthProgress = 1f, isReady = true)
@@ -863,7 +863,7 @@ class GameEngine(
                     if (shouldAuto) {
                         oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
                         miningXpGained += (3L + extraYield + extraOreYield)
-                        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
+                        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
                         vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else vein
                 } else {
@@ -872,7 +872,7 @@ class GameEngine(
                         if (shouldAuto) {
                             oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
                             miningXpGained += (3L + extraYield + extraOreYield)
-                            val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
+                            val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
                             vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                         } else {
                             vein.copy(miningProgress = 1f, isReady = true)
@@ -936,7 +936,7 @@ class GameEngine(
         val rewardAmt = yield.toLong().coerceAtLeast(1L)
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, herbName, yield)
-        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
+        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
         plots[idx] = plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
         val yieldStr = NumberFormatter.short(yield)
@@ -980,7 +980,7 @@ class GameEngine(
         val rewardAmt = yield.toLong().coerceAtLeast(1L)
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, vein.oreName, yield)
-        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
+        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
         veins[idx] = vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
         val yieldStr = NumberFormatter.short(yield)
