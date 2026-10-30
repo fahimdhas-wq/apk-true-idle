@@ -52,7 +52,12 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
-    val progress = if (isMaxLevel) 1f else if (requiredXp > 0) (currentXp.toFloat() / requiredXp.toFloat()).coerceIn(0f, 1f) else 0f
+    // Divide as Double before narrowing: late-game XP thresholds exceed Float.MAX_VALUE.
+    val progress = when {
+        isMaxLevel -> 1f
+        requiredXp <= 0.0 || !requiredXp.isFinite() -> 0f
+        else -> (currentXp.coerceAtLeast(0.0) / requiredXp).coerceIn(0.0, 1.0).toFloat()
+    }
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "XpAnim")
 
     Column(modifier = modifier.fillMaxWidth()) {
