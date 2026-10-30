@@ -51,8 +51,8 @@ fun HarvestScreen(
     val miningRank = harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
     val extraYield = harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
     val extraOreYield = harvest.upgrades.firstOrNull { it.id == "mining_yield" }?.rank ?: 0
-    val farmingQueueCapacity = harvest.farmingLvl / 10
-    val miningQueueCapacity = harvest.miningLvl / 10
+    val farmingQueueCapacity = 1 + harvest.farmingLvl / 10
+    val miningQueueCapacity = 1 + harvest.miningLvl / 10
     val activeFarmingQueues = harvest.plots.count { it.autoQueue }
     val activeMiningQueues = harvest.veins.count { it.autoQueue }
     val farmMult = (Math.pow(0.97, (harvest.farmingLvl - 1).toDouble()) * Math.pow(0.92, speedRank.toDouble()))
