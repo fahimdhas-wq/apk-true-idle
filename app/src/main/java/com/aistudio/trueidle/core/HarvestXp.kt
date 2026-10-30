@@ -26,7 +26,16 @@ object HarvestXp {
 
     /** Tier 1 Stone / first herb gives 12 XP per guaranteed item; each higher tier gives more. */
     fun xpPerItem(resourceName: String): Long {
-        val key = resourceName.lowercase(Locale.ROOT)
+        val rawKey = resourceName.lowercase(Locale.ROOT)
+        // Normalize resource names retained by older saves before looking up their current tier.
+        val key = when (rawKey) {
+            "felweed" -> ItemCatalog.HEALING_HERB.lowercase(Locale.ROOT)
+            "moonflower" -> ItemCatalog.MOONLIGHT_BLOSSOM.lowercase(Locale.ROOT)
+            "starbloom" -> ItemCatalog.SPIRITBLOOM.lowercase(Locale.ROOT)
+            "voidcap" -> ItemCatalog.WORLDTREE_LEAF.lowercase(Locale.ROOT)
+            "obsidian ore" -> ItemCatalog.OBSIDIAN.lowercase(Locale.ROOT)
+            else -> rawKey
+        }
         val tier = oreTiers[key] ?: herbTiers[key] ?: 1
         return XP_PER_TIER_UNIT * tier.toLong()
     }
