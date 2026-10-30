@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.HarvestXp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
@@ -130,7 +131,7 @@ fun HarvestScreen(
                         skillName = "BIO-FARMING",
                         level = harvest.farmingLvl,
                         currentXp = harvest.farmingXp,
-                        requiredXp = XpCurves.skill(harvest.farmingLvl),
+                        requiredXp = XpCurves.gatheringSkill(harvest.farmingLvl),
                         barColor = GreenSuccess
                     )
                 }
@@ -167,6 +168,10 @@ fun HarvestScreen(
                     val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
                     val reqProfXp = XpCurves.proficiency(plot.proficiencyLevel)
                     val profRatio = if (plot.proficiencyLevel >= 100) 1f else (plot.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
+                    val baseSkillYield = (2.0 + extraYield).toLong().coerceAtLeast(1L)
+                    val skillXpReward = if (harvest.farmingLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
+                        HarvestXp.forBaseBatch(plot.herbName, baseSkillYield)
+                    } else 0L
                     val totalYield = (2.0 + extraYield) * profMult
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
@@ -214,12 +219,12 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
                                 Text(
-                                    text = if (plot.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(plot.proficiencyXp.toDouble())} / ${NumberFormatter.short(reqProfXp.toDouble())} XP",
+                                    text = if (plot.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(plot.proficiencyXp)} / ${NumberFormatter.short(reqProfXp)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
@@ -332,7 +337,7 @@ fun HarvestScreen(
                         skillName = "PLASMA MINING",
                         level = harvest.miningLvl,
                         currentXp = harvest.miningXp,
-                        requiredXp = XpCurves.skill(harvest.miningLvl),
+                        requiredXp = XpCurves.gatheringSkill(harvest.miningLvl),
                         barColor = SecondaryGold
                     )
                 }
@@ -374,6 +379,10 @@ fun HarvestScreen(
                     val profMult = XpCurves.proficiencyYieldMultiplier(vein.proficiencyLevel)
                     val reqProfXp = XpCurves.proficiency(vein.proficiencyLevel)
                     val profRatio = if (vein.proficiencyLevel >= 100) 1f else (vein.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
+                    val baseSkillYield = (3.0 + extraYield + extraOreYield).toLong().coerceAtLeast(1L)
+                    val skillXpReward = if (harvest.miningLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) {
+                        HarvestXp.forBaseBatch(vein.oreName, baseSkillYield)
+                    } else 0L
                     val totalYield = (3.0 + extraYield + extraOreYield) * profMult
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
@@ -425,12 +434,12 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
                                 Text(
-                                    text = if (vein.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(vein.proficiencyXp.toDouble())} / ${NumberFormatter.short(reqProfXp.toDouble())} XP",
+                                    text = if (vein.proficiencyLevel >= 100) "MAX RANK (100)" else "${NumberFormatter.short(vein.proficiencyXp)} / ${NumberFormatter.short(reqProfXp)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
