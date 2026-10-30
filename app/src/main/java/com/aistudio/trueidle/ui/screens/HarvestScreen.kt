@@ -132,7 +132,8 @@ fun HarvestScreen(
                         level = harvest.farmingLvl,
                         currentXp = harvest.farmingXp,
                         requiredXp = XpCurves.gatheringSkill(harvest.farmingLvl),
-                        barColor = GreenSuccess
+                        barColor = GreenSuccess,
+                        isMaxLevel = harvest.farmingLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
                 }
             }
@@ -338,7 +339,8 @@ fun HarvestScreen(
                         level = harvest.miningLvl,
                         currentXp = harvest.miningXp,
                         requiredXp = XpCurves.gatheringSkill(harvest.miningLvl),
-                        barColor = SecondaryGold
+                        barColor = SecondaryGold,
+                        isMaxLevel = harvest.miningLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
                 }
             }
