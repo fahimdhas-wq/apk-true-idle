@@ -774,8 +774,16 @@ class GameEngine(
 
     /** Saturating addition for arbitrary-scale gathering XP; non-finite values never escape. */
     private fun safeAddNonNegative(current: Double, amount: Double): Double {
-        val base = if (current.isFinite()) current.coerceAtLeast(0.0) else Double.MAX_VALUE
-        val increment = if (amount.isFinite()) amount.coerceAtLeast(0.0) else Double.MAX_VALUE
+        val base = when {
+            current.isNaN() || current < 0.0 -> 0.0
+            current.isInfinite() -> Double.MAX_VALUE
+            else -> current
+        }
+        val increment = when {
+            amount.isNaN() || amount < 0.0 -> 0.0
+            amount.isInfinite() -> Double.MAX_VALUE
+            else -> amount
+        }
         val sum = base + increment
         return if (sum.isFinite()) sum else Double.MAX_VALUE
     }
@@ -887,8 +895,10 @@ class GameEngine(
             }
         }
 
-        var farmingXp = frame.harvest.farmingXp.coerceAtLeast(0.0)
-        var miningXp = frame.harvest.miningXp.coerceAtLeast(0.0)
+        var farmingXp = frame.harvest.farmingXp
+            .takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
+        var miningXp = frame.harvest.miningXp
+            .takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0
         var farmingLvl = frame.harvest.farmingLvl.coerceIn(1, XpCurves.GATHERING_SKILL_MAX_LEVEL)
         var miningLvl = frame.harvest.miningLvl.coerceIn(1, XpCurves.GATHERING_SKILL_MAX_LEVEL)
 
@@ -2006,9 +2016,9 @@ class GameEngine(
                 ),
                 harvest = input.harvest.copy(
                     farmingLvl = input.harvest.farmingLvl.coerceAtLeast(1),
-                    farmingXp = input.harvest.farmingXp.coerceAtLeast(0.0),
+                    farmingXp = input.harvest.farmingXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                     miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
-                    miningXp = input.harvest.miningXp.coerceAtLeast(0.0),
+                    miningXp = input.harvest.miningXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                     plots = run {
                         val firstAuto = input.harvest.plots.indexOfFirst { it.autoQueue }
                         val basePlots = if (input.harvest.plots.size == ItemCatalog.HERBS.size &&
