@@ -2015,9 +2015,9 @@ class GameEngine(
                     upgrades = clampUpgrades(input.necro.upgrades)
                 ),
                 harvest = input.harvest.copy(
-                    farmingLvl = input.harvest.farmingLvl.coerceAtLeast(1),
+                    farmingLvl = input.harvest.farmingLvl.coerceIn(1, XpCurves.GATHERING_SKILL_MAX_LEVEL),
                     farmingXp = input.harvest.farmingXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
-                    miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
+                    miningLvl = input.harvest.miningLvl.coerceIn(1, XpCurves.GATHERING_SKILL_MAX_LEVEL),
                     miningXp = input.harvest.miningXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                     plots = run {
                         val firstAuto = input.harvest.plots.indexOfFirst { it.autoQueue }
