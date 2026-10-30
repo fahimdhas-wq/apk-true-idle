@@ -112,6 +112,7 @@ class SkillContentTest {
         val copperVeinId = GameState().harvest.veins.indexOfFirst { it.oreName == ItemCatalog.COPPER_ORE }
         val base = GameState().copy(
             harvest = GameState().harvest.copy(
+                miningLvl = 10,
                 veins = GameState().harvest.veins.map {
                     if (it.oreName == ItemCatalog.COPPER_ORE) it.copy(isReady = true) else it
                 }
