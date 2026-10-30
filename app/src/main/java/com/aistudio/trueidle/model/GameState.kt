@@ -215,7 +215,7 @@ data class TrainingNode(
     val name: String = "",
     val stat: String = "",
     val rank: Int = 0,
-    val maxRank: Int = 20,
+    val maxRank: Int = 1_000_000,
     val costGold: Long = 50L
 )
 
@@ -224,11 +224,11 @@ data class TrainingState(
     val lvl: Int = 1,
     val xp: Long = 0L,
     val nodes: List<TrainingNode> = listOf(
-        TrainingNode(id = "str_bonus", name = "Titan Strength", stat = "+5 STR per rank", rank = 0, maxRank = 30, costGold = 50L),
-        TrainingNode(id = "vit_bonus", name = "Iron Constitution", stat = "+5 VIT per rank", rank = 0, maxRank = 30, costGold = 50L),
-        TrainingNode(id = "int_bonus", name = "Arcane Mind", stat = "+5 INT per rank", rank = 0, maxRank = 30, costGold = 50L),
-        TrainingNode(id = "speed_bonus", name = "Swift Strikes", stat = "+5% Attack Speed per rank", rank = 0, maxRank = 15, costGold = 100L),
-        TrainingNode(id = "luck_bonus", name = "Fortune's Favor", stat = "+5% Drop Chance per rank", rank = 0, maxRank = 20, costGold = 75L)
+        TrainingNode(id = "str_bonus", name = "Titan Strength", stat = "+5 STR per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
+        TrainingNode(id = "vit_bonus", name = "Iron Constitution", stat = "+5 VIT per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
+        TrainingNode(id = "int_bonus", name = "Arcane Mind", stat = "+5 INT per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
+        TrainingNode(id = "speed_bonus", name = "Swift Strikes", stat = "+5% Attack Speed per rank", rank = 0, maxRank = 1_000_000, costGold = 100L),
+        TrainingNode(id = "luck_bonus", name = "Fortune's Favor", stat = "+5% Drop Chance per rank", rank = 0, maxRank = 1_000_000, costGold = 75L)
     )
 )
 
@@ -293,11 +293,17 @@ data class TalentState(
 
 @Serializable
 data class SlayerTask(
-    val targetName: String = "Cave Rat",
+    val id: String = "slayer_1",
+    val targetName: String = "Any Hostile",
+    val tier: String = "F-",
+    val targetFloor: Int = 1,
     val currentKills: Int = 0,
     val requiredKills: Int = 15,
     val rewardGold: Long = 200L,
     val rewardPoints: Int = 5,
+    val rewardDiamonds: Long = 0L,
+    val rewardFaith: Long = 0L,
+    val rewardBones: Long = 0L,
     val isCompleted: Boolean = false
 )
 
@@ -306,7 +312,8 @@ data class SlayerState(
     val lvl: Int = 1,
     val xp: Long = 0L,
     val slayerPoints: Int = 10,
-    val currentTask: SlayerTask = SlayerTask()
+    val currentTask: SlayerTask = SlayerTask(),
+    val tasks: List<SlayerTask> = emptyList()
 )
 
 @Serializable
@@ -471,6 +478,24 @@ data class LifetimeStats(
 )
 
 @Serializable
+data class ActiveBuff(
+    val id: String = "",
+    val name: String = "",
+    val type: String = "", // "REGEN_HP", "REGEN_MANA", "SHIELD", "DAMAGE_REDUCTION", "LIFESTEAL", "HEAL_BOOST"
+    val value: Double = 0.0,
+    val durationRemaining: Double = 0.0,
+    val totalDuration: Double = 0.0
+)
+
+@Serializable
+data class PotionSettings(
+    val hpAutoThresholdPct: Int = 0, // 0 = OFF, 30 = 30%, 50 = 50%, etc.
+    val mpAutoThresholdPct: Int = 0,
+    val selectedHpPotion: String = "Minor Health Flask",
+    val selectedMpPotion: String = "Mana Infusion Tonic"
+)
+
+@Serializable
 data class GameState(
     val meta: SaveMeta = SaveMeta(),
     val lifetime: LifetimeStats = LifetimeStats(),
@@ -487,20 +512,23 @@ data class GameState(
     val automation: AutomationSettings = AutomationSettings(),
     val display: DisplaySettings = DisplaySettings(),
     val promotion: PromotionState = PromotionState(),
+    val potionSettings: PotionSettings = PotionSettings(),
+    val activeBuffs: List<ActiveBuff> = emptyList(),
     val inventory: List<InventoryItem> = listOf(
-        InventoryItem(id = "item_iron_sword", name = "Iron Greatsword", category = "Equipment", count = 1, tier = 2, slot = "Weapon", statDesc = "+18 Damage", sellValue = 45L, atk = 18.0),
-        InventoryItem(id = "item_steel_armor", name = "Steel Plate", category = "Equipment", count = 1, tier = 2, slot = "Armor", statDesc = "+12 Defense", sellValue = 50L, def = 12.0),
-        InventoryItem(id = "item_rusty_blade", name = "Rusty Blade", category = "Equipment", count = 1, tier = 1, slot = "Weapon", statDesc = "+8 Damage", sellValue = 10L, isEquipped = true, atk = 8.0),
-        InventoryItem(id = "item_tattered_leather", name = "Tattered Leather", category = "Equipment", count = 1, tier = 1, slot = "Armor", statDesc = "+4 Defense", sellValue = 10L, isEquipped = true, def = 4.0),
-        InventoryItem(id = "item_ember_band", name = "Ember Band", category = "Equipment", count = 1, tier = 2, slot = "Ring", statDesc = "+6 Attack", sellValue = 60L, isEquipped = true, atk = 6.0),
-        InventoryItem(id = "item_warden_sigil", name = "Warden Sigil", category = "Equipment", count = 1, tier = 2, slot = "Amulet", statDesc = "+6 Defense", sellValue = 60L, isEquipped = true, def = 6.0),
-        InventoryItem(id = "item_hp_pot", name = "Lesser Healing Potion", category = "Potion", count = 5, tier = 1, statDesc = "Restores 50 HP", sellValue = 10L),
-        InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Crafting Ore", sellValue = 2L),
-        InventoryItem(id = "item_felweed", name = "Felweed", category = "Resource", count = 8, tier = 1, statDesc = "Alchemy Herb", sellValue = 3L)
+        InventoryItem(id = "item_rifle_f", name = "F- Rifle", category = "Equipment", count = 1, tier = 1, slot = "Rifle", statDesc = "+12 ATK", sellValue = 35L, isEquipped = true, atk = 12.0),
+        InventoryItem(id = "item_vest_f", name = "F- Vest", category = "Equipment", count = 1, tier = 1, slot = "Vest", statDesc = "+8 DEF, +4 VIT", sellValue = 35L, isEquipped = true, def = 8.0, vit = 4.0),
+        InventoryItem(id = "item_blade_f", name = "F- Blade", category = "Equipment", count = 1, tier = 1, slot = "Blade", statDesc = "+12 ATK", sellValue = 35L, isEquipped = true, atk = 12.0),
+        InventoryItem(id = "item_visor_f", name = "F- Visor", category = "Equipment", count = 1, tier = 1, slot = "Visor", statDesc = "+8 DEF, +4 VIT", sellValue = 35L, isEquipped = true, def = 8.0, vit = 4.0),
+        InventoryItem(id = "item_node1_f", name = "F- Node I", category = "Equipment", count = 1, tier = 1, slot = "Node I", statDesc = "+8 DEF, +4 VIT", sellValue = 35L, isEquipped = true, def = 8.0, vit = 4.0),
+        InventoryItem(id = "item_node2_f", name = "F- Node II", category = "Equipment", count = 1, tier = 1, slot = "Node II", statDesc = "+8 DEF, +4 VIT", sellValue = 35L, isEquipped = true, def = 8.0, vit = 4.0),
+        InventoryItem(id = "item_hp_flask", name = "Minor Health Flask", category = "Potion", count = 5, tier = 1, statDesc = "Restores 5% missing HP", sellValue = 10L),
+        InventoryItem(id = "item_mp_tonic", name = "Mana Infusion Tonic", category = "Potion", count = 5, tier = 1, statDesc = "Restores 25% missing mana", sellValue = 15L),
+        InventoryItem(id = "item_copper", name = "Copper Ore", category = "Resource", count = 12, tier = 1, statDesc = "Conductive red metal ore", sellValue = 3L),
+        InventoryItem(id = "item_healing_herb", name = "Healing Herb", category = "Resource", count = 8, tier = 1, statDesc = "Cellular regenerative herb", sellValue = 2L)
     ),
     val logs: List<LogEntry> = listOf(
         LogEntry(id = 1L, text = "SYSTEM INITIALIZED: Welcome to True IDLE Sector 01.", type = "system"),
-        LogEntry(id = 2L, text = "RADAR CONTACT: Cave Rat engaged.", type = "combat")
+        LogEntry(id = 2L, text = "RADAR CONTACT: Hostiles detected in perimeter.", type = "combat")
     ),
     val pendingOfflineLoot: OfflineLoot? = null,
     val achievements: List<Achievement> = listOf(

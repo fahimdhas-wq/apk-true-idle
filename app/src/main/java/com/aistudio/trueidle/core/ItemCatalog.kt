@@ -162,37 +162,213 @@ object ItemCatalog {
     fun newResource(id: String, name: String, count: Int): InventoryItem =
         newResource(id, name, count.toDouble())
 
-    /** Potion recipes: name -> (required herb, herb count, heal amount). */
-    data class PotionDef(val name: String, val herb: String, val herbCost: Int, val heal: Double)
+    /** Potion recipes with exact percentage and duration effects matching canonical 20 herbs. */
+    data class PotionDef(
+        val name: String,
+        val herb: String,
+        val herbCost: Int,
+        val effectDesc: String,
+        val directMissingHpPct: Double = 0.0,
+        val directMissingManaPct: Double = 0.0,
+        val directMaxHpPct: Double = 0.0,
+        val cleanseNegatives: Boolean = false,
+        val regenHpPctPerSec: Double = 0.0,
+        val regenManaPctPerSec: Double = 0.0,
+        val regenDurationSec: Double = 0.0,
+        val shieldPctMaxHp: Double = 0.0,
+        val shieldDurationSec: Double = 0.0,
+        val damageReductionPct: Double = 0.0,
+        val damageReductionDurationSec: Double = 0.0,
+        val lifestealPct: Double = 0.0,
+        val lifestealDurationSec: Double = 0.0,
+        val healBoostPct: Double = 0.0,
+        val healBoostDurationSec: Double = 0.0,
+        val grantsPermanentMaxHpWhileCarried: Boolean = false
+    )
 
-    /**
-     * The engine charges these costs and the Forge screen renders this same table, so a recipe can
-     * never quote one price and take another.
-     */
     val POTIONS = listOf(
-        PotionDef("Minor Health Flask", HEALING_HERB, 4, 50.0),
-        PotionDef("Lesser Health Draught", LESSER_HEALING_HERB, 4, 100.0),
-        PotionDef("Mana Infusion Tonic", MANA_HERB, 4, 150.0),
-        PotionDef("Cleansing Antidote", ANTIDOTE_HERB, 5, 220.0),
-        PotionDef("Vitality Elixir", VITALITY_HERB, 5, 300.0),
-        PotionDef("Spirit Grass Philter", SPIRIT_GRASS, 5, 400.0),
-        PotionDef("Moonshade Concoction", MOONSHADE_HERB, 6, 550.0),
-        PotionDef("Sunroot Extract", SUNROOT_HERB, 6, 750.0),
-        PotionDef("Silverleaf Cordial", SILVERLEAF_HERB, 6, 1000.0),
-        PotionDef("Windwhisper Brew", WINDWHISPER_GRASS, 7, 1400.0),
-        PotionDef("Bloodroot Restorative", BLOODROOT, 7, 1900.0),
-        PotionDef("Frostbloom Draught", FROSTBLOOM, 7, 2600.0),
-        PotionDef("Emberleaf Tincture", EMBERLEAF, 8, 3500.0),
-        PotionDef("Dreamer's Balm", DREAMERS_SAGE, 8, 4800.0),
-        PotionDef("Golden Ginseng Panacea", GOLDEN_GINSENG, 8, 6500.0),
-        PotionDef("Moonlight Blossom Philter", MOONLIGHT_BLOSSOM, 9, 9000.0),
-        PotionDef("Sacred Lotus Ambrosia", SACRED_LOTUS, 9, 12500.0),
-        PotionDef("Mandrake Elixir", MANDRAKE_ROOT, 9, 17500.0),
-        PotionDef("Spiritbloom Nectar", SPIRITBLOOM, 10, 25000.0),
-        PotionDef("Worldtree Dew", WORLDTREE_LEAF, 10, 40000.0)
+        PotionDef(
+            name = "Minor Health Flask",
+            herb = HEALING_HERB,
+            herbCost = 4,
+            effectDesc = "Restores 5% of current missing HP.",
+            directMissingHpPct = 0.05
+        ),
+        PotionDef(
+            name = "Lesser Health Draught",
+            herb = LESSER_HEALING_HERB,
+            herbCost = 4,
+            effectDesc = "Restores 10% of current missing HP.",
+            directMissingHpPct = 0.10
+        ),
+        PotionDef(
+            name = "Mana Infusion Tonic",
+            herb = MANA_HERB,
+            herbCost = 4,
+            effectDesc = "Restores 25% of current missing mana.",
+            directMissingManaPct = 0.25
+        ),
+        PotionDef(
+            name = "Cleansing Antidote",
+            herb = ANTIDOTE_HERB,
+            herbCost = 5,
+            effectDesc = "Cleanses negative status and restores 5% Max HP.",
+            cleanseNegatives = true,
+            directMaxHpPct = 0.05
+        ),
+        PotionDef(
+            name = "Vitality Elixir",
+            herb = VITALITY_HERB,
+            herbCost = 5,
+            effectDesc = "Restores 15% missing HP, +2.5% max HP/s regen for 15s.",
+            directMissingHpPct = 0.15,
+            regenHpPctPerSec = 0.025,
+            regenDurationSec = 15.0
+        ),
+        PotionDef(
+            name = "Spirit Grass Philter",
+            herb = SPIRIT_GRASS,
+            herbCost = 5,
+            effectDesc = "Restores 20% missing HP, +4% max mana/s regen for 12s.",
+            directMissingHpPct = 0.20,
+            regenManaPctPerSec = 0.04,
+            regenDurationSec = 12.0
+        ),
+        PotionDef(
+            name = "Moonshade Concoction",
+            herb = MOONSHADE_HERB,
+            herbCost = 6,
+            effectDesc = "Restores 25% missing HP, +12% max HP shield for 15s.",
+            directMissingHpPct = 0.25,
+            shieldPctMaxHp = 0.12,
+            shieldDurationSec = 15.0
+        ),
+        PotionDef(
+            name = "Sunroot Extract",
+            herb = SUNROOT_HERB,
+            herbCost = 6,
+            effectDesc = "Restores 30% missing HP, +1.5% max mana/s regen for 12s.",
+            directMissingHpPct = 0.30,
+            regenManaPctPerSec = 0.015,
+            regenDurationSec = 12.0
+        ),
+        PotionDef(
+            name = "Silverleaf Cordial",
+            herb = SILVERLEAF_HERB,
+            herbCost = 6,
+            effectDesc = "Restores 35% missing HP, reduces incoming damage by 6% for 14s.",
+            directMissingHpPct = 0.35,
+            damageReductionPct = 0.06,
+            damageReductionDurationSec = 14.0
+        ),
+        PotionDef(
+            name = "Windwhisper Brew",
+            herb = WINDWHISPER_GRASS,
+            herbCost = 7,
+            effectDesc = "Restores 40% missing HP, +5% max mana/s regen for 12s.",
+            directMissingHpPct = 0.40,
+            regenManaPctPerSec = 0.05,
+            regenDurationSec = 12.0
+        ),
+        PotionDef(
+            name = "Bloodroot Restorative",
+            herb = BLOODROOT,
+            herbCost = 7,
+            effectDesc = "Restores 45% missing HP, 8% damage dealt back as HP for 10s.",
+            directMissingHpPct = 0.45,
+            lifestealPct = 0.08,
+            lifestealDurationSec = 10.0
+        ),
+        PotionDef(
+            name = "Frostbloom Draught",
+            herb = FROSTBLOOM,
+            herbCost = 7,
+            effectDesc = "Restores 50% missing HP, reduces incoming damage by 8% for 14s.",
+            directMissingHpPct = 0.50,
+            damageReductionPct = 0.08,
+            damageReductionDurationSec = 14.0
+        ),
+        PotionDef(
+            name = "Emberleaf Tincture",
+            herb = EMBERLEAF,
+            herbCost = 8,
+            effectDesc = "Restores 55% missing HP, increases healing received by 10% for 12s.",
+            directMissingHpPct = 0.55,
+            healBoostPct = 0.10,
+            healBoostDurationSec = 12.0
+        ),
+        PotionDef(
+            name = "Dreamer's Balm",
+            herb = DREAMERS_SAGE,
+            herbCost = 8,
+            effectDesc = "Restores 20% missing HP and 20% missing mana, +3% max mana/s for 10s.",
+            directMissingHpPct = 0.20,
+            directMissingManaPct = 0.20,
+            regenManaPctPerSec = 0.03,
+            regenDurationSec = 10.0
+        ),
+        PotionDef(
+            name = "Golden Ginseng Panacea",
+            herb = GOLDEN_GINSENG,
+            herbCost = 8,
+            effectDesc = "Restores 70% missing HP, +6% max HP/s regen for 18s.",
+            directMissingHpPct = 0.70,
+            regenHpPctPerSec = 0.06,
+            regenDurationSec = 18.0
+        ),
+        PotionDef(
+            name = "Moonlight Blossom Philter",
+            herb = MOONLIGHT_BLOSSOM,
+            herbCost = 9,
+            effectDesc = "Restores 75% missing HP, +7% max mana/s regen for 16s.",
+            directMissingHpPct = 0.75,
+            regenManaPctPerSec = 0.07,
+            regenDurationSec = 16.0
+        ),
+        PotionDef(
+            name = "Sacred Lotus Ambrosia",
+            herb = SACRED_LOTUS,
+            herbCost = 9,
+            effectDesc = "Restores 85% missing HP, +18% max HP shield for 20s.",
+            directMissingHpPct = 0.85,
+            shieldPctMaxHp = 0.18,
+            shieldDurationSec = 20.0
+        ),
+        PotionDef(
+            name = "Mandrake Elixir",
+            herb = MANDRAKE_ROOT,
+            herbCost = 9,
+            effectDesc = "Restores 90% missing HP, +8% max mana/s for 18s, reduces damage by 10% for 14s.",
+            directMissingHpPct = 0.90,
+            regenManaPctPerSec = 0.08,
+            damageReductionPct = 0.10,
+            damageReductionDurationSec = 14.0,
+            regenDurationSec = 18.0
+        ),
+        PotionDef(
+            name = "Spiritbloom Nectar",
+            herb = SPIRITBLOOM,
+            herbCost = 10,
+            effectDesc = "Restores 95% missing HP and 25% missing mana, +9% max HP/s for 20s.",
+            directMissingHpPct = 0.95,
+            directMissingManaPct = 0.25,
+            regenHpPctPerSec = 0.09,
+            regenDurationSec = 20.0
+        ),
+        PotionDef(
+            name = "Worldtree Dew",
+            herb = WORLDTREE_LEAF,
+            herbCost = 10,
+            effectDesc = "Restores 100% missing HP and 40% missing mana, +10% max mana/s for 20s. Grants +1% Max HP permanently while carried in inventory.",
+            directMissingHpPct = 1.00,
+            directMissingManaPct = 0.40,
+            regenManaPctPerSec = 0.10,
+            regenDurationSec = 20.0,
+            grantsPermanentMaxHpWhileCarried = true
+        )
     )
 
     fun potion(name: String): PotionDef? = POTIONS.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
-    fun potionHeal(name: String): Double = potion(name)?.heal ?: 75.0
+    fun potionHeal(name: String): Double = potion(name)?.directMissingHpPct ?: 0.25
 }

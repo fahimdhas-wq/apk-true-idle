@@ -15,6 +15,7 @@ import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.SlayerMath
+import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.data.NoOpSaveStore
 import com.aistudio.trueidle.data.SaveRepository
@@ -49,6 +50,15 @@ class GameEngine(
     var state: GameState = ContentCatalog.reconcile(sanitize(initialState))
         private set
 
+    init {
+        state = state.copy(
+            slayer = state.slayer.copy(
+                tasks = ensureSlayerTasks(state.slayer.tasks),
+                currentTask = state.slayer.tasks.firstOrNull() ?: state.slayer.currentTask
+            )
+        )
+    }
+
     private val ids = Ids(nextIdFrom(initialState))
 
     private var respawnLeft = 0.0
@@ -78,7 +88,13 @@ class GameEngine(
         // The saved notation preference drives the shared formatter, and the stored name is
         // normalised so an unknown/legacy value cannot leave the UI in a state the engine does not
         // recognise.
-        state = state.copy(display = state.display.copy(notation = applyNotation(state.display.notation).mode.name))
+        state = state.copy(
+            display = state.display.copy(notation = applyNotation(state.display.notation).mode.name),
+            slayer = state.slayer.copy(
+                tasks = ensureSlayerTasks(state.slayer.tasks),
+                currentTask = state.slayer.tasks.firstOrNull() ?: state.slayer.currentTask
+            )
+        )
         reseedIds(state)
         respawnLeft = 0.0
         playTimeSubSec = 0.0
@@ -229,33 +245,52 @@ class GameEngine(
             levels++
         }
 
-        // Slayer kills earned offline, resolved exactly like the live path.
+        // Slayer kills earned offline, resolved across active tasks
         var slayer = state.slayer
         var slayerGold = 0L
-        val task = slayer.currentTask
-        if (loot.slayerKills > 0 && !task.isCompleted) {
-            val kills = task.currentKills + loot.slayerKills
-            if (kills < task.requiredKills) {
-                slayer = slayer.copy(currentTask = task.copy(currentKills = kills))
-            } else {
-                var sxp = slayer.xp + 100L
-                var slvl = slayer.lvl
-                while (sxp >= Balance.slayerXpReq(slvl)) {
-                    sxp -= Balance.slayerXpReq(slvl)
-                    slvl++
+        var slayerDiamonds = 0L
+        var slayerFaith = 0L
+        var slayerBones = 0L
+        var remainingOfflineKills = loot.slayerKills
+        if (remainingOfflineKills > 0) {
+            val tasks = ensureSlayerTasks(slayer.tasks).toMutableList()
+            for (i in tasks.indices) {
+                if (remainingOfflineKills <= 0) break
+                val task = tasks[i]
+                if (!task.isCompleted) {
+                    val killsNeeded = (task.requiredKills - task.currentKills).coerceAtLeast(0)
+                    if (remainingOfflineKills < killsNeeded) {
+                        tasks[i] = task.copy(currentKills = task.currentKills + remainingOfflineKills)
+                        remainingOfflineKills = 0
+                    } else {
+                        remainingOfflineKills -= killsNeeded
+                        slayerGold += task.rewardGold
+                        slayerDiamonds += task.rewardDiamonds
+                        slayerFaith += task.rewardFaith
+                        slayerBones += task.rewardBones
+                        val tierRank = TierConfig.rankOf(task.tier).coerceAtLeast(0)
+                        val xpEarned = (100L * (1.0 + tierRank * 0.25)).toLong()
+                        var sxp = slayer.xp + xpEarned
+                        var slvl = slayer.lvl
+                        while (sxp >= Balance.slayerXpReq(slvl)) {
+                            sxp -= Balance.slayerXpReq(slvl)
+                            slvl++
+                        }
+                        slayer = slayer.copy(
+                            lvl = slvl,
+                            xp = sxp,
+                            slayerPoints = slayer.slayerPoints + task.rewardPoints
+                        )
+                        tasks[i] = newSlayerTask(task.id)
+                    }
                 }
-                slayer = slayer.copy(
-                    lvl = slvl,
-                    xp = sxp,
-                    slayerPoints = slayer.slayerPoints + task.rewardPoints,
-                    currentTask = task.copy(currentKills = kills, isCompleted = true)
-                )
-                slayerGold = task.rewardGold
             }
+            slayer = slayer.copy(tasks = tasks, currentTask = tasks.firstOrNull() ?: com.aistudio.trueidle.model.SlayerTask())
         }
 
         var player = state.player.copy(
             gold = state.player.gold + loot.goldEarned + slayerGold,
+            diamonds = state.player.diamonds + slayerDiamonds,
             xp = xp,
             lvl = lvl,
             currentFloor = finalFloor,
@@ -273,8 +308,8 @@ class GameEngine(
         state = state.copy(
             player = player,
             monster = monster,
-            necro = state.necro.copy(boneEssence = state.necro.boneEssence + loot.bonesEarned),
-            essence = state.essence.copy(faith = state.essence.faith + loot.faithEarned),
+            necro = state.necro.copy(boneEssence = state.necro.boneEssence + loot.bonesEarned + slayerBones),
+            essence = state.essence.copy(faith = state.essence.faith + loot.faithEarned + slayerFaith),
             slayer = slayer,
             beasts = beasts,
             inventory = inventory,
@@ -323,6 +358,8 @@ class GameEngine(
         var talent: TalentState = base.talent
         var lifetime = base.lifetime
         var inventory: MutableList<InventoryItem> = base.inventory.toMutableList()
+        var activeBuffs: MutableList<com.aistudio.trueidle.model.ActiveBuff> = base.activeBuffs.toMutableList()
+        var potionSettings: com.aistudio.trueidle.model.PotionSettings = base.potionSettings
         val logs: MutableList<LogEntry> = mutableListOf()
 
         private var cachedDerived: Derived? = null
@@ -340,7 +377,9 @@ class GameEngine(
             slayer = slayer,
             talent = talent,
             lifetime = lifetime,
-            inventory = inventory
+            inventory = inventory,
+            potionSettings = potionSettings,
+            activeBuffs = activeBuffs
         )
 
         fun commit(engine: GameEngine) {
@@ -355,7 +394,9 @@ class GameEngine(
 
         // Subsystems that must keep running while the hero is down or waiting to respawn.
         tickPlayTime(frame, dt)
+        tickBuffs(frame, dt)
         tickTalentTimers(frame, dt)
+        autoTriggerTalents(frame)
         tickRegeneration(frame, dt)
         tickAegisDrain(frame, dt)
         tickHarvest(frame, deltaSeconds)
@@ -376,6 +417,104 @@ class GameEngine(
         frame.commit(this)
         if (frame.logs.isNotEmpty()) evaluateAchievements()
         return state
+    }
+
+    private fun tickBuffs(frame: Frame, dt: Double) {
+        if (frame.activeBuffs.isEmpty()) return
+        val remaining = mutableListOf<com.aistudio.trueidle.model.ActiveBuff>()
+        var changed = false
+        for (b in frame.activeBuffs) {
+            val dur = b.durationRemaining - dt
+            if (dur > 0.0) {
+                remaining.add(b.copy(durationRemaining = dur))
+            } else {
+                changed = true
+            }
+        }
+        frame.activeBuffs = remaining
+        if (changed) frame.invalidateDerived()
+    }
+
+    private fun autoTriggerTalents(frame: Frame) {
+        if (frame.player.recoverLeft > 0.0 || respawnLeft > 0.0) return
+        val d = frame.derived()
+        var player = frame.player
+        var monster = frame.monster
+        var talentsChanged = false
+
+        val updatedTalents = frame.talent.activeTalents.map { talent ->
+            if (talent.rank > 0 && talent.cooldownRemaining <= 0.0) {
+                val manaCost = Balance.talentManaCost(talent.id)
+                if (player.mana >= manaCost) {
+                    talentsChanged = true
+                    player = player.copy(mana = player.mana - manaCost)
+                    val rank = talent.rank.coerceAtLeast(1)
+                    val rankScale = 1.0 + 0.1 * (rank - 1)
+
+                    when (talent.id) {
+                        "nanite_heal" -> {
+                            val healHp = d.maxHp * 0.40 * rankScale
+                            val healShield = d.maxShield * 0.25 * rankScale
+                            player = player.copy(
+                                hp = (player.hp + healHp).coerceAtMost(d.maxHp),
+                                shield = (player.shield + healShield).coerceAtMost(d.maxShield)
+                            )
+                        }
+                        "mana_rampage" -> {
+                            val burst = CombatMath.heroHitDamage(d) * 2.5 * rankScale * CombatMath.mitigation(monster.armor)
+                            var shield = monster.shield
+                            var hp = monster.hp
+                            if (shield > 0.0) {
+                                val absorbed = burst.coerceAtMost(shield)
+                                shield -= absorbed
+                                hp -= (burst - absorbed)
+                            } else {
+                                hp -= burst
+                            }
+                            monster = monster.copy(shield = shield.coerceAtLeast(0.0), hp = hp.coerceAtLeast(0.0))
+                        }
+                        "aegis_bastion" -> {
+                            val barrier = d.maxShield * 0.60 * rankScale
+                            player = player.copy(shield = (player.shield + barrier).coerceAtMost(d.maxShield * 1.5))
+                        }
+                        "phoenix_protocol" -> {
+                            player = player.copy(
+                                hp = d.maxHp,
+                                shield = (player.shield + d.maxShield * 0.40 * rankScale).coerceAtMost(d.maxShield)
+                            )
+                        }
+                        "void_pulse" -> {
+                            val burst = CombatMath.heroHitDamage(d) * 3.0 * rankScale * CombatMath.mitigation(monster.armor)
+                            var shield = monster.shield
+                            var hp = monster.hp
+                            if (shield > 0.0) {
+                                val absorbed = burst.coerceAtMost(shield)
+                                shield -= absorbed
+                                hp -= (burst - absorbed)
+                            } else {
+                                hp -= burst
+                            }
+                            monster = monster.copy(shield = shield.coerceAtLeast(0.0), hp = hp.coerceAtLeast(0.0))
+                        }
+                    }
+
+                    val duration = talent.durationSeconds * rankScale
+                    val cooldown = (talent.cooldownSeconds * (1.0 - 0.05 * (rank - 1))).coerceAtLeast(5.0)
+                    talent.copy(
+                        isActive = talent.durationSeconds > 0.0,
+                        durationRemaining = duration,
+                        cooldownRemaining = cooldown
+                    )
+                } else talent
+            } else talent
+        }
+
+        if (talentsChanged) {
+            frame.player = player
+            frame.monster = monster
+            frame.talent = frame.talent.copy(activeTalents = updatedTalents)
+            frame.invalidateDerived()
+        }
     }
 
     private fun tickPlayTime(frame: Frame, dt: Double) {
@@ -414,7 +553,7 @@ class GameEngine(
         frame.player = frame.player.copy(
             hp = (frame.player.hp + d.healthRegen * dt).coerceAtMost(d.maxHp),
             shield = (frame.player.shield + d.shieldRegen * dt).coerceAtMost(d.maxShield),
-            mana = (frame.player.mana + Balance.MANA_REGEN_PER_SEC * dt).coerceAtMost(d.maxMana)
+            mana = (frame.player.mana + d.manaRegen * dt).coerceAtMost(d.maxMana)
         )
     }
 
@@ -458,6 +597,121 @@ class GameEngine(
 
     // ------------------------------------------------------------------ combat
 
+    private fun deployPotionInFrame(frame: Frame, potionName: String): Boolean {
+        val inventory = frame.inventory
+        val idx = inventory.indexOfFirst {
+            it.name.equals(potionName, ignoreCase = true) && it.category == ItemCatalog.CATEGORY_POTION
+        }
+        if (idx < 0) return false
+        val item = inventory[idx]
+        val def = ItemCatalog.potion(item.name) ?: return false
+        val d = frame.derived()
+
+        val missingHp = (d.maxHp - frame.player.hp).coerceAtLeast(0.0)
+        var healedHp = missingHp * def.directMissingHpPct * (1.0 + d.healBoost)
+        if (def.directMaxHpPct > 0.0) {
+            healedHp += d.maxHp * def.directMaxHpPct * (1.0 + d.healBoost)
+        }
+
+        val missingMana = (d.maxMana - frame.player.mana).coerceAtLeast(0.0)
+        val healedMana = missingMana * def.directMissingManaPct
+
+        val newFailures = if (def.cleanseNegatives) 0 else frame.player.failuresInRow
+
+        frame.player = frame.player.copy(
+            hp = (frame.player.hp + healedHp).coerceAtMost(d.maxHp),
+            mana = (frame.player.mana + healedMana).coerceAtMost(d.maxMana),
+            failuresInRow = newFailures
+        )
+
+        if (def.regenHpPctPerSec > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "REGEN_HP" && it.name == "${item.name} Regen" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_hp_${ids.next()}",
+                    name = "${item.name} Regen",
+                    type = "REGEN_HP",
+                    value = def.regenHpPctPerSec,
+                    durationRemaining = def.regenDurationSec,
+                    totalDuration = def.regenDurationSec
+                )
+            )
+        }
+        if (def.regenManaPctPerSec > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "REGEN_MANA" && it.name == "${item.name} Mana Regen" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_mp_${ids.next()}",
+                    name = "${item.name} Mana Regen",
+                    type = "REGEN_MANA",
+                    value = def.regenManaPctPerSec,
+                    durationRemaining = def.regenDurationSec,
+                    totalDuration = def.regenDurationSec
+                )
+            )
+        }
+        if (def.shieldPctMaxHp > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "SHIELD" && it.name == "${item.name} Shield" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_shd_${ids.next()}",
+                    name = "${item.name} Shield",
+                    type = "SHIELD",
+                    value = def.shieldPctMaxHp,
+                    durationRemaining = def.shieldDurationSec,
+                    totalDuration = def.shieldDurationSec
+                )
+            )
+        }
+        if (def.damageReductionPct > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "DAMAGE_REDUCTION" && it.name == "${item.name} Protection" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_red_${ids.next()}",
+                    name = "${item.name} Protection",
+                    type = "DAMAGE_REDUCTION",
+                    value = def.damageReductionPct,
+                    durationRemaining = def.damageReductionDurationSec,
+                    totalDuration = def.damageReductionDurationSec
+                )
+            )
+        }
+        if (def.lifestealPct > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "LIFESTEAL" && it.name == "${item.name} Lifesteal" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_ls_${ids.next()}",
+                    name = "${item.name} Lifesteal",
+                    type = "LIFESTEAL",
+                    value = def.lifestealPct,
+                    durationRemaining = def.lifestealDurationSec,
+                    totalDuration = def.lifestealDurationSec
+                )
+            )
+        }
+        if (def.healBoostPct > 0.0) {
+            frame.activeBuffs.removeAll { it.type == "HEAL_BOOST" && it.name == "${item.name} Heal Boost" }
+            frame.activeBuffs.add(
+                com.aistudio.trueidle.model.ActiveBuff(
+                    id = "buff_hb_${ids.next()}",
+                    name = "${item.name} Heal Boost",
+                    type = "HEAL_BOOST",
+                    value = def.healBoostPct,
+                    durationRemaining = def.healBoostDurationSec,
+                    totalDuration = def.healBoostDurationSec
+                )
+            )
+        }
+
+        if (item.count > 1.0) {
+            inventory[idx] = item.copy(count = item.count - 1.0)
+        } else {
+            inventory.removeAt(idx)
+        }
+        frame.invalidateDerived()
+        return true
+    }
+
     private fun tickCombat(frame: Frame, dt: Double) {
         val d = frame.derived()
         val monster = frame.monster
@@ -499,10 +753,33 @@ class GameEngine(
             playerHp -= monsterDamage
         }
 
-        // Struggle passives only count damage that reached HP, accumulated without truncation.
-        val hpDamage = (hpBefore - playerHp).coerceAtLeast(0.0)
-        if (hpDamage > 0.0) {
-            val accumulated = frame.talent.struggleDamageFraction + hpDamage
+        // Lifesteal restores health on damage dealt
+        if (d.lifesteal > 0.0 && dealt > 0.0) {
+            val stolen = dealt * d.lifesteal
+            playerHp = (playerHp + stolen).coerceAtMost(d.maxHp)
+        }
+
+        // Auto-potion triggers
+        if (frame.potionSettings.hpAutoThresholdPct > 0 && d.maxHp > 0.0) {
+            val hpPct = (playerHp / d.maxHp) * 100.0
+            if (hpPct <= frame.potionSettings.hpAutoThresholdPct) {
+                deployPotionInFrame(frame, frame.potionSettings.selectedHpPotion)
+                playerHp = frame.player.hp
+                playerShield = frame.player.shield
+            }
+        }
+        if (frame.potionSettings.mpAutoThresholdPct > 0 && d.maxMana > 0.0) {
+            val mpPct = (frame.player.mana / d.maxMana) * 100.0
+            if (mpPct <= frame.potionSettings.mpAutoThresholdPct) {
+                deployPotionInFrame(frame, frame.potionSettings.selectedMpPotion)
+            }
+        }
+
+        // Struggle passives count all damage sustained in combat (both absorbed by shield and HP damage),
+        // ensuring talents and struggle adaptation build reliably even when shield absorbs the blow.
+        val totalDamageEndured = monsterDamage.coerceAtLeast(0.0)
+        if (totalDamageEndured > 0.0) {
+            val accumulated = frame.talent.struggleDamageFraction + totalDamageEndured
             val whole = accumulated.toLong()
             frame.talent = frame.talent.copy(
                 struggleDamageFraction = accumulated - whole,
@@ -667,31 +944,71 @@ class GameEngine(
     }
 
     private fun grantSlayerProgress(frame: Frame, monster: Monster, count: Int = 1) {
-        val task = frame.slayer.currentTask
-        if (task.isCompleted) return
-        if (!task.targetName.equals(monster.name, ignoreCase = true)) return
-        val kills = task.currentKills + count
-        if (kills < task.requiredKills) {
-            frame.slayer = frame.slayer.copy(currentTask = task.copy(currentKills = kills))
-            return
+        val tasks = ensureSlayerTasks(frame.slayer.tasks)
+        var slayer = frame.slayer
+        var player = frame.player
+        var essence = frame.essence
+        var necro = frame.necro
+        var tasksUpdated = false
+
+        val newTasks = tasks.map { task ->
+            if (task.isCompleted) {
+                task
+            } else {
+                tasksUpdated = true
+                val kills = task.currentKills + count
+                if (kills < task.requiredKills) {
+                    task.copy(currentKills = kills)
+                } else {
+                    // Automatic mission rewards upon completion
+                    player = player.copy(
+                        gold = player.gold + task.rewardGold,
+                        diamonds = player.diamonds + task.rewardDiamonds
+                    )
+                    slayer = slayer.copy(slayerPoints = slayer.slayerPoints + task.rewardPoints)
+                    if (task.rewardFaith > 0L) {
+                        essence = essence.copy(faith = essence.faith + task.rewardFaith)
+                    }
+                    if (task.rewardBones > 0L) {
+                        necro = necro.copy(boneEssence = necro.boneEssence + task.rewardBones)
+                    }
+
+                    val tierRank = TierConfig.rankOf(task.tier).coerceAtLeast(0)
+                    val xpEarned = (100L * (1.0 + tierRank * 0.25)).toLong()
+                    var sxp = slayer.xp + xpEarned
+                    var slvl = slayer.lvl
+                    while (sxp >= Balance.slayerXpReq(slvl)) {
+                        sxp -= Balance.slayerXpReq(slvl)
+                        slvl++
+                        frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Slayer reached Level $slvl!")
+                    }
+                    slayer = slayer.copy(xp = sxp, lvl = slvl)
+
+                    var bonusDesc = ""
+                    if (task.rewardDiamonds > 0L) bonusDesc += ", +${task.rewardDiamonds} DIA"
+                    if (task.rewardFaith > 0L) bonusDesc += ", +${task.rewardFaith} FAITH"
+                    if (task.rewardBones > 0L) bonusDesc += ", +${task.rewardBones} BONE"
+
+                    frame.logs += log(
+                        LogType.MILESTONE,
+                        "SLAYER CONTRACT COMPLETE [${task.tier}]: ${task.targetName} (+${task.rewardGold} CR, +${task.rewardPoints} PTS$bonusDesc)"
+                    )
+
+                    // Instant auto-refresh upon completion
+                    newSlayerTask(task.id)
+                }
+            }
         }
-        // Completed tasks stay visible (and claimable) until the player rolls the next one.
-        frame.slayer = frame.slayer.copy(
-            currentTask = task.copy(currentKills = kills, isCompleted = true),
-            slayerPoints = frame.slayer.slayerPoints + task.rewardPoints
-        )
-        frame.player = frame.player.copy(gold = frame.player.gold + task.rewardGold)
-        frame.logs += log(
-            LogType.MILESTONE,
-            "SLAYER DIRECTIVE FULFILLED: ${task.targetName} (+${task.rewardGold} CREDITS, +${task.rewardPoints} PTS)"
-        )
-        var xp = frame.slayer.xp + 100L
-        var lvl = frame.slayer.lvl
-        while (xp >= Balance.slayerXpReq(lvl)) {
-            xp -= Balance.slayerXpReq(lvl)
-            lvl++
+
+        if (tasksUpdated) {
+            frame.player = player
+            frame.slayer = slayer.copy(
+                tasks = newTasks,
+                currentTask = newTasks.firstOrNull() ?: com.aistudio.trueidle.model.SlayerTask()
+            )
+            frame.essence = essence
+            frame.necro = necro
         }
-        frame.slayer = frame.slayer.copy(xp = xp, lvl = lvl)
     }
 
     private fun rollTame(frame: Frame, monster: Monster, d: Derived) {
@@ -737,9 +1054,44 @@ class GameEngine(
 
     private fun rollLoot(frame: Frame, d: Derived) {
         if (random.nextDouble() >= d.lootChance) return
-        val resource = if (random.nextBoolean()) ItemCatalog.COPPER_ORE else ItemCatalog.FELWEED
-        addToInventory(frame.inventory, resource, 1)
-        frame.logs += log(LogType.LOOT, "SALVAGE ACQUIRED: $resource")
+        if (random.nextDouble() < 0.35) {
+            val group = Equipment.GROUPS.random(random)
+            val floor = frame.player.currentFloor
+            val tier = ((floor - 1) / 5 + 1).coerceIn(1, TierConfig.size)
+            val tierInfo = TierConfig.forOrdinal(tier)
+            val isWep = Equipment.isWeapon(group)
+            val atk = if (isWep) tier * 12.0 else 0.0
+            val def = if (!isWep) tier * 8.0 else 0.0
+            val vit = if (!isWep) tier * 4.0 else 0.0
+            val name = "${tierInfo.id} $group"
+            val statDesc = if (isWep) "+${atk.toInt()} ATK" else "+${def.toInt()} DEF, +${vit.toInt()} VIT"
+            frame.inventory.add(
+                InventoryItem(
+                    id = "loot_${ids.next()}",
+                    name = name,
+                    category = ItemCatalog.CATEGORY_EQUIPMENT,
+                    count = 1,
+                    tier = tier,
+                    slot = group,
+                    statDesc = statDesc,
+                    sellValue = tier * 35L,
+                    atk = atk,
+                    def = def,
+                    vit = vit
+                )
+            )
+            frame.logs += log(LogType.LOOT, "TACTICAL DROP: Secured $name ($statDesc)")
+        } else {
+            val resource = if (random.nextBoolean()) {
+                val oreIdx = (frame.player.currentFloor / 6).coerceIn(0, ItemCatalog.ORES.size - 1)
+                ItemCatalog.ORES[oreIdx]
+            } else {
+                val herbIdx = (frame.player.currentFloor / 6).coerceIn(0, ItemCatalog.HERBS.size - 1)
+                ItemCatalog.HERBS[herbIdx]
+            }
+            addToInventory(frame.inventory, resource, 1)
+            frame.logs += log(LogType.LOOT, "SALVAGE ACQUIRED: $resource")
+        }
     }
 
     private fun grantTrophy(frame: Frame) {
@@ -1420,7 +1772,11 @@ class GameEngine(
         if (node.rank >= node.maxRank || state.player.gold < node.costGold) return state
 
         val goldCost = node.costGold
-        nodes[idx] = node.copy(rank = node.rank + 1, costGold = (node.costGold * 1.4).toLong())
+        val nextCost = (node.costGold.toDouble() * 1.4)
+            .coerceAtMost(Long.MAX_VALUE.toDouble() - 10_000)
+            .toLong()
+            .coerceAtLeast(1L)
+        nodes[idx] = node.copy(rank = node.rank + 1, costGold = nextCost)
         val (xp, lvl, logs) = grantSkillXp(
             state.training.xp,
             state.training.lvl,
@@ -1632,41 +1988,81 @@ class GameEngine(
 
     // ------------------------------------------------------------------ slayer
 
-    fun rerollSlayerTask(): GameState {
-        val task = state.slayer.currentTask
-        // Fulfilling a completed directive is free; rerolling an open one costs a point.
-        if (!task.isCompleted) {
-            if (state.slayer.slayerPoints < 1) return state
-        }
-        val next = newSlayerTask()
+    fun rerollSlayerTask(taskId: String = ""): GameState {
+        // Manual refresh costs 1 Gold as specified by the user
+        if (state.player.gold < 1L) return state
+        val tasks = ensureSlayerTasks(state.slayer.tasks).toMutableList()
+        val idx = if (taskId.isNotEmpty()) tasks.indexOfFirst { it.id == taskId } else 0
+        if (idx < 0) return state
+
+        val oldTask = tasks[idx]
+        val newTask = newSlayerTask(oldTask.id)
+        tasks[idx] = newTask
+
         state = state.copy(
+            player = state.player.copy(gold = state.player.gold - 1L),
             slayer = state.slayer.copy(
-                slayerPoints = if (task.isCompleted) state.slayer.slayerPoints else state.slayer.slayerPoints - 1,
-                currentTask = next
+                tasks = tasks,
+                currentTask = tasks.firstOrNull() ?: newTask
             ),
-            logs = (state.logs + log(LogType.SYSTEM, "SLAYER DIRECTIVE: new target ${next.targetName}."))
+            logs = (state.logs + log(LogType.SYSTEM, "SLAYER CONTRACT REROLLED: ${newTask.targetName} [${newTask.tier}] for 1 Gold."))
                 .takeLast(Balance.LOG_CAP)
         )
         return state
     }
 
     /**
-     * Picks a target the player can actually reach: the floor window is clamped to the unlocked
-     * range, so the directive is never impossible.
+     * Generates a fresh directive matching the player's current stage range [max(1, currentFloor - 5), currentFloor]
+     * and tier appropriate for player's Slayer level.
      */
-    private fun newSlayerTask(): com.aistudio.trueidle.model.SlayerTask {
+    fun newSlayerTask(
+        slotId: String = "slayer_${random.nextInt(1000, 9999)}",
+        floorOverride: Int? = null
+    ): com.aistudio.trueidle.model.SlayerTask {
         val reachable = state.player.maxUnlockedFloor.coerceIn(1, Balance.MAX_FLOOR)
-        val offset = random.nextInt(-3, 4) // symmetric window
-        val floor = (state.player.currentFloor + offset).coerceIn(1, reachable)
+        val currentFloor = state.player.currentFloor.coerceIn(1, reachable)
+        val minFloor = maxOf(1, currentFloor - 5)
+        val maxFloor = currentFloor.coerceAtMost(reachable).coerceAtLeast(minFloor)
+        val floor = floorOverride ?: if (maxFloor > minFloor) random.nextInt(minFloor, maxFloor + 1) else minFloor
         val monster = Balance.generateMonsterForFloor(floor)
+
+        val maxRank = SlayerMath.maxTierRankForLevel(state.slayer.lvl)
+        val minRank = maxOf(0, maxRank - 4)
+        val tierRank = if (maxRank > minRank) random.nextInt(minRank, maxRank + 1) else minRank
+        val tierId = TierConfig.idAt(tierRank) ?: "F-"
+
+        val requiredKills = 10 + (tierRank % 5) * 2
+        val tierMultiplier = 1.0 + (tierRank * 0.35)
+        val rawBaseGold = ((floor * 35L + 100L) * tierMultiplier).toLong()
+        val rewardGold = SlayerMath.scaledGold(rawBaseGold, state.slayer.lvl)
+        val basePoints = (3 + (floor / 5) + (tierRank / 3)).coerceIn(3, 500)
+        val rewardPoints = SlayerMath.scaledPoints(basePoints, state.slayer.lvl)
+
+        val bonus = SlayerMath.rollBonusRewards(tierRank, rewardGold, random)
+
         return com.aistudio.trueidle.model.SlayerTask(
+            id = slotId,
             targetName = monster.name,
+            tier = tierId,
+            targetFloor = floor,
             currentKills = 0,
-            requiredKills = random.nextInt(10, 21),
-            rewardGold = SlayerMath.scaledGold((floor * 25L).coerceAtLeast(100L), state.slayer.lvl),
-            rewardPoints = SlayerMath.scaledPoints((floor / 5 + 3).coerceIn(3, 15), state.slayer.lvl),
+            requiredKills = requiredKills,
+            rewardGold = rewardGold + bonus.extraGold,
+            rewardPoints = rewardPoints,
+            rewardDiamonds = bonus.diamonds,
+            rewardFaith = bonus.faith,
+            rewardBones = bonus.bones,
             isCompleted = false
         )
+    }
+
+    fun ensureSlayerTasks(tasks: List<com.aistudio.trueidle.model.SlayerTask>): List<com.aistudio.trueidle.model.SlayerTask> {
+        val list = tasks.toMutableList()
+        while (list.size < SlayerMath.MAX_TASKS) {
+            val id = "slayer_${list.size + 1}_${random.nextInt(1000, 9999)}"
+            list.add(newSlayerTask(id))
+        }
+        return list.take(SlayerMath.MAX_TASKS)
     }
 
     // ------------------------------------------------------------------ misc actions
@@ -2062,7 +2458,7 @@ class GameEngine(
                 training = input.training.copy(
                     lvl = input.training.lvl.coerceAtLeast(1),
                     xp = input.training.xp.coerceAtLeast(0L),
-                    nodes = input.training.nodes.map { it.copy(rank = it.rank.coerceIn(0, it.maxRank)) }
+                    nodes = input.training.nodes.map { it.copy(maxRank = 1_000_000, rank = it.rank.coerceIn(0, 1_000_000)) }
                 ),
                 essence = input.essence.copy(
                     lvl = input.essence.lvl.coerceAtLeast(1),
@@ -2092,7 +2488,13 @@ class GameEngine(
                     currentTask = input.slayer.currentTask.copy(
                         currentKills = input.slayer.currentTask.currentKills.coerceAtLeast(0),
                         requiredKills = input.slayer.currentTask.requiredKills.coerceAtLeast(1)
-                    )
+                    ),
+                    tasks = input.slayer.tasks.map { task ->
+                        task.copy(
+                            currentKills = task.currentKills.coerceAtLeast(0),
+                            requiredKills = task.requiredKills.coerceAtLeast(1)
+                        )
+                    }
                 ),
                 promotion = input.promotion.copy(
                     tier = input.promotion.tier.coerceIn(1, input.promotion.maxTier),

@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for high-speed combat batching, harvest floating-point countdowns, automated queue slots per category, exponential 2^level proficiency yield scaling up to level 100, and replacing emojis with sci-fi tinted Material vector icons.",
-  "updatedAt":  "2026-10-28T13:33:58.101371689Z",
+  "summary":  "Comprehensive implementation plan for the True IDLE systems expansion: Skills navigation simplification, random kill-count Slayer contracts, advanced Stats breakdown, canonical 13-slot equipment drop and migration fix, Arsenal 1x/100x/1000x selling and sorting controls, stacked combat HP/MP potion deployment with auto-drink thresholds, automated multi-power Talents, 20-herb exact percentage crafting effects engine, and a modular debug Dev Panel.",
+  "updatedAt":  "2026-10-30T13:52:19.904693221Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

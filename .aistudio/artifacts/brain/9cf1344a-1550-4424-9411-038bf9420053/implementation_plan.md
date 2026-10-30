@@ -1,140 +1,120 @@
-# Harvest Proficiency, High-Speed Combat Batching & Sci-Fi Iconography
+# System Upgrades, Combat Potions, Herb Alchemy & Dev Panel Expansion
 
-Comprehensive performance, simulation, and UI expansion introducing automated harvest queues, exponential 2^level item proficiency scaling up to Level 100, floating-point harvest countdowns, lag-free high-speed combat kill batching, and replacement of emoji icons with styled Material sci-fi vector glyphs.
+Implementation plan to deliver comprehensive updates across True IDLE: simplifying the Skills menu to a single top-left button, converting Slayer missions to random kill-count directives, upgrading the Stats screen with full telemetry, replacing legacy gear drops with the canonical 13 equipment groups, adding batch selling (1x/100x/1000x) and rank/quantity sorting in the Arsenal, adding stacked quick HP/MP potion buttons on the combat panel, enabling simultaneous auto-activation for Power Talents, implementing exact 20-herb percentage brews, and building a modular debug Dev Panel.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following requirements were confirmed during interactive clarification and govern the implementation:
-> - **Iconography**: Replace all Unicode emojis (🪙, 💎, 💀, ⚔️, 🛡️, etc.) with Material vector icons tinted in sci-fi neon colors (`PrimaryNeon`, `SecondaryGold`, `NecroPurple`, `CyanShield`).
-> - **Combat Batching**: When combat hit speed exceeds 10 hits/sec or when player DPS defeats multiple hostiles within a single simulation tick, transition seamlessly into high-speed batch calculation to prevent frame drops, lag, and lost kill efficiency.
-> - **Harvest Proficiency**: Each herb and ore has an individual proficiency bar (Level 1 to 100). Yield scales exponentially at $2^{\text{level}-1}$ (doubling every level: 1x, 2x, 4x, 8x... up to $\approx 6.34 \times 10^{29}\times$ at Level 100) using 64-bit IEEE floating-point arithmetic and sci-fi compact notation (`e30`).
-> - **Auto-Queue**: Players can enable 1 auto-queue slot in Bio-Farming and 1 auto-queue slot in Plasma Mining. Toggling an item auto-drills/auto-grows and collects continuously upon cycle completion.
-> - **Harvest Timers**: Display remaining cycle durations with single-decimal float precision (e.g. `1.5s`, `0.1s`).
+> The following decisions were confirmed through Phase 1 user interview questions:
+> - **Dev Panel Toggle**: Floating bug icon button placed at the top/bottom corner of the screen, active only in debug builds (`BuildConfig.DEBUG`).
+> - **Combat Potion Controls**: Vertically stacked Health and Mana potion buttons on the combat HUD displaying active potion count, instant one-tap deployment, and an interactive popover/sheet to select specific potions and configure auto-deploy thresholds.
+> - **Power Talents Activation**: All unlocked power talents (`rank > 0`) automatically fire whenever their cooldown expires, allowing multiple abilities to run simultaneously.
 
 ---
 
 ## 1. Overview & Core Concept
 
-### What It Delivers
-1. **Material Sci-Fi Iconography**: Replaces inconsistent system emojis with crisp, cohesive vector icons across currencies (Credits, Gems, Bone Essence), stats (ATK, DEF), and inventory loot.
-2. **Lag-Free High-Speed Combat**: When attack speed or monster clearing outpaces UI rendering (>10 hits/sec or overkill damage across ticks), combat calculates batch kills, aggregate XP, credits, drops, and Slayer progression in a single analytical pass without frame hitching.
-3. **Automated Harvest Queues**: A dedicated toggle per category (1 herb plot, 1 mining vein) allowing players to dedicate bio-drones and plasma drills to continuously harvest one specific resource hands-free.
-4. **Item Proficiency (Levels 1–100) & Doubling Yield**: Each herb and ore accumulates proficiency XP per harvest. Each level doubles yield ($2^{\text{level}-1}$ multiplier). At Level 100, yields reach $2^{99}$ without numeric overflow.
-5. **Precision Decimal Timers**: All active plot and vein cards display exact floating-point countdowns (`3.2s`, `0.4s`) rather than coarse percentages or integer rounding.
+This expansion addresses gameplay friction, unlocks deeper tactical depth, and empowers developer testing:
+- **Skills Navigation**: Cleans up the top bar by replacing busy multi-readouts with a single `[ ☰ SKILLS ]` menu button at the top-left, renaming all "Discipline" references to "Skills".
+- **Slayer Mission Directives**: Decouples contracts from restrictive sector monster types. Missions now task the player with eliminating randomized quantities of hostiles (e.g. 5x, 7x, 11x, 25x, 1111x), scaling rewards and difficulty with contract tier.
+- **Stats Screen Overhaul**: Expands the dashboard with detailed effective health pool (EHP), weapon/armor/node contributions across all 13 gear slots, total true DPS breakdown, and combat mitigation telemetry.
+- **Equipment Drop & Migration Fix**: Sanitizes starting loadouts, drop tables, and saves so old equipment names ("Iron Greatsword", "Steel Plate", "Rusty Blade", "Tattered Leather", "Ember Band", "Warden Sigil") are completely migrated to the canonical 13 equipment groups (`F- Rifle`, `F- Vest`, `F- Blade`, `F- Visor`, `F- Node I`, etc.).
+- **Arsenal Batch Selling & Sorting**: Introduces quick batch selling multipliers (`1x`, `100x`, `1000x`) and sort toggles (by Tier/Rank, Quantity, Slot) for frictionless inventory management.
+- **Combat Potion Deployment**: Adds stacked HP and MP quick-action buttons directly to the combat panel showing active counts, manual deployment, and configurable auto-deploy triggers (e.g. auto-drink when HP < 30% / 50% / OFF).
+- **Automated Simultaneous Power Talents**: Overhauls the talent loop so all active abilities run on individual timers and automatically trigger when off cooldown without blocking one another.
+- **Accurate 20-Herb Crafting Engine**: Replaces generic potion effects with the exact 20-herb percentage formula table (direct missing HP/MP heals, regen over time, temporary shields, damage reduction, and Worldtree Leaf's permanent passive boost).
+- **Modular Dev Panel**: Implements `DevPanel.kt` featuring resource grants (+100, +10k, Max), game speed multipliers (1x, 5x, 10x, 50x), stage/achievement/skill unlock cheats, hard reset, and live state inspection.
 
 ---
 
 ## 2. User Experience & Visual Design
 
-### Key User Flows
-- **Harvesting with Proficiency & Auto-Queue**:
-  1. The player navigates to the **Skills -> Harvest** screen.
-  2. Each **Plot** and **Vein** card shows:
-     - Header: Item name, current Proficiency Level (`LVL 42/100`), and active multiplier badge (`x2.20e12 YIELD`).
-     - Proficiency Progress Bar: Displays current item proficiency XP toward next level.
-     - Cycle Timer: Floating-point countdown (`1.8s`, `0.3s`) alongside linear cycle progress.
-     - Auto-Queue Toggle Button: Clean neon toggle (`AUTO ON / OFF`). Enabling auto-queue on "Felweed" disengages other herb plots, locking the dedicated bio-drone to Felweed.
-     - Manual Harvest Button: Enabled when ready if not on auto-queue.
-- **High-Speed Combat Feedback**:
-  - When fighting high-level or lower-floor mobs with high DPS/attack speed, the HUD displays smooth continuous credit/XP flyouts and compact telemetry without spamming the combat log or freezing the main thread.
-  - Periodic batch summary logs (`HIGH-SPEED ENGAGEMENT: x45 Hostiles Cleared (+12.4K CREDITS, +8.2K XP)`) keep the player informed without creating hundreds of GC allocations.
-- **Currency & Stat Badges**:
-  - Top app bar, dialogue windows, inventory chips, and shop buttons render Material vector icons (`MonetizationOn`, `Diamond`, `Dangerous`/Skull, `Shield`, `Bolt`) rendered at 16–20dp with matching neon tints.
+### Visual Identity & Theme
+- **Cyberpunk Sci-Fi Aesthetics**: Dark carbon surfaces (`#0A0E17`), laser-sharp rectangular geometries, neon cyan (`#00E5FF`), gold (`#FFD700`), red alert (`#EF5350`), and shield blue (`#42A5F5`) accents.
+- **Clean Single-Action Header**: Skills tab features a prominent top-left `[ ☰ SKILLS ]` trigger button with clear drawer slide animation.
+- **Combat Potion Stack**: High-contrast, tactile buttons anchored alongside combat controls:
+  - **HP Flask**: Crimson neon border, heart/vitality icon, remaining quantity badge, tap to consume, quick settings cog for auto-deploy threshold.
+  - **MP Tonic**: Cyan neon border, energy icon, remaining quantity badge, tap to consume, quick settings cog for auto-deploy threshold.
+- **Arsenal Controls**: Modern segmented pill selectors for `[1X] [100X] [1000X]` sell modes and sorting toggles (`[RANK ▲▼]`, `[QTY ▲▼]`).
+- **Dev Panel Overlay**: Semi-transparent obsidian modal (`rgba(5, 8, 15, 0.94)`) with collapsible sections, high-contrast monospace readouts, and responsive touch targets.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-### Decision 1: Numeric Representation for $2^{100}$ Yields
-- **Chosen Approach**: Store inventory item counts and harvest yields as 64-bit IEEE 754 `Double` (which natively supports values up to $1.79 \times 10^{308}$).
-- **Why**: Standard integers (`Int` max $2.14 \times 10^9$) and 64-bit longs (`Long` max $9.22 \times 10^{18}$) overflow around levels 31 and 63 respectively. `Double` provides instantaneous arithmetic, requires zero third-party BigInteger dependencies, and integrates seamlessly with `NumberFormatter.short(Double)`.
-- **Trade-Off**: Display uses scientific notation (`1.27e30`) once values exceed $10^{15}$, perfectly fitting sci-fi RPG aesthetics while preventing UI overflow.
-
-### Decision 2: Single Dedicated Auto-Queue per Category
-- **Chosen Approach**: Mutual exclusivity within each category (`HarvestState.plots` and `HarvestState.veins`). Selecting auto-queue on one item automatically sets `autoQueue = false` on all other items in that category.
-- **Why**: Fulfills the user requirement for exactly 1 automation queue per category while preserving player agency to choose which resource they need most.
-
-### Decision 3: Combat Overkill & High-Speed Batching
-- **Chosen Approach**: When `totalDps * dt >= monster.maxHp * 2` or `hitsPerSec > 10.0`, compute `batchKills = floor(dealtDamage / monsterEhp)`. Scale rewards, XP, Slayer progress, and floor clearance proportionally in a single pass.
-- **Why**: Prevents frame drops caused by repeatedly constructing 20–50 `Monster` and `LogEntry` objects per tick.
+- **Decision 1: Slayer Target Mechanics**
+  - *Chosen Approach*: Any monster defeat increments the active directive's count. Required kills are rolled from randomized thematic numbers (`5`, `7`, `11`, `25`, `50`, `111`, `333`, `777`, `1111`) based on tier rank.
+  - *Why*: Eliminates awkward back-tracking to previous floors just to find a specific monster species, creating seamless idle progression while maintaining high reward scaling.
+- **Decision 2: 20-Herb Percentage Engine**
+  - *Chosen Approach*: Implement a rich `ActiveBuff` model supporting instantaneous heals (`missingHp * percentage`), time-based regeneration (`maxHpPerSec * duration`), damage reduction buffers, and passive inventory-based buffs.
+  - *Why*: Perfectly satisfies the user's detailed specification for all 20 herbs without losing nuances like duration or mixed HP/MP recovery.
+- **Decision 3: Modular Dev Panel Isolation**
+  - *Chosen Approach*: Encapsulate all debug UI inside `DevPanel.kt` and guard button rendering with `BuildConfig.DEBUG`.
+  - *Why*: Ensures zero debug pollution or performance overhead in release builds while giving full testing power during development.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
-### System & Component Architecture
 ```
-┌────────────────────────────────────────────────────────┐
-│                      TrueIdleApp                       │
-│  - Top Bar: Replaces 🪙, 💎, 💀 with Neon Vector Icons  │
-└───────────────────────────┬────────────────────────────┘
-                            │
-            ┌───────────────┴───────────────┐
-            ▼                               ▼
-┌────────────────────────┐      ┌────────────────────────┐
-│     CombatScreen       │      │     HarvestScreen      │
-│  - CombatTelemetryCard │      │  - Float Timers (1.5s) │
-│  - Bulk Kill Animation │      │  - Proficiency Bar/Lvl │
-│  - Scaled Rewards Pass │      │  - 1-Slot Auto Queue   │
-└───────────┬────────────┘      └───────────┬────────────┘
-            │                               │
-            └───────────────┬───────────────┘
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│                      GameEngine                        │
-│  - tickCombat: Batching kills when hitRate/DPS > 10/s  │
-│  - tickHarvest: Auto-cycles 1 active plot & 1 vein    │
-│  - Proficiency: Level up (1..100) -> 2^(lvl-1) yield   │
-│  - Inventory: Double counts with NumberFormatter.short │
-└────────────────────────────────────────────────────────┘
-```
-
-### Data Model Updates (`GameState.kt`)
-```kotlin
-// Updated Plot model
-data class Plot(
-    val id: Int = 0,
-    val herbName: String = "Felweed",
-    val growthProgress: Float = 0f,
-    val durationSeconds: Float = 8f,
-    val isReady: Boolean = false,
-    val autoQueue: Boolean = false,
-    val proficiencyLevel: Int = 1,
-    val proficiencyXp: Long = 0L
-)
-
-// Updated MiningVein model
-data class MiningVein(
-    val id: Int = 0,
-    val oreName: String = "Copper Ore",
-    val reqLvl: Int = 1,
-    val miningProgress: Float = 0f,
-    val durationSeconds: Float = 5f,
-    val isReady: Boolean = false,
-    val autoQueue: Boolean = false,
-    val proficiencyLevel: Int = 1,
-    val proficiencyXp: Long = 0L
-)
-
-// Updated InventoryItem count to Double for extreme harvest scaling
-data class InventoryItem(
-    val id: String = "",
-    val name: String = "",
-    val category: String = "Resource",
-    val count: Double = 1.0,
-    val tier: Int = 1,
-    val slot: String = "",
-    val statDesc: String = "",
-    val sellValue: Long = 10L,
-    val isEquipped: Boolean = false,
-    val atk: Double = 0.0,
-    val def: Double = 0.0
-)
+┌────────────────────────────────────────────────────────────────────────┐
+│                          TRUE IDLE UI LAYER                            │
+├───────────────┬───────────────────┬──────────────────┬─────────────────┤
+│ CombatScreen  │   SkillsScreen    │ InventoryScreen  │   DevPanel      │
+│ - Stacked HP/ │ - Single Top-Left │ - 1x/100x/1000x  │ - Currencies    │
+│   MP Potions  │   Menu Button     │   Batch Selling  │ - Game Speed    │
+│ - Auto-deploy │ - "Skills" naming │ - Rank/Qty Sort  │ - Unlocks/Reset │
+│ - Quick-select│ - Sub-sections    │ - Gear Compare   │ - Live Inspector│
+└───────┬───────┴─────────┬─────────┴────────┬─────────┴────────┬────────┘
+        │                 │                  │                  │
+        ▼                 ▼                  ▼                  ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                        GAME VIEW MODEL & FLOW                          │
+│ - usePotion() / autoPotion()              - batchSellItem()            │
+│ - setAutoPotionThreshold()                - rerollSlayerTask()         │
+│ - toggleDevPanel() / devModifyResource()  - devSetSpeed()              │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                          GAME ENGINE CORE                              │
+├─────────────────┬──────────────────┬─────────────────┬─────────────────┤
+│ Potion Engine   │   Talent Loop    │  Slayer System  │ Equipment Drop  │
+│ - 20 Herb buffs │ - Auto-trigger   │ - Any monster   │ - 13 canonical  │
+│ - Missing HP/MP │ - Multi-active   │   random count  │   gear groups   │
+│ - Worldtree Dew │ - Cooldown tick  │ - Auto-rewards  │ - Old item san. │
+└─────────────────┴──────────────────┴─────────────────┴─────────────────┘
 ```
 
-### Component & State Mapping
-- `togglePlotAutoQueue(plotId: Int)`: Sets `autoQueue = !current` on selected plot, setting all other plots to `false`.
-- `toggleVeinAutoQueue(veinId: Int)`: Sets `autoQueue = !current` on selected vein, setting all other veins to `false`.
-- `computeProficiencyYield(level: Int)`: Returns $2^{\text{level}-1}$ multiplier (Level 1: 1x, Level 2: 2x, Level 3: 4x, Level 100: $\approx 6.34 \times 10^{29}\text{x}$).
-- `NumberFormatter.short(Double)`: Displays compact numbers up to $10^{308}$ with precision scientific formatting.
+### Component & File Work Breakdown
+1. **`app/build.gradle.kts`**: Enable `buildConfig = true` under `buildFeatures`.
+2. **`app/src/main/java/com/aistudio/trueidle/model/GameState.kt`**:
+   - Update default starting equipment in `inventory` to use canonical groups (`F- Rifle`, `F- Vest`, `F- Blade`, `F- Visor`, `F- Node I`, `F- Node II`).
+   - Add potion auto-deploy configuration (`hpAutoThresholdPct`, `mpAutoThresholdPct`, `selectedHpPotion`, `selectedMpPotion`).
+   - Add active status effects / temporary buffs list (`List<ActiveBuff>`).
+3. **`app/src/main/java/com/aistudio/trueidle/core/ItemCatalog.kt`**:
+   - Update potion definitions with the exact 20-herb percentage and duration formulas.
+4. **`app/src/main/java/com/aistudio/trueidle/engine/GameEngine.kt`**:
+   - Update `sanitize()` to migrate all legacy equipment items in saves to the 13 canonical groups.
+   - Update `rollLoot()` to drop items from the 13 canonical groups scaled to floor/tier.
+   - Implement potion consumption with exact percentage math and buff durations.
+   - Implement automated simultaneous power talent execution on tick.
+   - Update Slayer contract generator to target randomized kill counts (`5x`, `7x`, `11x`, `25x`, `1111x`) for any hostile.
+   - Add cheat methods for Dev Panel: `devAddCurrency`, `devUnlockAll`, `devHardReset`.
+5. **`app/src/main/java/com/aistudio/trueidle/ui/screens/SkillsScreen.kt`**:
+   - Keep only 1 menu button at top-left (`[ ☰ SKILLS ]`), rename all labels to "Skills".
+6. **`app/src/main/java/com/aistudio/trueidle/ui/screens/SlayerScreen.kt`**:
+   - Display randomized hostile target count with progress bars and instant rewards.
+7. **`app/src/main/java/com/aistudio/trueidle/ui/screens/StatsScreen.kt`**:
+   - Enhance with detailed telemetry: EHP, True DPS breakdown, defense mitigation curve, and gear loadout metrics.
+8. **`app/src/main/java/com/aistudio/trueidle/ui/screens/InventoryScreen.kt`**:
+   - Add `1x`, `100x`, `1000x` batch selling options.
+   - Add `Sort by Rank` and `Sort by Quantity` buttons.
+9. **`app/src/main/java/com/aistudio/trueidle/ui/screens/CombatScreen.kt`**:
+   - Add vertically stacked quick-deploy buttons for HP and MP potions with count badges and auto-deploy settings.
+10. **`app/src/main/java/com/aistudio/trueidle/ui/screens/TalentScreen.kt`**:
+    - Update Power Talents UI to show automated simultaneous execution status.
+11. **`app/src/main/java/com/aistudio/trueidle/ui/components/DevPanel.kt`**:
+    - Build modular Dev Panel with floating toggle button for debug APKs.
+12. **Verification & Testing**:
+    - Run `compile_applet` and execute unit tests (`gradle :app:testDebugUnitTest`) verifying all updated systems.

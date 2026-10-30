@@ -89,7 +89,7 @@ object CombatMath {
      * the UI, and the barrier maths lives in exactly one place.
      */
     fun incomingPerSec(m: Monster, d: Derived, aegisReduction: Double = 0.0): Double {
-        val raw = m.damage * (1.0 - aegisReduction.coerceIn(0.0, 0.9))
+        val raw = m.damage * (1.0 - aegisReduction.coerceIn(0.0, 0.9)) * (1.0 - d.damageReduction.coerceIn(0.0, 0.9))
         return (raw - d.armorDef * 0.3).coerceAtLeast(1.0)
     }
 }

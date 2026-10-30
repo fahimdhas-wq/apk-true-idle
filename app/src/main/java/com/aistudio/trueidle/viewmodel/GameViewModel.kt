@@ -270,7 +270,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         mutate { engine.brewPotion(name, reqHerb, reqQty) }
     fun toggleEssenceAegis() = mutate { engine.toggleEssenceAegis() }
     fun upgradeEssenceSmite() = mutate { engine.upgradeEssenceSmite() }
-    fun rerollSlayerTask() = mutate { engine.rerollSlayerTask() }
+    fun rerollSlayerTask(taskId: String = "") = mutate { engine.rerollSlayerTask(taskId) }
     fun upgradeDiscipline(category: DisciplineCategory, upgradeId: String) =
         mutate { engine.upgradeDiscipline(category, upgradeId) }
     fun activateTalent(talentId: String) = mutate { engine.activateTalent(talentId) }

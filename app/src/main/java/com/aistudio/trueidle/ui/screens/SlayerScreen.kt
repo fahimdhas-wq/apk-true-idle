@@ -18,8 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.SlayerMath
+import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.model.SlayerTask
 import com.aistudio.trueidle.ui.components.SciFiBadge
 import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiGauge
@@ -30,15 +32,12 @@ import com.aistudio.trueidle.ui.theme.*
 @Composable
 fun SlayerScreen(
     state: GameState,
-    onRerollTask: () -> Unit,
+    onRerollTask: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val slayer = state.slayer
-    val task = slayer.currentTask
     val reqXp = XpCurves.slayer(slayer.lvl)
-    val taskProgressRatio = if (task.requiredKills > 0)
-        task.currentKills.toFloat() / task.requiredKills.toFloat()
-    else 0f
+    val tasks = slayer.tasks.ifEmpty { listOf(slayer.currentTask) }
 
     Column(
         modifier = modifier
@@ -98,7 +97,7 @@ fun SlayerScreen(
             tag = "${slayer.slayerPoints} POINTS"
         ) {
             Text(
-                text = "Targeted eradication contracts awarded by the Tactical Command. Complete directives to earn gold, points, and permanent mastery.",
+                text = "Targeted eradication contracts awarded by the Tactical Command. Up to 10 missions are tracked simultaneously, granting gold, points, and bonus spoils with automatic claims on completion.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
@@ -122,14 +121,14 @@ fun SlayerScreen(
             }
         }
 
-        // Mastery scaling: the same table the engine scales a new contract's bounty with.
+        // Mastery scaling
         SciFiPanel(
             title = "MASTERY SCALING",
             accent = PrimaryNeon,
             tag = "LV ${slayer.lvl}"
         ) {
             Text(
-                text = "Each level above 1 adds +2% credits to a new contract, and every ${SlayerMath.LEVELS_PER_BONUS_POINT} levels adds +1 bounty point.",
+                text = "Each level above 1 adds +2% credits to a new contract, and every ${SlayerMath.LEVELS_PER_BONUS_POINT} levels adds +1 bounty point. Contracts ranked D+ or higher grant Diamonds, Faith, and Bone Essences.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
@@ -155,86 +154,191 @@ fun SlayerScreen(
             )
         }
 
-        // Active Directive Card
-        SciFiPanel(
-            title = "ACTIVE ASSIGNMENT",
-            accent = HpRed,
-            tag = if (task.isCompleted) "FULFILLED" else "IN PROGRESS"
-        ) {
-            Text(
-                text = "TARGET: ${task.targetName.uppercase()}",
-                style = TrueIdleType.title,
-                color = TextLight
+        // 10 Active Mission Directives
+        Text(
+            text = "ACTIVE CONTRACTS (${tasks.size} / 10)",
+            style = TrueIdleType.title,
+            color = TextLight,
+            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+        )
+
+        tasks.forEachIndexed { index, task ->
+            SlayerTaskCard(
+                task = task,
+                canReroll = state.player.gold >= 1L,
+                onReroll = { onRerollTask(task.id) }
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Locate and neutralize ${task.requiredKills} specimens of this species in the dungeon sectors.",
-                style = TrueIdleType.body,
-                color = TextMuted
-            )
+        }
+    }
+}
+
+
+@Composable
+private fun SlayerTaskCard(
+    task: SlayerTask,
+    canReroll: Boolean,
+    onReroll: () -> Unit
+) {
+    val tierColor = Color(TierConfig.colorOf(task.tier))
+    val taskProgressRatio = if (task.requiredKills > 0)
+        task.currentKills.toFloat() / task.requiredKills.toFloat()
+    else 0f
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("slayer_task_card_${task.id}"),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, tierColor.copy(alpha = 0.8f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            // Header row with Tier tag, Monster name and Sector
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(tierColor.copy(alpha = 0.2f), RectangleShape)
+                            .border(1.dp, tierColor, RectangleShape)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "[${task.tier}]",
+                            style = TrueIdleType.tag,
+                            color = tierColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = task.targetName.uppercase(),
+                        style = TrueIdleType.title,
+                        color = TextLight
+                    )
+                }
+                Text(
+                    text = "SECTOR ${task.targetFloor}",
+                    style = TrueIdleType.tag,
+                    color = PrimaryNeon
+                )
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
             SciFiGauge(
                 label = "ELIMINATION PROGRESS",
                 valueText = "${task.currentKills} / ${task.requiredKills}",
-                ratio = taskProgressRatio,
-                color = HpRed
+                ratio = taskProgressRatio.coerceIn(0f, 1f),
+                color = tierColor
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Bounty rewards grid
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(SurfaceVariantDark, RectangleShape)
                     .border(1.dp, BorderDark, RectangleShape)
                     .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("BOUNTY (CREDITS):", style = TrueIdleType.meta, color = TextMuted)
+                    Text("BOUNTY (CREDITS & PTS):", style = TrueIdleType.meta, color = TextMuted)
                     Spacer(modifier = Modifier.height(2.dp))
-                    SciFiBadge(
-                        type = SciFiIconType.CREDIT,
-                        label = "+${task.rewardGold}",
-                        iconTint = SecondaryGold,
-                        textColor = SecondaryGold
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SciFiBadge(
+                            type = SciFiIconType.CREDIT,
+                            label = "+${NumberFormatter.short(task.rewardGold)}",
+                            iconTint = SecondaryGold,
+                            textColor = SecondaryGold
+                        )
+                        SciFiBadge(
+                            type = SciFiIconType.WEAPON,
+                            label = "+${task.rewardPoints} PTS",
+                            iconTint = HpRed,
+                            textColor = HpRed
+                        )
+                    }
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("BOUNTY (POINTS):", style = TrueIdleType.meta, color = TextMuted)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    SciFiBadge(
-                        type = SciFiIconType.WEAPON,
-                        label = "+${task.rewardPoints} PTS",
-                        iconTint = HpRed,
-                        textColor = HpRed
-                    )
+
+                // High-Tier Bonus Spoils
+                if (task.rewardDiamonds > 0L || task.rewardFaith > 0L || task.rewardBones > 0L) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("SPECIAL SPOILS:", style = TrueIdleType.meta, color = TextMuted)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (task.rewardDiamonds > 0L) {
+                                SciFiBadge(
+                                    type = SciFiIconType.DIAMOND,
+                                    label = "+${task.rewardDiamonds}",
+                                    iconTint = PrimaryNeon,
+                                    textColor = PrimaryNeon
+                                )
+                            }
+                            if (task.rewardFaith > 0L) {
+                                SciFiBadge(
+                                    type = SciFiIconType.ESSENCE,
+                                    label = "+${task.rewardFaith}",
+                                    iconTint = ManaTeal,
+                                    textColor = ManaTeal
+                                )
+                            }
+                            if (task.rewardBones > 0L) {
+                                SciFiBadge(
+                                    type = SciFiIconType.WEAPON,
+                                    label = "+${task.rewardBones}",
+                                    iconTint = NecroPurple,
+                                    textColor = NecroPurple
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            val canReroll = slayer.slayerPoints >= 1
-            Button(
-                onClick = onRerollTask,
-                enabled = canReroll,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .testTag("reroll_task_button"),
-                shape = RectangleShape,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = SecondaryGold.copy(alpha = 0.2f),
-                    contentColor = SecondaryGold,
-                    disabledContainerColor = SurfaceVariantDark,
-                    disabledContentColor = TextMuted
-                ),
-                border = BorderStroke(1.dp, if (canReroll) SecondaryGold else BorderDark)
+            // Actions row: auto claim notice + 1 Gold manual refresh
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (canReroll) "REROLL DIRECTIVE (COST 1 POINT)" else "REROLL (REQUIRES 1 POINT)",
-                    style = TrueIdleType.tag
+                    text = "AUTO-CLAIM ON COMPLETION",
+                    style = TrueIdleType.meta,
+                    color = GreenSuccess
                 )
+
+                Button(
+                    onClick = onReroll,
+                    enabled = canReroll,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .testTag("reroll_task_button_${task.id}"),
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SecondaryGold.copy(alpha = 0.2f),
+                        contentColor = SecondaryGold,
+                        disabledContainerColor = SurfaceVariantDark,
+                        disabledContentColor = TextMuted
+                    ),
+                    border = BorderStroke(1.dp, if (canReroll) SecondaryGold else BorderDark),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "REROLL (1 GOLD)",
+                        style = TrueIdleType.tag
+                    )
+                }
             }
         }
     }

@@ -313,7 +313,7 @@ fun TrueIdleApp(
                     onTrainNode = { id -> viewModel.trainNode(id) },
                     onToggleSanctifiedAegis = { viewModel.toggleEssenceAegis() },
                     onUpgradeSanctifiedSmite = { viewModel.upgradeEssenceSmite() },
-                    onRerollSlayerTask = { viewModel.rerollSlayerTask() },
+                    onRerollSlayerTask = { id -> viewModel.rerollSlayerTask(id) },
                     onUpgradeDiscipline = { cat, id -> viewModel.upgradeDiscipline(cat, id) },
                     onActivateTalent = { id -> viewModel.activateTalent(id) },
                     onUpgradeTalent = { id -> viewModel.upgradeTalent(id) },

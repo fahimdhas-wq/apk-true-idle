@@ -1,6 +1,5 @@
 package com.aistudio.trueidle.ui.screens
 
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,8 +19,12 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
+import com.aistudio.trueidle.model.InventoryItem
+import com.aistudio.trueidle.ui.components.SciFiBadge
+import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
@@ -35,13 +38,35 @@ fun StatsScreen(
     val scrollState = rememberScrollState()
     val p = state.player
     val reqXp = XpCurves.player(p.lvl)
-
     val d = com.aistudio.trueidle.ui.LocalDerived.current
 
-    val weapon = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_WEAPON }
-    val armor = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_ARMOR }
-    val ring = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_RING }
-    val amulet = state.inventory.firstOrNull { it.isEquipped && it.slot == Equipment.SLOT_AMULET }
+    // Equipped weapons
+    val rifle = Equipment.equipped(state, Equipment.SLOT_RIFLE)
+    val sidearm = Equipment.equipped(state, Equipment.SLOT_SIDEARM)
+    val blade = Equipment.equipped(state, Equipment.SLOT_BLADE)
+    val totalWeaponAtk = Equipment.baseAttack(rifle) + Equipment.baseAttack(sidearm) + Equipment.baseAttack(blade)
+
+    // Equipped armor (7 groups)
+    val visor = Equipment.equipped(state, Equipment.SLOT_VISOR)
+    val vest = Equipment.equipped(state, Equipment.SLOT_VEST)
+    val grips = Equipment.equipped(state, Equipment.SLOT_GRIPS)
+    val pants = Equipment.equipped(state, Equipment.SLOT_PANTS)
+    val boots = Equipment.equipped(state, Equipment.SLOT_BOOTS)
+    val duster = Equipment.equipped(state, Equipment.SLOT_DUSTER)
+    val rig = Equipment.equipped(state, Equipment.SLOT_RIG)
+
+    val armorList = listOf(visor, vest, grips, pants, boots, duster, rig)
+    val totalArmorDef = armorList.sumOf { Equipment.baseDefense(it) }
+    val totalArmorVit = armorList.sumOf { Equipment.baseVit(it) }
+
+    // Equipped nodes (3 slots)
+    val node1 = Equipment.equipped(state, Equipment.SLOT_NODE_I)
+    val node2 = Equipment.equipped(state, Equipment.SLOT_NODE_II)
+    val node3 = Equipment.equipped(state, Equipment.SLOT_NODE_III)
+
+    val nodeList = listOf(node1, node2, node3)
+    val totalNodeDef = nodeList.sumOf { Equipment.baseDefense(it) }
+    val totalNodeVit = nodeList.sumOf { Equipment.baseVit(it) }
 
     Column(
         modifier = modifier
@@ -95,187 +120,239 @@ fun StatsScreen(
             }
         }
 
-        // 1. EQUIPMENT 2x2 GEAR GRID (Direct from HTML preview)
+        // 1. GEAR MATRIX OVERVIEW
         SciFiPanel(
-            title = "EQUIPMENT",
-            accent = PrimaryNeon,
-            tag = "GS ${d.gearScore}"
+            title = "TACTICAL LOADOUT SUMMARY",
+            accent = SecondaryGold,
+            tag = "GEAR SCORE ${d.gearScore}"
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Top Row: Weapon & Armor
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Weapon Cell
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(SurfaceVariantDark, RectangleShape)
-                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(6.dp)
-                    ) {
-                        Column {
-                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(PrimaryNeon))
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("WEAPON", style = TrueIdleType.meta, color = TextMuted)
-                            Text(
-                                text = Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS").uppercase(),
-                                style = TrueIdleType.label,
-                                color = TextLight,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = "DMG +${NumberFormatter.short(d.weaponDmg)}",
-                                style = TrueIdleType.tag,
-                                color = PrimaryNeon
-                            )
-                        }
+                    Column {
+                        Text("TOTAL WEAPON ATK", style = TrueIdleType.meta, color = TextMuted)
+                        Text("+${NumberFormatter.short(totalWeaponAtk)} ATK", style = TrueIdleType.value, color = PrimaryNeon)
                     }
-
-                    // Armor Cell
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(SurfaceVariantDark, RectangleShape)
-                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(6.dp)
-                    ) {
-                        Column {
-                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(ShieldBlue))
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("ARMOR", style = TrueIdleType.meta, color = TextMuted)
-                            Text(
-                                text = Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE").uppercase(),
-                                style = TrueIdleType.label,
-                                color = TextLight,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = "DEF +${NumberFormatter.short(d.armorDef)}",
-                                style = TrueIdleType.tag,
-                                color = ShieldBlue
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("TOTAL ARMOR DEF", style = TrueIdleType.meta, color = TextMuted)
+                        Text("+${NumberFormatter.short(totalArmorDef + totalNodeDef)} DEF", style = TrueIdleType.value, color = ShieldBlue)
                     }
-                }
-
-                // Bottom Row: Ring & Amulet
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Ring Cell
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(SurfaceVariantDark, RectangleShape)
-                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(6.dp)
-                    ) {
-                        Column {
-                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(SecondaryGold))
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("RING", style = TrueIdleType.meta, color = TextMuted)
-                            Text(
-                                text = (ring?.name ?: "EMPTY SLOT").uppercase(),
-                                style = TrueIdleType.label,
-                                color = TextLight,
-                                maxLines = 1
-                            )
-                            Text(
-                                // Derived from the equipped item: the old hard-coded "CRIT +2.1%"
-                                // did not describe what the ring actually granted.
-                                text = if (ring != null) "+${NumberFormatter.short(d.ringBonus)} ATK" else "—",
-                                style = TrueIdleType.tag,
-                                color = SecondaryGold
-                            )
-                        }
-                    }
-
-                    // Amulet Cell
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(SurfaceVariantDark, RectangleShape)
-                            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
-                            .padding(6.dp)
-                    ) {
-                        Column {
-                            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(NecroPurple))
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text("AMULET", style = TrueIdleType.meta, color = TextMuted)
-                            Text(
-                                text = (amulet?.name ?: "EMPTY SLOT").uppercase(),
-                                style = TrueIdleType.label,
-                                color = TextLight,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = if (amulet != null) "+${NumberFormatter.short(amulet.def)} DEF" else "—",
-                                style = TrueIdleType.tag,
-                                color = NecroPurple
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("TOTAL VITALITY", style = TrueIdleType.meta, color = TextMuted)
+                        Text("+${NumberFormatter.short(totalArmorVit + totalNodeVit)} VIT", style = TrueIdleType.value, color = GreenSuccess)
                     }
                 }
             }
         }
 
-        // 2. DERIVED STATS CARD (With Colored Indicator Dots as in HTML)
+        // 2. WEAPONS ARSENAL BREAKDOWN (3 Slots)
         SciFiPanel(
-            title = "DERIVED STATS",
+            title = "WEAPONS ARSENAL (3 SLOTS)",
+            accent = PrimaryNeon,
+            tag = "+${NumberFormatter.short(totalWeaponAtk)} ATK"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                EquipmentItemRow("RIFLE", Equipment.SLOT_RIFLE, rifle)
+                EquipmentItemRow("SIDEARM", Equipment.SLOT_SIDEARM, sidearm)
+                EquipmentItemRow("BLADE", Equipment.SLOT_BLADE, blade)
+            }
+        }
+
+        // 3. ARMOR MATRIX BREAKDOWN (7 Slots)
+        SciFiPanel(
+            title = "ARMOR PLATING MATRIX (7 SLOTS)",
+            accent = ShieldBlue,
+            tag = "+${NumberFormatter.short(totalArmorDef)} DEF"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                EquipmentItemRow("VISOR", Equipment.SLOT_VISOR, visor)
+                EquipmentItemRow("VEST", Equipment.SLOT_VEST, vest)
+                EquipmentItemRow("GRIPS", Equipment.SLOT_GRIPS, grips)
+                EquipmentItemRow("PANTS", Equipment.SLOT_PANTS, pants)
+                EquipmentItemRow("BOOTS", Equipment.SLOT_BOOTS, boots)
+                EquipmentItemRow("DUSTER", Equipment.SLOT_DUSTER, duster)
+                EquipmentItemRow("RIG", Equipment.SLOT_RIG, rig)
+            }
+        }
+
+        // 4. SUB-NEURAL NODES BREAKDOWN (3 Slots)
+        SciFiPanel(
+            title = "SUB-NEURAL NODES (3 SLOTS)",
+            accent = NecroPurple,
+            tag = "+${NumberFormatter.short(totalNodeDef)} DEF"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                EquipmentItemRow("NODE I", Equipment.SLOT_NODE_I, node1)
+                EquipmentItemRow("NODE II", Equipment.SLOT_NODE_II, node2)
+                EquipmentItemRow("NODE III", Equipment.SLOT_NODE_III, node3)
+            }
+        }
+
+        // 5. COMBAT ATTRIBUTES & MULTIPLIERS
+        SciFiPanel(
+            title = "COMBAT MULTIPLIERS & METRICS",
             accent = SecondaryGold,
             tag = "LVL ${p.lvl}"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Strength
-                StatDotRow(label = "STRENGTH", value = NumberFormatter.short(d.str), dotColor = PrimaryNeon, valueColor = PrimaryNeon)
-                // Intelligence
-                StatDotRow(label = "INTELLIGENCE", value = NumberFormatter.short(d.intVal), dotColor = SecondaryGold, valueColor = SecondaryGold)
-                // Vitality
-                StatDotRow(label = "VITALITY", value = NumberFormatter.short(d.vit), dotColor = GreenSuccess, valueColor = GreenSuccess)
-                // Defense
-                StatDotRow(label = "DEFENSE", value = NumberFormatter.short(d.armorDef), dotColor = NecroPurple, valueColor = NecroPurple)
-                // Physical Damage
-                StatDotRow(label = "PHYSICAL DAMAGE", value = NumberFormatter.short(d.physicalDamage), dotColor = null, valueColor = TextLight)
-                // Crit Chance
-                StatDotRow(label = "CRIT CHANCE", value = String.format(Locale.ROOT, "%.1f%%", d.critChance * 100), dotColor = null, valueColor = TextLight)
-                // Crit Damage
-                StatDotRow(label = "CRIT DAMAGE", value = "${(d.critDamage * 100).toInt()}%", dotColor = null, valueColor = SecondaryGold)
-                // XP Gain
-                StatDotRow(label = "XP GAIN", value = "${(d.xpGain * 100).toInt()}%", dotColor = null, valueColor = TextLight)
-                // Kept from the removed telemetry panel: this figure appears nowhere else.
-                StatDotRow(label = "ARMOR MITIGATION", value = "${(CombatMath.mitigation(d.armorDef) * 100).toInt()}%", dotColor = null, valueColor = SecondaryGold)
+                StatDotRow("STRENGTH (ATK SCALING)", NumberFormatter.short(d.str), PrimaryNeon, PrimaryNeon)
+                StatDotRow("INTELLIGENCE (BURST SCALING)", NumberFormatter.short(d.intVal), SecondaryGold, SecondaryGold)
+                StatDotRow("VITALITY (HEALTH SCALING)", NumberFormatter.short(d.vit), GreenSuccess, GreenSuccess)
+                StatDotRow("ARMOR DEFENSE", NumberFormatter.short(d.armorDef), NecroPurple, NecroPurple)
+                StatDotRow("PHYSICAL HIT DAMAGE", NumberFormatter.short(d.physicalDamage), null, TextLight)
+                StatDotRow(
+                    "ATTACK SPEED",
+                    "${String.format(Locale.ROOT, "%.2f", d.atkSpeed)} HITS/S (${String.format(Locale.ROOT, "%.2f", if (d.atkSpeed > 0.0) 1.0 / d.atkSpeed else 1.0)}s)",
+                    null,
+                    PrimaryNeon
+                )
+                StatDotRow("CRITICAL STRIKE CHANCE", String.format(Locale.ROOT, "%.1f%%", d.critChance * 100), null, TextLight)
+                StatDotRow("CRITICAL DAMAGE MULTIPLIER", "${(d.critDamage * 100).toInt()}%", null, SecondaryGold)
+                StatDotRow("KINETIC ARMOR MITIGATION", "${(CombatMath.mitigation(d.armorDef) * 100).toInt()}% ABSORBED", null, SecondaryGold)
+                StatDotRow("TOTAL HIT POINTS (HP)", "${NumberFormatter.short(p.hp)} / ${NumberFormatter.short(d.maxHp)}", GreenSuccess, GreenSuccess)
+                StatDotRow("ENERGY BARRIER (SHIELD)", "${NumberFormatter.short(p.shield)} / ${NumberFormatter.short(d.maxShield)}", ShieldBlue, ShieldBlue)
+                StatDotRow("ARCANE ENERGY (MANA)", "${NumberFormatter.short(p.mana)} / ${NumberFormatter.short(d.maxMana)}", ManaTeal, ManaTeal)
+                StatDotRow("XP ACCELERATION", "+${(d.xpGain * 100).toInt()}%", null, TextLight)
             }
         }
 
-        // 3. LIFETIME TACTICAL TELEMETRY
+        // 6. STRUGGLE & ADAPTATION BREAKDOWN
+        SciFiPanel(
+            title = "STRUGGLE ADAPTATION TELEMETRY",
+            accent = HpRed,
+            tag = "${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Accumulates combat damage sustained (both absorbed by energy shield and taken directly to HP). Unlocks defensive and offensive permanent thresholds.",
+                    style = TrueIdleType.body,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                StatDotRow("TOTAL DAMAGE ENDURED", "${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG", HpRed, HpRed)
+                state.talent.struggleTalents.forEach { st ->
+                    StatDotRow(st.name.uppercase(), "RANK ${st.rank} (COST ${st.costPoints} TP)", SecondaryGold, TextLight)
+                }
+            }
+        }
+
+        // 7. DISCIPLINE MASTERIES BREAKDOWN
+        SciFiPanel(
+            title = "DISCIPLINE MASTERIES",
+            accent = PrimaryNeon,
+            tag = "ACADEMY"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatDotRow("TRAINING BAY", "LV ${state.training.lvl} (${state.training.nodes.sumOf { it.rank }} NODES)", PrimaryNeon, TextLight)
+                StatDotRow("SLAYER CORPS", "LV ${state.slayer.lvl} (${state.slayer.slayerPoints} PTS)", HpRed, SecondaryGold)
+                StatDotRow("BIO-FARMING", "LV ${state.harvest.farmingLvl}", GreenSuccess, TextLight)
+                StatDotRow("ORE EXTRACTION", "LV ${state.harvest.miningLvl}", SecondaryGold, TextLight)
+                StatDotRow("ARMORY FORGE", "LV ${state.armory.smithingLvl}", SecondaryGold, TextLight)
+                StatDotRow("NANITE ALCHEMY", "LV ${state.armory.herbloreLvl}", ManaTeal, TextLight)
+                StatDotRow("NECROMANCY CORPS", "LV ${state.necro.lvl} (${state.necro.boneEssence} BONE)", NecroPurple, TextLight)
+                StatDotRow("BEAST SQUADRON", "LV ${state.beasts.lvl} (${state.beasts.beasts.size} BEASTS)", PrimaryNeon, TextLight)
+                StatDotRow("SANCTIFIED ESSENCE", "LV ${state.essence.lvl} (${state.essence.faith} FAITH)", ManaTeal, TextLight)
+            }
+        }
+
+        // 8. LIFETIME TACTICAL TELEMETRY
         SciFiPanel(
             title = "TACTICAL TELEMETRY",
             accent = TextLight,
             tag = "LIFETIME"
         ) {
-            listOf(
-                "TOTAL HOSTILES ELIMINATED" to NumberFormatter.short(state.lifetime.totalKills),
-                "DEEPEST SECTOR UNLOCKED" to "SECTOR ${p.maxUnlockedFloor}",
-                "CREDITS IN TREASURY" to "${NumberFormatter.short(p.gold)} CR",
-                "FAITH ACCUMULATED" to "${NumberFormatter.short(state.essence.faith)} FAITH",
-                "SLAYER POINTS" to "${NumberFormatter.short(state.slayer.slayerPoints)} PTS",
-                "TAMED COMPANIONS" to "${state.beasts.beasts.size}",
-                "UNDEAD CORPS SIZE" to "${state.necro.army.sumOf { it.count }}"
-            ).forEach { (label, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(label, style = TrueIdleType.label, color = TextMuted)
-                    Text(value, style = TrueIdleType.value, color = TextLight)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                StatDotRow("TOTAL HOSTILES ELIMINATED", NumberFormatter.short(state.lifetime.totalKills), null, TextLight)
+                StatDotRow("DEEPEST SECTOR UNLOCKED", "SECTOR ${p.maxUnlockedFloor}", null, PrimaryNeon)
+                StatDotRow("CREDITS IN TREASURY", "${NumberFormatter.short(p.gold)} CR", null, SecondaryGold)
+                StatDotRow("DIAMONDS RESERVE", "${p.diamonds} DIA", null, PrimaryNeon)
+                StatDotRow("FAITH ACCUMULATED", "${NumberFormatter.short(state.essence.faith)} FAITH", null, ManaTeal)
+                StatDotRow("SLAYER POINTS", "${NumberFormatter.short(state.slayer.slayerPoints)} PTS", null, HpRed)
+                StatDotRow("TAMED COMPANIONS", "${state.beasts.beasts.size}", null, TextLight)
+                StatDotRow("UNDEAD CORPS SIZE", "${state.necro.army.sumOf { it.count }}", null, TextLight)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EquipmentItemRow(
+    slotLabel: String,
+    slotName: String,
+    item: InventoryItem?
+) {
+    val tierInfo = item?.let { TierConfig.forOrdinal(it.tier) }
+    val tierColor = tierInfo?.let { Color(it.color) } ?: BorderDark
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceVariantDark, RectangleShape)
+            .border(BorderStroke(1.dp, BorderDark), RectangleShape)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(tierColor.copy(alpha = 0.2f), RectangleShape)
+                    .border(1.dp, tierColor, RectangleShape)
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = if (item != null) "[${tierInfo?.id ?: "F-"}]" else "[EMPTY]",
+                    style = TrueIdleType.tag,
+                    color = if (item != null) tierColor else TextMuted,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Column {
+                Text(slotLabel, style = TrueIdleType.meta, color = TextMuted)
+                Text(
+                    text = item?.name?.uppercase() ?: "EMPTY SLOT",
+                    style = TrueIdleType.label,
+                    color = if (item != null) TextLight else TextMuted,
+                    maxLines = 1
+                )
+            }
+        }
+
+        // Stats readout
+        if (item != null) {
+            val isWeapon = Equipment.isWeapon(slotName)
+            if (isWeapon) {
+                val atk = Equipment.baseAttack(item)
+                Text(
+                    text = "+${NumberFormatter.short(atk)} ATK",
+                    style = TrueIdleType.value,
+                    color = PrimaryNeon
+                )
+            } else {
+                val def = Equipment.baseDefense(item)
+                val vit = Equipment.baseVit(item)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "+${NumberFormatter.short(def)} DEF",
+                        style = TrueIdleType.value,
+                        color = ShieldBlue
+                    )
+                    if (vit > 0.0) {
+                        Text(
+                            text = "+${NumberFormatter.short(vit)} VIT",
+                            style = TrueIdleType.tag,
+                            color = GreenSuccess
+                        )
+                    }
                 }
             }
+        } else {
+            Text("—", style = TrueIdleType.meta, color = TextMuted)
         }
     }
 }
@@ -300,7 +377,7 @@ fun StatDotRow(
             if (dotColor != null) {
                 Box(
                     modifier = Modifier
-                        .size(4.dp)
+                        .size(5.dp)
                         .background(dotColor)
                 )
             }

@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.ItemCatalog
@@ -58,7 +61,7 @@ fun SkillsScreen(
     onTrainNode: (String) -> Unit,
     onToggleSanctifiedAegis: () -> Unit = {},
     onUpgradeSanctifiedSmite: () -> Unit = {},
-    onRerollSlayerTask: () -> Unit = {},
+    onRerollSlayerTask: (String) -> Unit = {},
     onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
     onActivateTalent: (String) -> Unit = {},
     onUpgradeTalent: (String) -> Unit = {},
@@ -66,6 +69,8 @@ fun SkillsScreen(
     onAutoEquip: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var isDrawerOpen by remember { mutableStateOf(false) }
+
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // High-Tech Cyber Header Strip
         Row(
@@ -83,129 +88,261 @@ fun SkillsScreen(
             ResourceReadout("TP", "${state.talent.talentPoints} TP", PrimaryNeon)
         }
 
-        // Sub-Navigation Tabs with Uniform Alignment
+        // Cyber Discipline Bar with Menu Access Button
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface, RectangleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 4.dp, vertical = 4.dp)
-                .testTag("skills_sub_nav_row"),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            SkillSubSection.entries.forEach { section ->
-                val selected = currentSection == section
-                val level = when (section) {
-                    SkillSubSection.OVERVIEW -> ""
-                    SkillSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
-                    SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
-                    SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
-                    SkillSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
-                    SkillSubSection.ESSENCE -> "LV ${state.essence.lvl}"
-                    SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
-                    SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
-                    SkillSubSection.TALENTS -> "${state.talent.talentPoints} TP"
-                }
-                Row(
-                    Modifier
-                        .clickable(role = Role.Tab) { onSectionChange(section) }
-                        .heightIn(min = 48.dp)
-                        .background(if (selected) section.color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                        .border(1.dp, if (selected) section.color else MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                        .testTag("skills_sub_tab_${section.name.lowercase()}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    // Decorative: the bracket glyph must not be announced alongside the label.
-                    Text(
-                        text = section.icon,
-                        style = TrueIdleType.tag,
-                        color = if (selected) section.color else TextMuted,
-                        modifier = Modifier.clearAndSetSemantics { }
-                    )
-                    Text(section.label, style = TrueIdleType.tag, color = if (selected) section.color else TextMuted)
-                    if (level.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .background(if (selected) section.color.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface)
-                                .border(1.dp, if (selected) section.color else MaterialTheme.colorScheme.outline)
-                                .padding(horizontal = 3.dp, vertical = 1.dp)
-                        ) {
-                            Text(level, style = TrueIdleType.numberSmall, color = if (selected) section.color else TextMuted)
-                        }
-                    }
-                }
+            Row(
+                modifier = Modifier
+                    .clickable { isDrawerOpen = !isDrawerOpen }
+                    .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
+                    .border(1.dp, PrimaryNeon, RectangleShape)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .testTag("skills_menu_button"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = if (isDrawerOpen) "◄ CLOSE MENU" else "► DISCIPLINES MENU",
+                    style = TrueIdleType.tag,
+                    color = PrimaryNeon,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(currentSection.color, RectangleShape)
+                )
+                Text(
+                    text = currentSection.label,
+                    style = TrueIdleType.label,
+                    color = currentSection.color,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
-        when (currentSection) {
-            SkillSubSection.OVERVIEW -> SkillsOverviewPage(state) { onSectionChange(it) }
-            SkillSubSection.HARVEST -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // HARVEST & EXTRACTION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
-                HarvestScreen(
-                    state = state,
-                    onHarvestPlot = onHarvestPlot,
-                    onMineVein = onMineVein,
-                    onTogglePlotAutoQueue = onTogglePlotAutoQueue,
-                    onToggleVeinAutoQueue = onToggleVeinAutoQueue,
-                    onUpgradeDiscipline = onUpgradeDiscipline
-                )
+        Box(Modifier.fillMaxSize()) {
+            // Main content area taking full space
+            when (currentSection) {
+                SkillSubSection.OVERVIEW -> SkillsOverviewPage(state) { onSectionChange(it) }
+                SkillSubSection.HARVEST -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // HARVEST & EXTRACTION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    HarvestScreen(
+                        state = state,
+                        onHarvestPlot = onHarvestPlot,
+                        onMineVein = onMineVein,
+                        onTogglePlotAutoQueue = onTogglePlotAutoQueue,
+                        onToggleVeinAutoQueue = onToggleVeinAutoQueue,
+                        onUpgradeDiscipline = onUpgradeDiscipline
+                    )
+                }
+                SkillSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // FORGE FABRICATION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    ForgeScreen(
+                        state = state,
+                        onCraftEquipment = onCraftEquipment,
+                        onBrewPotion = onBrewPotion
+                    )
+                }
+                SkillSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // ARMORY & TACTICAL LOADOUT") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    ArmoryScreen(
+                        state = state,
+                        onCraftEquipment = onCraftEquipment,
+                        onBrewPotion = onBrewPotion,
+                        onUpgradeDiscipline = onUpgradeDiscipline,
+                        onUnequipItem = onUnequipItem,
+                        onAutoEquip = onAutoEquip,
+                        onOpenForge = { onSectionChange(SkillSubSection.FORGE) }
+                    )
+                }
+                SkillSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // GENESIS BIO-REANIMATION") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    GenesisScreen(
+                        state = state,
+                        onMergeBeasts = onMergeBeasts,
+                        onSummonMinion = onSummonMinion,
+                        onUpgradeDiscipline = onUpgradeDiscipline
+                    )
+                }
+                SkillSubSection.ESSENCE -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // ESSENCE PROTOCOL") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    EssenceScreen(
+                        state = state,
+                        onToggleAegis = onToggleSanctifiedAegis,
+                        onUpgradeSmite = onUpgradeSanctifiedSmite,
+                        onUpgradeDiscipline = onUpgradeDiscipline
+                    )
+                }
+                SkillSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // NEURAL ENHANCEMENT BAY") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    TrainingScreen(state = state, onTrainNode = onTrainNode)
+                }
+                SkillSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // TARGETING DIRECTIVES") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    SlayerScreen(state = state, onRerollTask = onRerollSlayerTask)
+                }
+                SkillSubSection.TALENTS -> Column(Modifier.fillMaxSize()) {
+                    SubSectionHeader("SKILLS // TACTICAL & STRUGGLE TALENTS") { onSectionChange(SkillSubSection.OVERVIEW) }
+                    TalentScreen(
+                        state = state,
+                        onActivateTalent = onActivateTalent,
+                        onUpgradeTalent = onUpgradeTalent
+                    )
+                }
             }
-            SkillSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // FORGE FABRICATION MATRIX") { onSectionChange(SkillSubSection.OVERVIEW) }
-                ForgeScreen(
-                    state = state,
-                    onCraftEquipment = onCraftEquipment,
-                    onBrewPotion = onBrewPotion
-                )
+
+            // Swipe/Tap Edge Handle on Left Edge
+            if (!isDrawerOpen) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .clickable { isDrawerOpen = true }
+                        .background(SurfaceDark.copy(alpha = 0.95f), RectangleShape)
+                        .border(BorderStroke(1.dp, PrimaryNeon), RectangleShape)
+                        .padding(horizontal = 4.dp, vertical = 14.dp)
+                        .testTag("skills_edge_swipe_handle"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text("►", color = PrimaryNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("M", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("E", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("N", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("U", color = TextLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
-            SkillSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // ARMORY & TACTICAL LOADOUT") { onSectionChange(SkillSubSection.OVERVIEW) }
-                ArmoryScreen(
-                    state = state,
-                    onCraftEquipment = onCraftEquipment,
-                    onBrewPotion = onBrewPotion,
-                    onUpgradeDiscipline = onUpgradeDiscipline,
-                    onUnequipItem = onUnequipItem,
-                    onAutoEquip = onAutoEquip,
-                    onOpenForge = { onSectionChange(SkillSubSection.FORGE) }
-                )
-            }
-            SkillSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // GENESIS BIO-REANIMATION") { onSectionChange(SkillSubSection.OVERVIEW) }
-                GenesisScreen(
-                    state = state,
-                    onMergeBeasts = onMergeBeasts,
-                    onSummonMinion = onSummonMinion,
-                    onUpgradeDiscipline = onUpgradeDiscipline
-                )
-            }
-            SkillSubSection.ESSENCE -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // ESSENCE PROTOCOL") { onSectionChange(SkillSubSection.OVERVIEW) }
-                EssenceScreen(
-                    state = state,
-                    onToggleAegis = onToggleSanctifiedAegis,
-                    onUpgradeSmite = onUpgradeSanctifiedSmite,
-                    onUpgradeDiscipline = onUpgradeDiscipline
-                )
-            }
-            SkillSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // NEURAL ENHANCEMENT BAY") { onSectionChange(SkillSubSection.OVERVIEW) }
-                TrainingScreen(state = state, onTrainNode = onTrainNode)
-            }
-            SkillSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // TARGETING DIRECTIVES") { onSectionChange(SkillSubSection.OVERVIEW) }
-                SlayerScreen(state = state, onRerollTask = onRerollSlayerTask)
-            }
-            SkillSubSection.TALENTS -> Column(Modifier.fillMaxSize()) {
-                SubSectionHeader("SKILLS // TACTICAL & STRUGGLE TALENTS") { onSectionChange(SkillSubSection.OVERVIEW) }
-                TalentScreen(
-                    state = state,
-                    onActivateTalent = onActivateTalent,
-                    onUpgradeTalent = onUpgradeTalent
-                )
+
+            // Sliding Side Navigation Panel / Drawer
+            this@Column.AnimatedVisibility(
+                visible = isDrawerOpen,
+                enter = slideInHorizontally(initialOffsetX = { -it }) + fadeIn(),
+                exit = slideOutHorizontally(targetOffsetX = { -it }) + fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    // Scrim dismisses on tap
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0x99000000))
+                            .clickable { isDrawerOpen = false }
+                            .testTag("skills_drawer_scrim")
+                    )
+
+                    // Vertical Disciplines Column
+                    Column(
+                        Modifier
+                            .width(260.dp)
+                            .fillMaxHeight()
+                            .background(SurfaceDark)
+                            .border(BorderStroke(1.dp, PrimaryNeon))
+                            .verticalScroll(rememberScrollState())
+                            .padding(12.dp)
+                            .testTag("skills_vertical_drawer"),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("DISCIPLINES", style = TrueIdleType.title, color = PrimaryNeon)
+                            IconButton(
+                                onClick = { isDrawerOpen = false },
+                                modifier = Modifier.size(36.dp).testTag("close_skills_drawer_button")
+                            ) {
+                                Text("✕", style = TrueIdleType.tag, color = TextLight, fontSize = 16.sp)
+                            }
+                        }
+                        Text(
+                            text = "Swipe or select a discipline below:",
+                            style = TrueIdleType.body,
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(4.dp))
+
+                        SkillSubSection.entries.forEach { section ->
+                            val selected = currentSection == section
+                            val level = when (section) {
+                                SkillSubSection.OVERVIEW -> ""
+                                SkillSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
+                                SkillSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
+                                SkillSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
+                                SkillSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
+                                SkillSubSection.ESSENCE -> "LV ${state.essence.lvl}"
+                                SkillSubSection.TRAINING -> "LV ${state.training.lvl}"
+                                SkillSubSection.SLAYER -> "LV ${state.slayer.lvl}"
+                                SkillSubSection.TALENTS -> "${state.talent.talentPoints} TP"
+                            }
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
+                                    .clickable(role = Role.Tab) {
+                                        onSectionChange(section)
+                                        isDrawerOpen = false
+                                    }
+                                    .background(
+                                        if (selected) section.color.copy(alpha = 0.2f) else SurfaceVariantDark,
+                                        RectangleShape
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (selected) section.color else BorderDark,
+                                        RectangleShape
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                                    .testTag("skills_vertical_tab_${section.name.lowercase()}"),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(8.dp)
+                                            .background(section.color, RectangleShape)
+                                    )
+                                    Text(
+                                        text = section.label,
+                                        style = TrueIdleType.label,
+                                        color = if (selected) section.color else TextLight
+                                    )
+                                }
+                                if (level.isNotEmpty()) {
+                                    Box(
+                                        Modifier
+                                            .background(Color(0xFF000000), RectangleShape)
+                                            .border(1.dp, BorderDark, RectangleShape)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(level, style = TrueIdleType.meta, color = section.color)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -33,6 +33,10 @@ data class Derived(
     val gearScore: Int = 0,
     val healthRegen: Double = 0.0,
     val shieldRegen: Double = 0.0,
+    val manaRegen: Double = 5.0,
+    val damageReduction: Double = 0.0,
+    val lifesteal: Double = 0.0,
+    val healBoost: Double = 0.0,
     val struggleHpBonus: Double = 0.0,
     val struggleDefBonus: Double = 0.0,
     val struggleManaBonus: Double = 0.0,
@@ -119,11 +123,26 @@ object DerivedStats {
         val tameRateRank = s.beasts.upgrades.firstOrNull { it.id == "beast_tame_rate" }?.rank ?: 0
         val tameChance = 0.10 + luck / 100.0 + 0.05 * tameRateRank
 
-        val maxHp = (40.0 + 5.0 * vit + 10.0 * lvl + 25.0 * rank("vit_bonus")) * bonusMult + struggleHp
+        // Worldtree Leaf / Dew: +1% Max HP while in inventory
+        val hasWorldtreeDew = s.inventory.any {
+            it.name.equals(ItemCatalog.WORLDTREE_LEAF, ignoreCase = true) || it.name.equals("Worldtree Dew", ignoreCase = true)
+        }
+        val worldtreeHpMult = if (hasWorldtreeDew) 1.01 else 1.0
+
+        // Potion active buffs calculations
+        val buffHpRegenPct = s.activeBuffs.filter { it.type == "REGEN_HP" }.sumOf { it.value }
+        val buffManaRegenPct = s.activeBuffs.filter { it.type == "REGEN_MANA" }.sumOf { it.value }
+        val buffShieldPct = s.activeBuffs.filter { it.type == "SHIELD" }.sumOf { it.value }
+        val buffDmgReduction = s.activeBuffs.filter { it.type == "DAMAGE_REDUCTION" }.sumOf { it.value }.coerceIn(0.0, 0.75)
+        val buffLifesteal = s.activeBuffs.filter { it.type == "LIFESTEAL" }.sumOf { it.value }
+        val buffHealBoost = s.activeBuffs.filter { it.type == "HEAL_BOOST" }.sumOf { it.value }
+
+        val maxHp = ((40.0 + 5.0 * vit + 10.0 * lvl + 25.0 * rank("vit_bonus")) * bonusMult + struggleHp) * worldtreeHpMult
         val shieldRank = rank("shield_bonus")
         val aegisReserveRank = s.essence.upgrades.firstOrNull { it.id == "aegis_reserve" }?.rank ?: 0
-        val maxShield = (20.0 + 5.0 * lvl) * bonusMult *
+        val baseShield = (20.0 + 5.0 * lvl) * bonusMult *
             (1.0 + 0.05 * shieldRank) * (1.0 + 0.08 * aegisReserveRank) + struggleShield
+        val maxShield = baseShield + (maxHp * buffShieldPct)
         val maxMana = (30.0 + 2.0 * intVal + 15.0 * rank("int_bonus")) * bonusMult + struggleMana
 
         val physicalDmg = CombatMath.heroDps(
@@ -139,6 +158,10 @@ object DerivedStats {
         )
         val computedGearScore = 1200 + (lvl * 15) + (weaponDmg * 20).toInt() +
             (armorDef * 20).toInt() + (((ringBonus + amuletBonus) * 15) + (rawItemVit * 10)).toInt()
+
+        val baseHpRegen = maxHp * 0.015 * (1.0 + 0.04 * rank("regen_bonus"))
+        val totalHpRegen = baseHpRegen + (maxHp * buffHpRegenPct)
+        val totalManaRegen = 5.0 + (maxMana * buffManaRegenPct)
 
         return Derived(
             str = str,
@@ -161,8 +184,12 @@ object DerivedStats {
             xpGain = 1.0 + 0.02 * lvl + 0.02 * rank("xp_bonus"),
             physicalDamage = physicalDmg,
             gearScore = computedGearScore,
-            healthRegen = maxHp * 0.015 * (1.0 + 0.04 * rank("regen_bonus")),
+            healthRegen = totalHpRegen,
             shieldRegen = maxShield * 0.05 * (1.0 + 0.04 * rank("regen_bonus")),
+            manaRegen = totalManaRegen,
+            damageReduction = buffDmgReduction,
+            lifesteal = buffLifesteal,
+            healBoost = buffHealBoost,
             struggleHpBonus = struggleHp,
             struggleDefBonus = struggleDef,
             struggleManaBonus = struggleMana,

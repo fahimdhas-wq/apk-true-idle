@@ -100,10 +100,10 @@ object ContentCatalog {
     // ---- Training -----------------------------------------------------------
 
     val EXTRA_TRAINING_NODES = listOf(
-        TrainingNode(id = "crit_bonus", name = "Precision Targeting", stat = "+0.5% Crit Chance per rank", rank = 0, maxRank = 20, costGold = 150L),
-        TrainingNode(id = "shield_bonus", name = "Layered Plating", stat = "+5% Max Shield per rank", rank = 0, maxRank = 20, costGold = 140L),
-        TrainingNode(id = "regen_bonus", name = "Cellular Repair", stat = "+4% HP & Shield regen per rank", rank = 0, maxRank = 15, costGold = 120L),
-        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank", rank = 0, maxRank = 20, costGold = 130L)
+        TrainingNode(id = "crit_bonus", name = "Precision Targeting", stat = "+0.5% Crit Chance per rank", rank = 0, maxRank = 1_000_000, costGold = 150L),
+        TrainingNode(id = "shield_bonus", name = "Layered Plating", stat = "+5% Max Shield per rank", rank = 0, maxRank = 1_000_000, costGold = 140L),
+        TrainingNode(id = "regen_bonus", name = "Cellular Repair", stat = "+4% HP & Shield regen per rank", rank = 0, maxRank = 1_000_000, costGold = 120L),
+        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank", rank = 0, maxRank = 1_000_000, costGold = 130L)
     )
 
     // ---- Talents ------------------------------------------------------------
@@ -150,7 +150,13 @@ object ContentCatalog {
         val harvestUpgrades = merge(state.harvest.upgrades, EXTRA_HARVEST_UPGRADES) { it.id }
         val essenceUpgrades = merge(state.essence.upgrades, EXTRA_ESSENCE_UPGRADES) { it.id }
         val necroUpgrades = merge(state.necro.upgrades, EXTRA_NECRO_UPGRADES) { it.id }
-        val nodes = merge(state.training.nodes, EXTRA_TRAINING_NODES) { it.id }
+        val needsNodeUpdate = state.training.nodes.any { it.maxRank < 1_000_000 }
+        val baseNodes = if (needsNodeUpdate) {
+            state.training.nodes.map { if (it.maxRank < 1_000_000) it.copy(maxRank = 1_000_000) else it }
+        } else {
+            state.training.nodes
+        }
+        val nodes = merge(baseNodes, EXTRA_TRAINING_NODES) { it.id }
         val talents = merge(state.talent.activeTalents, EXTRA_ACTIVE_TALENTS) { it.id }
         val struggle = merge(state.talent.struggleTalents, EXTRA_STRUGGLE_TALENTS) { it.id }
 
