@@ -7,6 +7,7 @@ import com.aistudio.trueidle.engine.GameEngine
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.Monster
 import com.aistudio.trueidle.model.PlayerState
+import com.aistudio.trueidle.model.TalentState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -47,7 +48,12 @@ class GameEngineTest {
         val engine = GameEngine(
             initialState = GameState(
                 player = PlayerState(hp = 1.0, shield = 0.0),
-                monster = Monster(damage = 50.0, hp = 500.0)
+                monster = Monster(damage = 50.0, hp = 500.0),
+                // Automatic talents fire before combat now, and Nanite Repair would out-heal the
+                // blow. Zero their ranks so this test isolates the defeat/recovery path.
+                talent = TalentState(
+                    activeTalents = TalentState().activeTalents.map { it.copy(rank = 0) }
+                )
             ),
             clock = clock,
             random = Random(1234)
@@ -67,7 +73,11 @@ class GameEngineTest {
         val engine = GameEngine(
             initialState = GameState(
                 player = PlayerState(currentFloor = 5, maxUnlockedFloor = 5, failuresInRow = 2, autoAdvance = true, hp = 1.0, shield = 0.0),
-                monster = Monster(damage = 50.0, hp = 500.0)
+                monster = Monster(damage = 50.0, hp = 500.0),
+                // Same isolation as above: automatic talents must not rescue the hero here.
+                talent = TalentState(
+                    activeTalents = TalentState().activeTalents.map { it.copy(rank = 0) }
+                )
             ),
             clock = clock,
             random = Random(1234)

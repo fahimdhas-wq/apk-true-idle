@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.data
 
+import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.model.GameState
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -56,14 +57,16 @@ object Migrations {
             // Only weapons/armor carry a plain "+N Damage"/"+N Defense" description. Rings and
             // amulets used to fall through to the model default and lose their bonus entirely.
             val parsed = STAT_VALUE.find(statDesc)?.groupValues?.get(1)?.toDoubleOrNull()
-            val atk = when (slot) {
-                "Weapon" -> parsed ?: (tier * 12.0)
-                "Ring" -> item["atk"]?.jsonPrimitive?.doubleOrNull ?: (tier * 3.0)
+            // Canonical groups (Rifle/Blade/Vest/Node I...) replaced the old Weapon/Armor/Ring/
+            // Amulet slots, so both spellings must rebuild their baked stats here.
+            val atk = when {
+                Equipment.isWeapon(slot) -> parsed ?: (tier * 12.0)
+                slot == Equipment.SLOT_RING -> item["atk"]?.jsonPrimitive?.doubleOrNull ?: (tier * 3.0)
                 else -> item["atk"]?.jsonPrimitive?.doubleOrNull ?: 0.0
             }
-            val def = when (slot) {
-                "Armor" -> parsed ?: (tier * 8.0)
-                "Amulet" -> item["def"]?.jsonPrimitive?.doubleOrNull ?: (tier * 3.0)
+            val def = when {
+                Equipment.isArmorOrNode(slot) -> parsed ?: (tier * 8.0)
+                slot == Equipment.SLOT_AMULET -> item["def"]?.jsonPrimitive?.doubleOrNull ?: (tier * 3.0)
                 else -> item["def"]?.jsonPrimitive?.doubleOrNull ?: 0.0
             }
             JsonObject(

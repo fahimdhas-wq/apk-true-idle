@@ -15,13 +15,15 @@ class DerivedStatsTest {
         val state = GameState()
         val d = DerivedStats.of(state)
 
-        assertEquals(100.0, d.maxHp, 1e-6)
+        // Canonical starting loadout: Rifle + Blade (12 ATK each), and Vest/Visor/Node I/Node II
+        // (+8 DEF and +4 VIT each), so the hero starts at 24 ATK / 32 DEF / 16 gear VIT.
+        assertEquals(180.0, d.maxHp, 1e-6)
         assertEquals(25.0, d.maxShield, 1e-6)
         assertEquals(50.0, d.maxMana, 1e-6)
         assertEquals(0.35, d.lootChance, 1e-6)
         assertEquals(0.15, d.tameChance, 1e-6)
-        assertEquals(8.0, d.weaponDmg, 1e-6)
-        assertEquals(4.0, d.armorDef, 1e-6)
+        assertEquals(24.0, d.weaponDmg, 1e-6)
+        assertEquals(32.0, d.armorDef, 1e-6)
     }
 
     @Test
@@ -38,8 +40,8 @@ class DerivedStatsTest {
 
         // STR: base 10 + 5 * 2 = 20
         assertEquals(20.0, d.str, 1e-6)
-        // Max HP: 40 + 5 * 10 + 10 * 1 + 50 * 1 = 150
-        assertEquals(150.0, d.maxHp, 1e-6)
+        // Max HP: 40 + 5 * (10 + 5 + 16 gear VIT) + 10 * 1 + 25 * 1 = 230
+        assertEquals(230.0, d.maxHp, 1e-6)
         // Max Mana: 30 + 2 * 10 + 25 * 1 = 75
         assertEquals(75.0, d.maxMana, 1e-6)
         // Luck: base 5 + 5 * 2 = 15 -> lootChance = 0.30 + 0.15 = 0.45
