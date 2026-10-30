@@ -1011,7 +1011,7 @@ class GameEngine(
         return state
     }
 
-    fun togglePlotAutoQueue(    fun togglePlotAutoQueue(plotId: Int): GameState {
+    fun togglePlotAutoQueue(plotId: Int): GameState {
         val harvest = state.harvest
         val target = harvest.plots.find { it.id == plotId } ?: return state
         if (harvest.farmingLvl < target.reqLvl) return state
@@ -1975,9 +1975,9 @@ class GameEngine(
                 ),
                 harvest = input.harvest.copy(
                     farmingLvl = input.harvest.farmingLvl.coerceAtLeast(1),
-                    farmingXp = input.harvest.farmingXp.coerceAtLeast(0L),
+                    farmingXp = input.harvest.farmingXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                     miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
-                    miningXp = input.harvest.miningXp.coerceAtLeast(0L),
+                    miningXp = input.harvest.miningXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                     plots = run {
                         val basePlots = if (input.harvest.plots.size == ItemCatalog.HERBS.size &&
                             input.harvest.plots.map { it.herbName } == ItemCatalog.HERBS) {
