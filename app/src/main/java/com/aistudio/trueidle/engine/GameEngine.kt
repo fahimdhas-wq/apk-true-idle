@@ -763,12 +763,22 @@ class GameEngine(
 
     private fun advanceProficiency(currentLvl: Int, currentXp: Long, gain: Long): Pair<Int, Long> {
         var lvl = currentLvl.coerceIn(1, 100)
-        var xp = currentXp + gain
+        val safeCurrentXp = currentXp.coerceAtLeast(0L)
+        val safeGain = gain.coerceAtLeast(0L)
+        var xp = if (Long.MAX_VALUE - safeCurrentXp < safeGain) {
+            Long.MAX_VALUE
+        } else {
+            safeCurrentXp + safeGain
+        }
+
         while (lvl < 100 && xp >= XpCurves.proficiency(lvl)) {
             xp -= XpCurves.proficiency(lvl)
             lvl++
         }
-        return Pair(lvl.coerceIn(1, 100), xp)
+
+        // A capped proficiency must not retain an unbounded overflow bank.
+        if (lvl >= 100) xp = 0L
+        return Pair(lvl, xp)
     }
 
     private fun grantHarvestSkillXp(
