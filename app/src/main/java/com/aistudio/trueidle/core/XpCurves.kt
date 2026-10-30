@@ -31,9 +31,10 @@ object XpCurves {
      * Individual item proficiency curve for herbs and ores (Levels 1 to 100).
      */
     fun proficiency(lvl: Int): Long {
-        val level = lvl.coerceAtLeast(1)
-        // Fixed per-action proficiency gain prevents high yield multipliers from bypassing mastery.
-        return floor(40.0 * level.toDouble().pow(1.9) + 10.0 * level).toLong().coerceAtLeast(50L)
+        val level = lvl.coerceIn(1, 100)
+        // Exponent 7 makes proficiency a long-term progression track while keeping level-100
+        // requirements safely within Long. XP gain still scales with the actual resource yield.
+        return floor(40.0 * level.toDouble().pow(7.0) + 10.0 * level).toLong().coerceAtLeast(50L)
     }
 
     /**
