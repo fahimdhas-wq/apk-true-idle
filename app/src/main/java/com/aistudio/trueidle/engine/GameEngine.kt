@@ -1006,7 +1006,7 @@ class GameEngine(
         val target = harvest.plots.find { it.id == plotId } ?: return state
         if (harvest.farmingLvl < target.reqLvl) return state
         val enable = !target.autoQueue
-        val capacity = harvest.farmingLvl / 10
+        val capacity = 1 + harvest.farmingLvl / 10
         val active = harvest.plots.count { it.autoQueue }
         if (enable && active >= capacity) return state
         val plots = harvest.plots.map { plot ->
@@ -1021,7 +1021,7 @@ class GameEngine(
         val target = harvest.veins.find { it.id == veinId } ?: return state
         if (harvest.miningLvl < target.reqLvl) return state
         val enable = !target.autoQueue
-        val capacity = harvest.miningLvl / 10
+        val capacity = 1 + harvest.miningLvl / 10
         val active = harvest.veins.count { it.autoQueue }
         if (enable && active >= capacity) return state
         val veins = harvest.veins.map { vein ->
