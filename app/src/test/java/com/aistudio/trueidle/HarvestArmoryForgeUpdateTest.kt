@@ -59,70 +59,51 @@ class HarvestArmoryForgeUpdateTest {
     }
 
     // -------------------------------------------------------------------------
-    // ITEM 2: REWARD MATH (XP AND PROFICIENCY GRANTED IN EQUAL AMOUNTS TO YIELD)
+    // ITEM 2: TIER-WEIGHTED GATHERING XP AND PROFICIENCY REWARDS
     // -------------------------------------------------------------------------
     @Test
-    fun testEqualRewardMathForFarming() {
-        // Base plot yield = 2.0. With proficiency lvl 1, multiplier = 1.0 -> yield = 2.0 items.
-        // Gaining 2 items must grant exactly 2 Farming XP and 2 Proficiency XP.
+    fun testTierWeightedRewardMathForFarming() {
         val baseState = GameState().copy(
             harvest = GameState().harvest.copy(
                 plots = GameState().harvest.plots.map {
                     if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 1, proficiencyXp = 0L) else it
                 },
-                farmingXp = 0L,
+                farmingXp = 0.0,
                 farmingLvl = 1
             )
         )
         val engine = GameEngine(baseState)
         val initialItems = engine.state.inventory.find { it.name == ItemCatalog.HEALING_HERB }?.count ?: 0.0
-
         engine.harvestPlot(0)
-
         val afterItems = engine.state.inventory.find { it.name == ItemCatalog.HEALING_HERB }?.count ?: 0.0
-        val itemsGained = afterItems - initialItems
         val plot = engine.state.harvest.plots[0]
-
-        // Yield is 2.0
-        assertEquals(2.0, itemsGained, 1e-6)
-        // Farming XP gained is 2L (equal to items gained)
-        assertEquals(2L, engine.state.harvest.farmingXp)
-        // Proficiency XP gained is 2L (equal to items gained and equal to skill XP)
+        assertEquals(2.0, afterItems - initialItems, 1e-6)
+        assertEquals(24.0, engine.state.harvest.farmingXp, 0.0)
         assertEquals(2L, plot.proficiencyXp)
     }
 
     @Test
-    fun testEqualRewardMathForMining() {
-        // Base vein yield = 3.0. With proficiency lvl 1, multiplier = 1.0 -> yield = 3.0 items.
-        // Gaining 3 items must grant exactly 3 Mining XP and 3 Proficiency XP.
+    fun testTierWeightedRewardMathForMining() {
         val baseState = GameState().copy(
             harvest = GameState().harvest.copy(
                 veins = GameState().harvest.veins.map {
                     if (it.id == 0) it.copy(isReady = true, proficiencyLevel = 1, proficiencyXp = 0L) else it
                 },
-                miningXp = 0L,
+                miningXp = 0.0,
                 miningLvl = 1
             )
         )
         val engine = GameEngine(baseState)
         val initialItems = engine.state.inventory.find { it.name == ItemCatalog.STONE }?.count ?: 0.0
-
         engine.mineVein(0)
-
         val afterItems = engine.state.inventory.find { it.name == ItemCatalog.STONE }?.count ?: 0.0
-        val itemsGained = afterItems - initialItems
         val vein = engine.state.harvest.veins[0]
-
-        // Yield is 3.0
-        assertEquals(3.0, itemsGained, 1e-6)
-        // Mining XP gained is 3L (equal to items gained)
-        assertEquals(3L, engine.state.harvest.miningXp)
-        // Proficiency XP gained is 3L (equal to items gained and equal to skill XP)
+        assertEquals(3.0, afterItems - initialItems, 1e-6)
+        assertEquals(36.0, engine.state.harvest.miningXp, 0.0)
         assertEquals(3L, vein.proficiencyXp)
     }
 
-    // -------------------------------------------------------------------------
-    // ITEM 5: ARMORY 13 EQUIPMENT GROUPS & LEGACY SAVE MIGRATION
+    // ITEM 5:    // ITEM 5: ARMORY 13 EQUIPMENT GROUPS & LEGACY SAVE MIGRATION
     // -------------------------------------------------------------------------
     @Test
     fun testArmoryEquipmentGroupsAndStats() {

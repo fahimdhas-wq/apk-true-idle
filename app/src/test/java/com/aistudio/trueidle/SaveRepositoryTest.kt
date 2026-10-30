@@ -16,6 +16,30 @@ class MemorySaveStore : SaveStore {
     override fun write(name: String, bytes: ByteArray) {
         files[name] = bytes
     }
+
+    @Test
+    fun largeGatheringXpRoundTripsThroughSaveSerialization() {
+        val repo = SaveRepository(MemorySaveStore())
+        val state = GameState(
+            harvest = GameState().harvest.copy(
+                farmingXp = 1.2E28,
+                miningXp = 2.4E28
+            )
+        )
+        val loaded = repo.decode(repo.encode(state)) ?: error("large XP save did not decode")
+        assertEquals(1.2E28, loaded.harvest.farmingXp, 1.0E13)
+        assertEquals(2.4E28, loaded.harvest.miningXp, 1.0E13)
+    }
+
+    @Test
+    fun legacyIntegerGatheringXpMigratesToDoubleStorage() {
+        val repo = SaveRepository(MemorySaveStore())
+        val legacy = """{"player":{},"harvest":{"farmingXp":1250,"miningXp":2500}}"""
+        val loaded = repo.decode(legacy.toByteArray()) ?: error("legacy integer XP save did not migrate")
+        assertEquals(1250.0, loaded.harvest.farmingXp, 0.0)
+        assertEquals(2500.0, loaded.harvest.miningXp, 0.0)
+    }
+
 }
 
 class SaveRepositoryTest {

@@ -113,34 +113,51 @@ class TalentAndDisciplineTest {
     }
 
     @Test
-    fun testHarvestAutoQueueMutualExclusion() {
-        // Level 5 unlocks the second plot and second vein. Keep the test focused on
-        // queue mutual exclusion rather than intentionally attempting locked resources.
-        val initialState = GameState().copy(
-            harvest = GameState().harvest.copy(farmingLvl = 5, miningLvl = 5)
+    fun testHarvestAutoQueueRespectsUnlocksAndCapacity() {
+        val base = GameState()
+        val levelFive = base.copy(
+            harvest = base.harvest.copy(farmingLvl = 5, miningLvl = 5)
         )
-        val engine = GameEngine(initialState)
-        // Toggle plot 0 on
+        val engine = GameEngine(levelFive)
+
         engine.togglePlotAutoQueue(0)
+        assertTrue(engine.state.harvest.plots[0].autoQueue)
+        engine.togglePlotAutoQueue(1)
         assertTrue(engine.state.harvest.plots[0].autoQueue)
         assertFalse(engine.state.harvest.plots[1].autoQueue)
 
-        // Toggle plot 1 on -> plot 0 must be disabled (mutual exclusivity: 1 auto queue per category)
+        engine.togglePlotAutoQueue(0)
         engine.togglePlotAutoQueue(1)
         assertFalse(engine.state.harvest.plots[0].autoQueue)
         assertTrue(engine.state.harvest.plots[1].autoQueue)
 
-        // Toggle vein 0 on
         engine.toggleVeinAutoQueue(0)
         assertTrue(engine.state.harvest.veins[0].autoQueue)
-
-        // Vein 1 on -> vein 0 turned off
         engine.toggleVeinAutoQueue(1)
-        assertFalse(engine.state.harvest.veins[0].autoQueue)
+        assertTrue(engine.state.harvest.veins[0].autoQueue)
+        assertFalse(engine.state.harvest.veins[1].autoQueue)
+
+        engine.togglePlotAutoQueue(2)
+        engine.toggleVeinAutoQueue(2)
+        assertFalse(engine.state.harvest.plots[2].autoQueue)
+        assertFalse(engine.state.harvest.veins[2].autoQueue)
+
+        val levelTen = base.copy(
+            harvest = base.harvest.copy(farmingLvl = 10, miningLvl = 10)
+        )
+        engine.restore(levelTen)
+        engine.togglePlotAutoQueue(0)
+        engine.togglePlotAutoQueue(1)
+        engine.toggleVeinAutoQueue(0)
+        engine.toggleVeinAutoQueue(1)
+        assertTrue(engine.state.harvest.plots[0].autoQueue)
+        assertTrue(engine.state.harvest.plots[1].autoQueue)
+        assertTrue(engine.state.harvest.veins[0].autoQueue)
         assertTrue(engine.state.harvest.veins[1].autoQueue)
     }
 
     @Test
+    fun testProficiencyYieldScaling()    @Test
     fun testProficiencyYieldScaling() {
         // Level 1 multiplier = 1.0 (2^0)
         assertEquals(1.0, XpCurves.proficiencyYieldMultiplier(1), 1e-6)

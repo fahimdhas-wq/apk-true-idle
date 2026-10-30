@@ -323,12 +323,29 @@ fun SkillsOverviewPage(state: GameState, onNavigate: (SkillSubSection) -> Unit) 
             onAction = { onNavigate(SkillSubSection.HARVEST) },
             level = max(state.harvest.farmingLvl, state.harvest.miningLvl),
             xp = max(state.harvest.farmingXp, state.harvest.miningXp),
-            requiredXp = XpCurves.skill(max(state.harvest.farmingLvl, state.harvest.miningLvl)),
+            requiredXp = max(
+                XpCurves.farmingSkillXp(state.harvest.farmingLvl),
+                XpCurves.miningSkillXp(state.harvest.miningLvl)
+            ),
             status = "EXTRACTION PROTOCOL"
         ) {
-            XpProgressBar("BIO-FARMING", state.harvest.farmingLvl, state.harvest.farmingXp, XpCurves.skill(state.harvest.farmingLvl), GreenSuccess)
+            XpProgressBar(
+                "BIO-FARMING",
+                state.harvest.farmingLvl,
+                state.harvest.farmingXp,
+                XpCurves.farmingSkillXp(state.harvest.farmingLvl),
+                GreenSuccess,
+                isMaxLevel = state.harvest.farmingLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
+            )
             Spacer(Modifier.height(3.dp))
-            XpProgressBar("ORE MINING", state.harvest.miningLvl, state.harvest.miningXp, XpCurves.skill(state.harvest.miningLvl), SecondaryGold)
+            XpProgressBar(
+                "ORE MINING",
+                state.harvest.miningLvl,
+                state.harvest.miningXp,
+                XpCurves.miningSkillXp(state.harvest.miningLvl),
+                SecondaryGold,
+                isMaxLevel = state.harvest.miningLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
+            )
         }
 
         // 03 FORGE
@@ -480,8 +497,8 @@ private fun SkillCategoryCard(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     level: Int,
-    xp: Long,
-    requiredXp: Long,
+    xp: Number,
+    requiredXp: Number,
     status: String,
     content: @Composable ColumnScope.() -> Unit
 ) {

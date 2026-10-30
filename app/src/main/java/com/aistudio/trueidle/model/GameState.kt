@@ -140,9 +140,9 @@ data class MiningVein(
 @Serializable
 data class HarvestState(
     val farmingLvl: Int = 1,
-    val farmingXp: Long = 0L,
+    val farmingXp: Double = 0.0,
     val miningLvl: Int = 1,
-    val miningXp: Long = 0L,
+    val miningXp: Double = 0.0,
     val plots: List<Plot> = listOf(
         Plot(id = 0, herbName = "Healing Herb", reqLvl = 1, durationSeconds = 4f),
         Plot(id = 1, herbName = "Lesser Healing Herb", reqLvl = 5, durationSeconds = 5f),

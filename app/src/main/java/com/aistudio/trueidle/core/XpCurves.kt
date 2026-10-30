@@ -19,6 +19,23 @@ object XpCurves {
     fun harvestSkill(lvl: Int): Long =
         floor(15.0 * lvl.coerceAtLeast(1).toDouble().pow(1.8)).toLong().coerceAtLeast(15L)
 
+    /** Large-number gathering progression with a hard level-100 cap. */
+    const val GATHERING_SKILL_MAX_LEVEL: Int = 100
+    private const val GATHERING_XP_GROWTH_PER_LEVEL: Double = 1.2
+    private const val FARMING_XP_BASE: Double = 8.84418650028039E27
+    private const val MINING_XP_BASE: Double = 1.495741475534792E28
+
+    fun farmingSkillXp(lvl: Int): Double = gatheringRequirement(FARMING_XP_BASE, lvl)
+
+    fun miningSkillXp(lvl: Int): Double = gatheringRequirement(MINING_XP_BASE, lvl)
+
+    private fun gatheringRequirement(base: Double, lvl: Int): Double {
+        val level = lvl.coerceIn(1, GATHERING_SKILL_MAX_LEVEL)
+        val requirement = base * level.toDouble().pow(2.3) *
+            GATHERING_XP_GROWTH_PER_LEVEL.pow((level - 1).toDouble())
+        return if (requirement.isFinite()) requirement else Double.MAX_VALUE
+    }
+
     fun slayer(lvl: Int): Long =
         floor(25.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(50L)
 

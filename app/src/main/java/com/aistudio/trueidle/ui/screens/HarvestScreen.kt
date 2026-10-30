@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.HarvestXp
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.UpgradeCosts
 import com.aistudio.trueidle.core.XpCurves
@@ -131,8 +132,9 @@ fun HarvestScreen(
                         skillName = "BIO-FARMING",
                         level = harvest.farmingLvl,
                         currentXp = harvest.farmingXp,
-                        requiredXp = XpCurves.skill(harvest.farmingLvl),
-                        barColor = GreenSuccess
+                        requiredXp = XpCurves.farmingSkillXp(harvest.farmingLvl),
+                        barColor = GreenSuccess,
+                        isMaxLevel = harvest.farmingLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
                 }
             }
@@ -175,6 +177,7 @@ fun HarvestScreen(
                     val reqProfXp = XpCurves.proficiency(plot.proficiencyLevel)
                     val profRatio = if (plot.proficiencyLevel >= 100) 1f else (plot.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
                     val totalYield = (2.0 + extraYield) * profMult
+                    val skillXpReward = if (harvest.farmingLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) HarvestXp.forYield(plot.herbName, totalYield) else 0.0
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
                     Card(
@@ -221,7 +224,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )
@@ -344,8 +347,9 @@ fun HarvestScreen(
                         skillName = "PLASMA MINING",
                         level = harvest.miningLvl,
                         currentXp = harvest.miningXp,
-                        requiredXp = XpCurves.skill(harvest.miningLvl),
-                        barColor = SecondaryGold
+                        requiredXp = XpCurves.miningSkillXp(harvest.miningLvl),
+                        barColor = SecondaryGold,
+                        isMaxLevel = harvest.miningLvl >= XpCurves.GATHERING_SKILL_MAX_LEVEL
                     )
                 }
             }
@@ -388,6 +392,7 @@ fun HarvestScreen(
                     val reqProfXp = XpCurves.proficiency(vein.proficiencyLevel)
                     val profRatio = if (vein.proficiencyLevel >= 100) 1f else (vein.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
                     val totalYield = (3.0 + extraYield + extraOreYield) * profMult
+                    val skillXpReward = if (harvest.miningLvl < XpCurves.GATHERING_SKILL_MAX_LEVEL) HarvestXp.forYield(vein.oreName, totalYield) else 0.0
                     val rewardAmt = totalYield.toLong().coerceAtLeast(1L)
 
                     Card(
@@ -438,7 +443,7 @@ fun HarvestScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "PROFICIENCY (2x/LVL · +$rewardAmt XP)",
+                                    text = "SKILL +${NumberFormatter.short(skillXpReward)} XP · PROF +${NumberFormatter.short(rewardAmt)} XP",
                                     style = TrueIdleType.meta,
                                     color = TextMuted
                                 )

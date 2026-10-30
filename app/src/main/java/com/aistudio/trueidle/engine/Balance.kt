@@ -66,6 +66,10 @@ object Balance {
      */
     fun skillXpReq(lvl: Int): Long = XpCurves.skill(lvl)
 
+    fun farmingSkillXpReq(lvl: Int): Double = XpCurves.farmingSkillXp(lvl)
+
+    fun miningSkillXpReq(lvl: Int): Double = XpCurves.miningSkillXp(lvl)
+
     fun slayerXpReq(lvl: Int): Long = XpCurves.slayer(lvl)
 
     fun playerXpReq(lvl: Int): Long = XpCurves.player(lvl)
