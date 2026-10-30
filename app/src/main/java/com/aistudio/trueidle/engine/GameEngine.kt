@@ -771,6 +771,24 @@ class GameEngine(
         return Pair(lvl.coerceIn(1, 100), xp)
     }
 
+    private fun grantHarvestSkillXp(
+        currentXp: Long,
+        currentLvl: Int,
+        amount: Long,
+        skillName: String,
+        successText: String
+    ): Triple<Long, Int, List<LogEntry>> {
+        var xp = currentXp + amount
+        var lvl = currentLvl
+        val logs = mutableListOf(log(LogType.LOOT, successText))
+        while (xp >= XpCurves.harvestSkill(lvl)) {
+            xp -= XpCurves.harvestSkill(lvl)
+            lvl++
+            logs += log(LogType.SKILL, "SKILL LEVEL UP: $skillName reached Level $lvl!")
+        }
+        return Triple(xp, lvl, logs)
+    }
+
     // ------------------------------------------------------------------ harvest
 
     private fun tickHarvest(frame: Frame, dt: Float) {
@@ -800,8 +818,8 @@ class GameEngine(
             if (plot.isReady) {
                 if (shouldAuto) {
                     herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
-                    farmingXpGained += rewardAmt
-                    val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
+                    farmingXpGained += (2L + extraYield)
+                    val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
                     plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                 } else plot
             } else {
@@ -809,8 +827,8 @@ class GameEngine(
                 if (progress >= 1f) {
                     if (shouldAuto) {
                         herbGains[plot.herbName] = (herbGains[plot.herbName] ?: 0.0) + baseYield
-                        farmingXpGained += rewardAmt
-                        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
+                        farmingXpGained += (2L + extraYield)
+                        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
                         plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else {
                         plot.copy(growthProgress = 1f, isReady = true)
@@ -834,8 +852,8 @@ class GameEngine(
                 if (vein.isReady) {
                     if (shouldAuto) {
                         oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
-                        miningXpGained += rewardAmt
-                        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
+                        miningXpGained += (3L + extraYield + extraOreYield)
+                        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
                         vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                     } else vein
                 } else {
@@ -843,8 +861,8 @@ class GameEngine(
                     if (progress >= 1f) {
                         if (shouldAuto) {
                             oreGains[vein.oreName] = (oreGains[vein.oreName] ?: 0.0) + baseYield
-                            miningXpGained += rewardAmt
-                            val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
+                            miningXpGained += (3L + extraYield + extraOreYield)
+                            val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
                             vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
                         } else {
                             vein.copy(miningProgress = 1f, isReady = true)
@@ -873,13 +891,13 @@ class GameEngine(
             frame.lifetime = frame.lifetime.copy(oresMined = frame.lifetime.oresMined + countItems)
             miningXp += miningXpGained
         }
-        while (farmingXp >= Balance.skillXpReq(farmingLvl)) {
-            farmingXp -= Balance.skillXpReq(farmingLvl)
+        while (farmingXp >= XpCurves.harvestSkill(farmingLvl)) {
+            farmingXp -= XpCurves.harvestSkill(farmingLvl)
             farmingLvl++
             frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Farming reached Level $farmingLvl!")
         }
-        while (miningXp >= Balance.skillXpReq(miningLvl)) {
-            miningXp -= Balance.skillXpReq(miningLvl)
+        while (miningXp >= XpCurves.harvestSkill(miningLvl)) {
+            miningXp -= XpCurves.harvestSkill(miningLvl)
             miningLvl++
             frame.logs += log(LogType.SKILL, "SKILL LEVEL UP: Mining reached Level $miningLvl!")
         }
@@ -908,11 +926,11 @@ class GameEngine(
         val rewardAmt = yield.toLong().coerceAtLeast(1L)
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, herbName, yield)
-        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, rewardAmt)
+        val (newLvl, newXp) = advanceProficiency(plot.proficiencyLevel, plot.proficiencyXp, 1L)
         plots[idx] = plot.copy(growthProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
         val yieldStr = NumberFormatter.short(yield)
-        val (xp, lvl, logs) = grantSkillXp(
+        val (xp, lvl, logs) = grantHarvestSkillXp(
             state.harvest.farmingXp,
             state.harvest.farmingLvl,
             rewardAmt,
@@ -952,11 +970,11 @@ class GameEngine(
         val rewardAmt = yield.toLong().coerceAtLeast(1L)
         val inventory = state.inventory.toMutableList()
         addToInventory(inventory, vein.oreName, yield)
-        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, rewardAmt)
+        val (newLvl, newXp) = advanceProficiency(vein.proficiencyLevel, vein.proficiencyXp, 1L)
         veins[idx] = vein.copy(miningProgress = 0f, isReady = false, proficiencyLevel = newLvl, proficiencyXp = newXp)
 
         val yieldStr = NumberFormatter.short(yield)
-        val (xp, lvl, logs) = grantSkillXp(
+        val (xp, lvl, logs) = grantHarvestSkillXp(
             state.harvest.miningXp,
             state.harvest.miningLvl,
             rewardAmt,
