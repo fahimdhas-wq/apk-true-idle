@@ -188,7 +188,7 @@ class HarvestArmoryForgeUpdateTest {
         // All potions use one of the 20 canonical herbs
         ItemCatalog.POTIONS.forEach { potion ->
             assertTrue("${potion.herb} is not in HERBS", ItemCatalog.HERBS.contains(potion.herb))
-            assertTrue(potion.heal > 0.0)
+            assertTrue(potion.restoresHp || potion.restoresMana)
             assertTrue(potion.herbCost > 0)
         }
     }

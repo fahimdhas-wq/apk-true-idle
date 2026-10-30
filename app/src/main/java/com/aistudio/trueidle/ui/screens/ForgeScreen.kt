@@ -301,7 +301,7 @@ fun ForgeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Restores ${NumberFormatter.short(potion.heal)} HP · Requires: ${potion.herbCost}x ${potion.herb} (Have ${NumberFormatter.short(have)})",
+                                    text = "${potion.effectDesc} · Requires: ${potion.herbCost}x ${potion.herb} (Have ${NumberFormatter.short(have)})",
                                     style = TrueIdleType.meta,
                                     color = if (canBrew) GreenSuccess else TextMuted
                                 )

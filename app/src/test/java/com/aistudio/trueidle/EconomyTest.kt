@@ -65,7 +65,7 @@ class EconomyTest {
 
         val potion = engine.state.inventory.firstOrNull { it.category == ItemCatalog.CATEGORY_POTION }
         assertNotNull("expected a brewed potion", potion)
-        assertEquals(50.0, ItemCatalog.potionHeal(potion!!.name), 1e-6)
+        assertEquals(0.05, ItemCatalog.potionHeal(potion!!.name), 1e-6)
         assertNull(engine.state.inventory.firstOrNull { it.name == ItemCatalog.FELWEED })
     }
 

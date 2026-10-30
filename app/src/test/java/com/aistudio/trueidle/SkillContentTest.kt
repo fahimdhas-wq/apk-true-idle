@@ -67,7 +67,7 @@ class SkillContentTest {
     fun `potion table grows and stays unique`() {
         assertEquals(20, ItemCatalog.POTIONS.size)
         assertEquals(20, ItemCatalog.POTIONS.map { it.name }.toSet().size)
-        assertTrue(ItemCatalog.POTIONS.all { it.herbCost > 0 && it.heal > 0.0 })
+        assertTrue(ItemCatalog.POTIONS.all { it.herbCost > 0 && (it.restoresHp || it.restoresMana) })
         assertTrue(ItemCatalog.potionHeal("Worldtree Dew") > ItemCatalog.potionHeal("Minor Health Flask"))
     }
 
