@@ -56,7 +56,14 @@ fun XpProgressBar(
     val progress = when {
         isMaxLevel -> 1f
         requiredXp <= 0.0 || !requiredXp.isFinite() -> 0f
-        else -> (currentXp.coerceAtLeast(0.0) / requiredXp).coerceIn(0.0, 1.0).toFloat()
+        else -> {
+            val safeCurrentXp = when {
+                currentXp.isNaN() || currentXp <= 0.0 -> 0.0
+                currentXp.isInfinite() -> requiredXp
+                else -> currentXp
+            }
+            (safeCurrentXp / requiredXp).coerceIn(0.0, 1.0).toFloat()
+        }
     }
     val animatedProgress by animateFloatAsState(targetValue = progress, label = "XpAnim")
 
