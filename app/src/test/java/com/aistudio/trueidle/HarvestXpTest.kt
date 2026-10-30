@@ -9,7 +9,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.ceil
-import kotlin.math.max
 import kotlin.math.pow
 
 class HarvestXpTest {
