@@ -51,6 +51,10 @@ fun HarvestScreen(
     val miningRank = harvest.upgrades.firstOrNull { it.id == "mining_speed" }?.rank ?: 0
     val extraYield = harvest.upgrades.firstOrNull { it.id == "harvest_yield" }?.rank ?: 0
     val extraOreYield = harvest.upgrades.firstOrNull { it.id == "mining_yield" }?.rank ?: 0
+    val farmingQueueCapacity = harvest.farmingLvl / 10
+    val miningQueueCapacity = harvest.miningLvl / 10
+    val activeFarmingQueues = harvest.plots.count { it.autoQueue }
+    val activeMiningQueues = harvest.veins.count { it.autoQueue }
     val farmMult = (Math.pow(0.97, (harvest.farmingLvl - 1).toDouble()) * Math.pow(0.92, speedRank.toDouble()))
         .coerceAtLeast(0.20).toFloat()
     val mineMult = (Math.pow(0.97, (harvest.miningLvl - 1).toDouble()) * Math.pow(0.92, miningRank.toDouble()))
@@ -109,7 +113,6 @@ fun HarvestScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("HYDROPONIC BIO-CULTIVATION", style = TrueIdleType.title, color = GreenSuccess)
-                        val activeAutoPlots = harvest.plots.count { it.autoQueue }
                         Box(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
@@ -117,9 +120,7 @@ fun HarvestScreen(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (activeAutoPlots > 0 || (harvest.autoCollectEnabled && harvest.autoCollectUnlocked))
-                                    "AUTO QUEUE [$activeAutoPlots/1 ACTIVE]"
-                                else "MANUAL HARVEST [0/1 AUTO]",
+                                text = "AUTO QUEUE [$activeFarmingQueues/$farmingQueueCapacity UNLOCKED]",
                                 style = TrueIdleType.tag,
                                 color = GreenSuccess
                             )
@@ -161,9 +162,15 @@ fun HarvestScreen(
                 tag = "${harvest.plots.count { it.isReady }}/${harvest.plots.size} READY"
             ) {
                 harvest.plots.forEach { plot ->
+                    val isLocked = harvest.farmingLvl < plot.reqLvl
                     val duration = (plot.durationSeconds * farmMult).coerceAtLeast(0.1f)
                     val remainingSec = ((1f - plot.growthProgress) * duration).coerceAtLeast(0f)
-                    val timeText = if (plot.isReady) "READY" else String.format(Locale.ROOT, "%.1fs", remainingSec)
+                    val timeText = when {
+                        isLocked -> "LOCKED (REQ LV ${plot.reqLvl})"
+                        plot.isReady -> "READY"
+                        else -> String.format(Locale.ROOT, "%.1fs", remainingSec)
+                    }
+                    val canEnableQueue = plot.autoQueue || activeFarmingQueues < farmingQueueCapacity
                     val profMult = XpCurves.proficiencyYieldMultiplier(plot.proficiencyLevel)
                     val reqProfXp = XpCurves.proficiency(plot.proficiencyLevel)
                     val profRatio = if (plot.proficiencyLevel >= 100) 1f else (plot.proficiencyXp.toFloat() / reqProfXp.toFloat()).coerceIn(0f, 1f)
@@ -177,7 +184,7 @@ fun HarvestScreen(
                             .testTag("plot_card_${plot.id}"),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         shape = RectangleShape,
-                        border = BorderStroke(1.dp, if (plot.autoQueue) GreenSuccess else if (plot.isReady) GreenSuccess.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
+                        border = BorderStroke(1.dp, if (isLocked) MaterialTheme.colorScheme.outline else if (plot.autoQueue) GreenSuccess else if (plot.isReady) GreenSuccess.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
                     ) {
                         Column(modifier = Modifier.padding(8.dp)) {
                             // Header
@@ -186,7 +193,7 @@ fun HarvestScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(plot.herbName.uppercase(), style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                                Text(plot.herbName.uppercase(), style = TrueIdleType.title, color = if (isLocked) TextMuted else MaterialTheme.colorScheme.onSurface)
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = "LVL ${plot.proficiencyLevel}/100",
@@ -235,7 +242,7 @@ fun HarvestScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             // Growth Progress Bar
                             LinearProgressIndicator(
-                                progress = { plot.growthProgress.coerceIn(0f, 1f) },
+                                progress = { if (isLocked) 0f else plot.growthProgress.coerceIn(0f, 1f) },
                                 modifier = Modifier.fillMaxWidth().height(6.dp),
                                 color = GreenSuccess,
                                 trackColor = MaterialTheme.colorScheme.surface
@@ -250,6 +257,7 @@ fun HarvestScreen(
                             ) {
                                 Button(
                                     onClick = { onTogglePlotAutoQueue(plot.id) },
+                                    enabled = !isLocked && canEnableQueue,
                                     shape = RectangleShape,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (plot.autoQueue) GreenSuccess.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface,
@@ -259,7 +267,13 @@ fun HarvestScreen(
                                     modifier = Modifier.weight(1f).testTag("auto_queue_plot_${plot.id}")
                                 ) {
                                     Text(
-                                        text = if (plot.autoQueue) "AUTO [ACTIVE]" else "AUTO [OFF]",
+                                        text = when {
+                                            isLocked -> "LOCKED"
+                                            plot.autoQueue -> "AUTO [ACTIVE]"
+                                            farmingQueueCapacity == 0 -> "AUTO [LVL 10]"
+                                            !canEnableQueue -> "QUEUE FULL"
+                                            else -> "AUTO [OFF]"
+                                        },
                                         style = TrueIdleType.tag,
                                         color = if (plot.autoQueue) GreenSuccess else TextMuted
                                     )
@@ -267,7 +281,7 @@ fun HarvestScreen(
 
                                 Button(
                                     onClick = { onHarvestPlot(plot.id) },
-                                    enabled = plot.isReady,
+                                    enabled = plot.isReady && !isLocked,
                                     shape = RectangleShape,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = GreenSuccess,
@@ -279,6 +293,7 @@ fun HarvestScreen(
                                 ) {
                                     Text(
                                         text = when {
+                                            isLocked -> "LOCKED (REQ LV ${plot.reqLvl})"
                                             plot.isReady -> "HARVEST (+${NumberFormatter.short(totalYield)})"
                                             plot.autoQueue -> "AUTORUN (${timeText})"
                                             else -> "GROWING (${timeText})"
@@ -311,7 +326,6 @@ fun HarvestScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("SUBTERRANEAN PLASMA MINING", style = TrueIdleType.title, color = SecondaryGold)
-                        val activeAutoVeins = harvest.veins.count { it.autoQueue }
                         Box(
                             modifier = Modifier
                                 .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
@@ -319,9 +333,7 @@ fun HarvestScreen(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (activeAutoVeins > 0 || (harvest.autoCollectEnabled && harvest.autoCollectUnlocked))
-                                    "AUTO QUEUE [$activeAutoVeins/1 ACTIVE]"
-                                else "MANUAL EXTRACTION [0/1 AUTO]",
+                                text = "AUTO QUEUE [$activeMiningQueues/$miningQueueCapacity UNLOCKED]",
                                 style = TrueIdleType.tag,
                                 color = SecondaryGold
                             )
@@ -364,6 +376,7 @@ fun HarvestScreen(
             ) {
                 harvest.veins.forEach { vein ->
                     val isLocked = harvest.miningLvl < vein.reqLvl
+                    val canEnableQueue = vein.autoQueue || activeMiningQueues < miningQueueCapacity
                     val duration = (vein.durationSeconds * mineMult).coerceAtLeast(0.1f)
                     val remainingSec = ((1f - vein.miningProgress) * duration).coerceAtLeast(0f)
                     val timeText = when {
@@ -461,7 +474,7 @@ fun HarvestScreen(
                             ) {
                                 Button(
                                     onClick = { onToggleVeinAutoQueue(vein.id) },
-                                    enabled = !isLocked,
+                                    enabled = !isLocked && canEnableQueue,
                                     shape = RectangleShape,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = if (vein.autoQueue) SecondaryGold.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface,
@@ -471,7 +484,13 @@ fun HarvestScreen(
                                     modifier = Modifier.weight(1f).testTag("auto_queue_vein_${vein.id}")
                                 ) {
                                     Text(
-                                        text = if (vein.autoQueue) "AUTO [ACTIVE]" else "AUTO [OFF]",
+                                        text = when {
+                                            isLocked -> "LOCKED"
+                                            vein.autoQueue -> "AUTO [ACTIVE]"
+                                            miningQueueCapacity == 0 -> "AUTO [LVL 10]"
+                                            !canEnableQueue -> "QUEUE FULL"
+                                            else -> "AUTO [OFF]"
+                                        },
                                         style = TrueIdleType.tag,
                                         color = if (vein.autoQueue) SecondaryGold else TextMuted
                                     )
