@@ -15,6 +15,10 @@ object XpCurves {
     fun skill(lvl: Int): Long =
         floor(90.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(100L)
 
+    /** Faster, harvest-only progression; unrelated disciplines keep the original skill curve. */
+    fun harvestSkill(lvl: Int): Long =
+        floor(15.0 * lvl.coerceAtLeast(1).toDouble().pow(1.8)).toLong().coerceAtLeast(15L)
+
     fun slayer(lvl: Int): Long =
         floor(25.0 * lvl.coerceAtLeast(1).toDouble().pow(2.3)).toLong().coerceAtLeast(50L)
 
@@ -28,7 +32,8 @@ object XpCurves {
      */
     fun proficiency(lvl: Int): Long {
         val level = lvl.coerceAtLeast(1)
-        return floor(30.0 * level.toDouble().pow(1.8) + 20.0 * level).toLong().coerceAtLeast(40L)
+        // Fixed per-action proficiency gain prevents high yield multipliers from bypassing mastery.
+        return floor(40.0 * level.toDouble().pow(1.9) + 10.0 * level).toLong().coerceAtLeast(50L)
     }
 
     /**
