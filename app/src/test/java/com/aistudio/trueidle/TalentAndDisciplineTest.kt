@@ -114,7 +114,12 @@ class TalentAndDisciplineTest {
 
     @Test
     fun testHarvestAutoQueueMutualExclusion() {
-        val engine = GameEngine()
+        // Level 5 unlocks the second plot and second vein. Keep the test focused on
+        // queue mutual exclusion rather than intentionally attempting locked resources.
+        val initialState = GameState().copy(
+            harvest = GameState().harvest.copy(farmingLvl = 5, miningLvl = 5)
+        )
+        val engine = GameEngine(initialState)
         // Toggle plot 0 on
         engine.togglePlotAutoQueue(0)
         assertTrue(engine.state.harvest.plots[0].autoQueue)
