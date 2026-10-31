@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
@@ -385,9 +386,11 @@ private fun PotionRow(
     onSettings: () -> Unit,
     testTag: String
 ) {
+    val empty = count <= 0
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (empty) 0.55f else 1f)
             .background(SurfaceDark, RectangleShape)
             .border(1.dp, accent.copy(alpha = 0.55f), RectangleShape)
             .padding(5.dp)
@@ -401,7 +404,7 @@ private fun PotionRow(
                 .heightIn(min = 48.dp)
                 .background(accent.copy(alpha = 0.12f), RectangleShape)
                 .border(1.dp, accent.copy(alpha = 0.7f), RectangleShape)
-                .clickable(role = Role.Button, onClick = onUse)
+                .clickable(enabled = !empty, role = Role.Button, onClick = onUse)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -433,9 +436,9 @@ private fun PotionRow(
                     .padding(horizontal = 5.dp, vertical = 2.dp)
             ) {
                 Text(
-                    text = "×$count",
+                    text = if (empty) "EMPTY" else "×$count",
                     style = TrueIdleType.tag.copy(fontSize = 10.sp),
-                    color = accent,
+                    color = if (empty) TextMuted else accent,
                     maxLines = 1
                 )
             }
@@ -569,6 +572,7 @@ private fun PotionQuickBar(
                                 RectangleShape
                             )
                             .border(1.dp, if (active) accent else BorderDark, RectangleShape)
+                            .alpha(if (ownedCount > 0 || active) 1f else 0.6f)
                             .clickable { if (isHp) onSelectHp(def.name) else onSelectMp(def.name) }
                             .padding(8.dp)
                             .testTag("potion_option_${kind.lowercase()}_${def.herb.lowercase().replace(' ', '_')}"),

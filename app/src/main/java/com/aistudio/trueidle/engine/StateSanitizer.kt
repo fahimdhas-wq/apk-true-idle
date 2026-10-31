@@ -1,6 +1,8 @@
 package com.aistudio.trueidle.engine
 
+import com.aistudio.trueidle.core.ContentCatalog
 import com.aistudio.trueidle.core.Equipment
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.model.DisciplineUpgrade
@@ -55,7 +57,7 @@ internal object StateSanitizer {
                 val required = Balance.killsRequiredFor(currentFloor)
 
                 val player = input.player.copy(
-                    lvl = input.player.lvl.coerceAtLeast(1),
+                    lvl = input.player.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                     xp = input.player.xp.coerceAtLeast(0L),
                     gold = input.player.gold.coerceAtLeast(0L),
                     diamonds = input.player.diamonds.coerceAtLeast(0L),
@@ -76,7 +78,7 @@ internal object StateSanitizer {
                     if (remaining <= 0) break
                     val count = minion.count.coerceIn(1, remaining)
                     remaining -= count
-                    army += minion.copy(count = count, lvl = minion.lvl.coerceAtLeast(1))
+                    army += minion.copy(count = count, lvl = minion.lvl.coerceIn(1, GameCaps.MAX_LEVEL))
                 }
 
                 fun clampUpgrades(list: List<DisciplineUpgrade>) =
@@ -133,16 +135,16 @@ internal object StateSanitizer {
                         gameSpeed = input.dev.gameSpeed.coerceIn(DEV_MIN_SPEED, DEV_MAX_SPEED)
                     ),
                     necro = input.necro.copy(
-                        lvl = input.necro.lvl.coerceAtLeast(1),
+                        lvl = input.necro.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         xp = input.necro.xp.coerceAtLeast(0L),
                         boneEssence = input.necro.boneEssence.coerceAtLeast(0L),
                         army = army,
                         upgrades = clampUpgrades(input.necro.upgrades)
                     ),
                     harvest = input.harvest.copy(
-                        farmingLvl = input.harvest.farmingLvl.coerceAtLeast(1),
+                        farmingLvl = input.harvest.farmingLvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         farmingXp = input.harvest.farmingXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
-                        miningLvl = input.harvest.miningLvl.coerceAtLeast(1),
+                        miningLvl = input.harvest.miningLvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         miningXp = input.harvest.miningXp.takeIf { it.isFinite() }?.coerceAtLeast(0.0) ?: 0.0,
                         plots = run {
                             val basePlots = if (input.harvest.plots.size == ItemCatalog.HERBS.size &&
@@ -219,19 +221,19 @@ internal object StateSanitizer {
                         upgrades = clampUpgrades(input.harvest.upgrades)
                     ),
                     armory = input.armory.copy(
-                        smithingLvl = input.armory.smithingLvl.coerceAtLeast(1),
-                        herbloreLvl = input.armory.herbloreLvl.coerceAtLeast(1),
+                        smithingLvl = input.armory.smithingLvl.coerceIn(1, GameCaps.MAX_LEVEL),
+                        herbloreLvl = input.armory.herbloreLvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         smithingXp = input.armory.smithingXp.coerceAtLeast(0L),
                         herbloreXp = input.armory.herbloreXp.coerceAtLeast(0L),
                         upgrades = clampUpgrades(input.armory.upgrades)
                     ),
                     training = input.training.copy(
-                        lvl = input.training.lvl.coerceAtLeast(1),
+                        lvl = input.training.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         xp = input.training.xp.coerceAtLeast(0L),
-                        nodes = input.training.nodes.map { it.copy(maxRank = 1_000_000, rank = it.rank.coerceIn(0, 1_000_000)) }
+                        nodes = input.training.nodes.map { ContentCatalog.normalizeNode(it) }
                     ),
                     essence = input.essence.copy(
-                        lvl = input.essence.lvl.coerceAtLeast(1),
+                        lvl = input.essence.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         xp = input.essence.xp.coerceAtLeast(0L),
                         faith = input.essence.faith.coerceAtLeast(0L),
                         faithRemainder = input.essence.faithRemainder.coerceIn(0.0, 1.0),
@@ -239,7 +241,7 @@ internal object StateSanitizer {
                         upgrades = clampUpgrades(input.essence.upgrades)
                     ),
                     beasts = input.beasts.copy(
-                        lvl = input.beasts.lvl.coerceAtLeast(1),
+                        lvl = input.beasts.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         xp = input.beasts.xp.coerceAtLeast(0L),
                         beasts = input.beasts.beasts.take(Balance.BEAST_CAP),
                         upgrades = clampUpgrades(input.beasts.upgrades)
@@ -252,7 +254,7 @@ internal object StateSanitizer {
                         struggleTalents = clampTalents(input.talent.struggleTalents)
                     ),
                     slayer = input.slayer.copy(
-                        lvl = input.slayer.lvl.coerceAtLeast(1),
+                        lvl = input.slayer.lvl.coerceIn(1, GameCaps.MAX_LEVEL),
                         xp = input.slayer.xp.coerceAtLeast(0L),
                         slayerPoints = input.slayer.slayerPoints.coerceAtLeast(0),
                         currentTask = input.slayer.currentTask.copy(

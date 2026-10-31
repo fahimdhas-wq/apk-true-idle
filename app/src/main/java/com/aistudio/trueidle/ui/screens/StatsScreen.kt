@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Equipment
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.TrainingCaps
 import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
@@ -123,7 +124,7 @@ fun StatsScreen(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "LEVEL ${p.lvl}",
+                            text = if (p.lvl >= GameCaps.MAX_LEVEL) "LEVEL ${p.lvl} MAX" else "LEVEL ${p.lvl}/${GameCaps.MAX_LEVEL}",
                             style = TrueIdleType.tag,
                             color = SecondaryGold
                         )
@@ -346,7 +347,7 @@ fun StatsScreen(
         SciFiPanel(
             title = "COMBAT MULTIPLIERS & METRICS",
             accent = SecondaryGold,
-            tag = "LVL ${p.lvl}"
+            tag = "LVL ${p.lvl}/${GameCaps.MAX_LEVEL}"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 StatDotRow("STRENGTH (ATK SCALING)", NumberFormatter.short(d.str), PrimaryNeon, PrimaryNeon)
@@ -387,6 +388,26 @@ fun StatsScreen(
                 state.talent.struggleTalents.forEach { st ->
                     StatDotRow(st.name.uppercase(), "RANK ${st.rank} (COST ${st.costPoints} TP)", SecondaryGold, TextLight)
                 }
+            }
+        }
+
+        // 6b. TRAINING LIMITS
+        SciFiPanel(
+            title = "TRAINING LIMITS",
+            accent = PrimaryNeon,
+            tag = "CAPS"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                fun nodeRank(id: String) = state.training.nodes.firstOrNull { it.id == id }?.rank ?: 0
+                fun capLabel(id: String): String {
+                    val r = nodeRank(id)
+                    val cap = TrainingCaps.maxRank(id)
+                    return "RANK ${NumberFormatter.short(r.toLong())}/${NumberFormatter.short(cap.toLong())}"
+                }
+                StatDotRow("CRITICAL CHANCE (MAX 100%)", String.format(Locale.ROOT, "%.1f%% · %s", d.critChance * 100, capLabel("crit_bonus")), PrimaryNeon, TextLight)
+                StatDotRow("ATTACK SPEED NODE (MAX +100%)", String.format(Locale.ROOT, "+%d%% · %s", (nodeRank("speed_bonus") * 5).coerceAtMost(100), capLabel("speed_bonus")), PrimaryNeon, TextLight)
+                StatDotRow("DROP CHANCE (MAX 100%)", String.format(Locale.ROOT, "%.0f%% · %s", d.lootChance * 100, capLabel("luck_bonus")), PrimaryNeon, TextLight)
+                StatDotRow("XP BONUS NODE", "${capLabel("xp_bonus")}", PrimaryNeon, TextLight)
             }
         }
 

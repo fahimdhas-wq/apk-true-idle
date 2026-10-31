@@ -3,6 +3,7 @@ package com.aistudio.trueidle.engine
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.core.TierConfig
 import com.aistudio.trueidle.model.EssenceState
@@ -122,14 +123,15 @@ internal class CombatResolution(
                 )
             }
 
-            var xp = player.xp + xpGained
-            var lvl = player.lvl
+            var lvl = player.lvl.coerceIn(1, GameCaps.MAX_LEVEL)
+            var xp = if (lvl >= GameCaps.MAX_LEVEL) 0L else player.xp + xpGained
             var levels = 0
-            while (xp >= Balance.playerXpReq(lvl)) {
+            while (lvl < GameCaps.MAX_LEVEL && xp >= Balance.playerXpReq(lvl)) {
                 xp -= Balance.playerXpReq(lvl)
                 lvl++
                 levels++
             }
+            if (lvl >= GameCaps.MAX_LEVEL) xp = 0L
             player = player.copy(
                 gold = player.gold + goldGained,
                 xp = xp,
@@ -226,14 +228,15 @@ internal class CombatResolution(
         essence.copy(faith = essence.faith + amount)
 
     private fun grantEssenceXp(essence: EssenceState, amount: Long, frame: Frame): EssenceState {
-            var xp = essence.xp + amount
-            var lvl = essence.lvl
+            var lvl = essence.lvl.coerceIn(1, GameCaps.MAX_LEVEL)
+            var xp = if (lvl >= GameCaps.MAX_LEVEL) 0L else essence.xp + amount
             var leveled = false
-            while (xp >= Balance.skillXpReq(lvl)) {
+            while (lvl < GameCaps.MAX_LEVEL && xp >= Balance.skillXpReq(lvl)) {
                 xp -= Balance.skillXpReq(lvl)
                 lvl++
                 leveled = true
             }
+            if (lvl >= GameCaps.MAX_LEVEL) xp = 0L
             if (leveled) frame.logs += log(LogType.SKILL, "CLASS LEVEL UP: Essence reached Level $lvl!")
             return essence.copy(xp = xp, lvl = lvl)
         }
@@ -270,13 +273,14 @@ internal class CombatResolution(
 
                         val tierRank = TierConfig.rankOf(task.tier).coerceAtLeast(0)
                         val xpEarned = (100L * (1.0 + tierRank * 0.25)).toLong()
-                        var sxp = slayer.xp + xpEarned
-                        var slvl = slayer.lvl
-                        while (sxp >= Balance.slayerXpReq(slvl)) {
+                        var slvl = slayer.lvl.coerceIn(1, GameCaps.MAX_LEVEL)
+                        var sxp = if (slvl >= GameCaps.MAX_LEVEL) 0L else slayer.xp + xpEarned
+                        while (slvl < GameCaps.MAX_LEVEL && sxp >= Balance.slayerXpReq(slvl)) {
                             sxp -= Balance.slayerXpReq(slvl)
                             slvl++
                             frame.logs += log(LogType.SKILL, "CLASS LEVEL UP: Slayer reached Level $slvl!")
                         }
+                        if (slvl >= GameCaps.MAX_LEVEL) sxp = 0L
                         slayer = slayer.copy(xp = sxp, lvl = slvl)
 
                         var bonusDesc = ""

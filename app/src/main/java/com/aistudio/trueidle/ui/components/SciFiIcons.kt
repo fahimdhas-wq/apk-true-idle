@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -91,7 +92,8 @@ object SciFiVectors {
         }.build()
     }
 
-    // 24x24 cyber-necro skull (sharp angular polygon)
+    // 24x24 skull. EvenOdd fill makes every inner sub-path a cut-out (eyes, nose, teeth) regardless of
+    // winding direction; with the default NonZero fill the sockets rendered as solid blobs.
     val Essence: ImageVector by lazy {
         ImageVector.Builder(
             name = "SciFiEssence",
@@ -100,35 +102,49 @@ object SciFiVectors {
             viewportWidth = 24f,
             viewportHeight = 24f
         ).apply {
-            path(fill = SolidColor(Color.White)) {
-                // Outer angular skull
-                moveTo(7f, 3f)
-                lineTo(17f, 3f)
-                lineTo(21f, 8f)
-                lineTo(21f, 15f)
-                lineTo(17f, 18f)
-                lineTo(17f, 22f)
-                lineTo(7f, 22f)
-                lineTo(7f, 18f)
-                lineTo(3f, 15f)
-                lineTo(3f, 8f)
+            path(fill = SolidColor(Color.White), pathFillType = PathFillType.EvenOdd) {
+                // Cranium and jaw
+                moveTo(12f, 2f)
+                curveTo(7f, 2f, 3.5f, 5.6f, 3.5f, 10.2f)
+                curveTo(3.5f, 13.2f, 5f, 15.4f, 7f, 16.6f)
+                lineTo(7f, 20f)
+                curveTo(7f, 20.6f, 7.4f, 21f, 8f, 21f)
+                lineTo(16f, 21f)
+                curveTo(16.6f, 21f, 17f, 20.6f, 17f, 20f)
+                lineTo(17f, 16.6f)
+                curveTo(19f, 15.4f, 20.5f, 13.2f, 20.5f, 10.2f)
+                curveTo(20.5f, 5.6f, 17f, 2f, 12f, 2f)
                 close()
                 // Left eye socket
-                moveTo(7f, 10f)
-                lineTo(10f, 10f)
-                lineTo(9f, 14f)
-                lineTo(6f, 14f)
+                moveTo(6.4f, 10.8f)
+                arcTo(2.2f, 2.2f, 0f, true, false, 10.8f, 10.8f)
+                arcTo(2.2f, 2.2f, 0f, true, false, 6.4f, 10.8f)
                 close()
                 // Right eye socket
-                moveTo(14f, 10f)
-                lineTo(17f, 10f)
-                lineTo(18f, 14f)
-                lineTo(15f, 14f)
+                moveTo(13.2f, 10.8f)
+                arcTo(2.2f, 2.2f, 0f, true, false, 17.6f, 10.8f)
+                arcTo(2.2f, 2.2f, 0f, true, false, 13.2f, 10.8f)
                 close()
-                // Center nasal
-                moveTo(12f, 14f)
-                lineTo(13f, 17f)
-                lineTo(11f, 17f)
+                // Nasal cavity
+                moveTo(12f, 13f)
+                lineTo(13f, 15.4f)
+                lineTo(11f, 15.4f)
+                close()
+                // Teeth gaps
+                moveTo(9.7f, 17.8f)
+                lineTo(10.3f, 17.8f)
+                lineTo(10.3f, 20.4f)
+                lineTo(9.7f, 20.4f)
+                close()
+                moveTo(11.7f, 17.8f)
+                lineTo(12.3f, 17.8f)
+                lineTo(12.3f, 20.4f)
+                lineTo(11.7f, 20.4f)
+                close()
+                moveTo(13.7f, 17.8f)
+                lineTo(14.3f, 17.8f)
+                lineTo(14.3f, 20.4f)
+                lineTo(13.7f, 20.4f)
                 close()
             }
         }.build()

@@ -6,6 +6,9 @@ object GameCaps {
     const val MINION = 12
     const val LOG = 40
     const val MAX_FLOOR = 100
+
+    /** Maximum level of the player and of every class (necro, essence, slayer, training, ...). */
+    const val MAX_LEVEL = 100
     const val RESERVED_ID_FLOOR = 100L
 
     /** Aegis barrier damage reduction, before the Radiant Capacitor upgrade scales it. */

@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.ui.theme.BorderDark
 import com.aistudio.trueidle.ui.theme.PrimaryNeon
@@ -32,8 +33,9 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
+    val atMax = isMaxLevel || level >= GameCaps.MAX_LEVEL
     val progress = when {
-        isMaxLevel -> 1f
+        atMax -> 1f
         requiredXp <= 0L -> 0f
         else -> (currentXp.toDouble() / requiredXp.toDouble()).coerceIn(0.0, 1.0).toFloat()
     }
@@ -45,7 +47,7 @@ fun XpProgressBar(
         progress = progress,
         barColor = barColor,
         modifier = modifier,
-        isMaxLevel = isMaxLevel
+        isMaxLevel = atMax
     )
 }
 
@@ -60,8 +62,9 @@ fun XpProgressBar(
     modifier: Modifier = Modifier,
     isMaxLevel: Boolean = false
 ) {
+    val atMax = isMaxLevel || level >= GameCaps.MAX_LEVEL
     val progress = when {
-        isMaxLevel -> 1f
+        atMax -> 1f
         requiredXp <= 0.0 || !requiredXp.isFinite() -> 0f
         else -> {
             val safeCurrentXp = when {
@@ -80,7 +83,7 @@ fun XpProgressBar(
         progress = progress,
         barColor = barColor,
         modifier = modifier,
-        isMaxLevel = isMaxLevel
+        isMaxLevel = atMax
     )
 }
 

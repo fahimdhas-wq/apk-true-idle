@@ -100,10 +100,10 @@ object ContentCatalog {
     // ---- Training -----------------------------------------------------------
 
     val EXTRA_TRAINING_NODES = listOf(
-        TrainingNode(id = "crit_bonus", name = "Precision Targeting", stat = "+0.5% Crit Chance per rank", rank = 0, maxRank = 1_000_000, costGold = 150L),
+        TrainingNode(id = "crit_bonus", name = "Precision Targeting", stat = "+0.5% Crit Chance per rank (max 100%)", rank = 0, maxRank = TrainingCaps.CRIT_MAX_RANK, costGold = 150L),
         TrainingNode(id = "shield_bonus", name = "Layered Plating", stat = "+5% Max Shield per rank", rank = 0, maxRank = 1_000_000, costGold = 140L),
         TrainingNode(id = "regen_bonus", name = "Cellular Repair", stat = "+4% HP & Shield regen per rank", rank = 0, maxRank = 1_000_000, costGold = 120L),
-        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank", rank = 0, maxRank = 1_000_000, costGold = 130L)
+        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank (max 100,000 ranks)", rank = 0, maxRank = TrainingCaps.XP_MAX_RANK, costGold = 130L)
     )
 
     // ---- Talents ------------------------------------------------------------
@@ -144,15 +144,22 @@ object ContentCatalog {
      * Unions every catalog entry into [state] by id and returns the state unchanged when it already
      * holds all of it, so calling this on every load is free for up-to-date saves and idempotent.
      */
+    /** Applies the per-id rank limit and clamps any rank held above it by an older save. */
+    fun normalizeNode(node: TrainingNode): TrainingNode {
+        val cap = TrainingCaps.maxRank(node.id)
+        return if (node.maxRank == cap && node.rank in 0..cap) node
+        else node.copy(maxRank = cap, rank = node.rank.coerceIn(0, cap))
+    }
+
     fun reconcile(state: GameState): GameState {
         val plots = merge(state.harvest.plots, EXTRA_PLOTS) { it.id }
         val veins = merge(state.harvest.veins, EXTRA_VEINS) { it.id }
         val harvestUpgrades = merge(state.harvest.upgrades, EXTRA_HARVEST_UPGRADES) { it.id }
         val essenceUpgrades = merge(state.essence.upgrades, EXTRA_ESSENCE_UPGRADES) { it.id }
         val necroUpgrades = merge(state.necro.upgrades, EXTRA_NECRO_UPGRADES) { it.id }
-        val needsNodeUpdate = state.training.nodes.any { it.maxRank < 1_000_000 }
+        val needsNodeUpdate = state.training.nodes.any { it.maxRank != TrainingCaps.maxRank(it.id) || it.rank > it.maxRank }
         val baseNodes = if (needsNodeUpdate) {
-            state.training.nodes.map { if (it.maxRank < 1_000_000) it.copy(maxRank = 1_000_000) else it }
+            state.training.nodes.map { normalizeNode(it) }
         } else {
             state.training.nodes
         }

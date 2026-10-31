@@ -259,6 +259,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleVeinAutoQueue(veinId: Int) = mutate { engine.toggleVeinAutoQueue(veinId) }
     fun summonMinion(type: String) = mutate { engine.summonMinion(type) }
     fun mergeBeasts(id1: String, id2: String) = mutate { engine.mergeBeasts(id1, id2) }
+    fun salvageBeasts(ids: Set<String>) = mutate { engine.salvageBeasts(ids) }
     fun trainNode(nodeId: String) = mutate { engine.trainNode(nodeId) }
     fun equipItem(itemId: String) = mutate { engine.equipItem(itemId) }
     fun unequipItem(itemId: String) = mutate { engine.unequipItem(itemId) }

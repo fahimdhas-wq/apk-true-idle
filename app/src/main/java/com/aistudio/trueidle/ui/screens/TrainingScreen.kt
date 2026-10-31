@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.aistudio.trueidle.core.NumberFormatter
+import com.aistudio.trueidle.core.TrainingCaps
 import com.aistudio.trueidle.core.XpCurves
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.ui.components.SciFiBadge
@@ -110,6 +111,15 @@ fun TrainingScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+                            trainingEffectLabel(node.id, node.rank)?.let { effect ->
+                                Text(
+                                    text = effect,
+                                    style = TrueIdleType.meta,
+                                    color = if (isMaxed) SecondaryGold else TextMuted,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
                         Row(
@@ -120,10 +130,10 @@ fun TrainingScreen(
                             // regardless of rank digits or credit cost.
                             Box(
                                 modifier = Modifier
-                                    .width(62.dp)
+                                    .widthIn(min = 62.dp)
                                     .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                                     .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
-                                    .padding(vertical = 5.dp),
+                                    .padding(horizontal = 4.dp, vertical = 5.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -159,4 +169,13 @@ fun TrainingScreen(
             }
         }
     }
+}
+
+/** Current total effect of a percent-bounded node, shown under its description. */
+internal fun trainingEffectLabel(id: String, rank: Int): String? = when (id) {
+    "crit_bonus" -> "CURRENT +%.1f%% / MAX 100%% CRIT".format(rank * 0.5)
+    "speed_bonus" -> "CURRENT +%d%% / MAX +%d%% SPEED".format(rank * 5, (TrainingCaps.SPEED_BONUS_CAP * 100).toInt())
+    "luck_bonus" -> "CURRENT +%d%% / DROP CHANCE CAPS AT 100%%".format(rank * 5)
+    "xp_bonus" -> "CURRENT +%s%% XP".format(NumberFormatter.short((rank * 2).toLong()))
+    else -> null
 }

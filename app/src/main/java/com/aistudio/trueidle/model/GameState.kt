@@ -227,8 +227,8 @@ data class TrainingState(
         TrainingNode(id = "str_bonus", name = "Titan Strength", stat = "+5 STR per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
         TrainingNode(id = "vit_bonus", name = "Iron Constitution", stat = "+5 VIT per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
         TrainingNode(id = "int_bonus", name = "Arcane Mind", stat = "+5 INT per rank", rank = 0, maxRank = 1_000_000, costGold = 50L),
-        TrainingNode(id = "speed_bonus", name = "Swift Strikes", stat = "+5% Attack Speed per rank", rank = 0, maxRank = 1_000_000, costGold = 100L),
-        TrainingNode(id = "luck_bonus", name = "Fortune's Favor", stat = "+5% Drop Chance per rank", rank = 0, maxRank = 1_000_000, costGold = 75L)
+        TrainingNode(id = "speed_bonus", name = "Swift Strikes", stat = "+5% Attack Speed per rank (max +100%)", rank = 0, maxRank = 20, costGold = 100L),
+        TrainingNode(id = "luck_bonus", name = "Fortune's Favor", stat = "+5% Drop Chance per rank (max 100%)", rank = 0, maxRank = 13, costGold = 75L)
     )
 )
 

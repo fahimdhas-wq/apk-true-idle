@@ -1,7 +1,6 @@
 package com.aistudio.trueidle.core
 
 import com.aistudio.trueidle.model.GameState
-import kotlin.math.pow
 
 /**
  * Every value here is derived from [GameState] on demand. Nothing is cached in `PlayerState`,
@@ -111,7 +110,8 @@ object DerivedStats {
         val ringBonus = (ring?.atk ?: 0.0) * bonusMult
         val amuletBonus = (amulet?.def ?: 0.0) * bonusMult
 
-        val atkSpeed = s.player.let { 1.0 * 1.05.pow(rank("speed_bonus")) * speedMultiplier }
+        val speedNode = (0.05 * rank("speed_bonus")).coerceAtMost(TrainingCaps.SPEED_BONUS_CAP)
+        val atkSpeed = (1.0 + speedNode) * speedMultiplier
         val critChance = (0.124 + luck * 0.001 + extraCrit + 0.005 * rank("crit_bonus")).coerceIn(0.0, 1.0)
         val critDamage = 1.85 + extraCritDmg
         // Smite is decoupled from Aegis, and Solar Lance scales the burst per rank.
@@ -174,7 +174,7 @@ object DerivedStats {
             maxMana = maxMana,
             weaponDmg = weaponDmg,
             armorDef = armorDef,
-            lootChance = 0.30 + luck / 100.0,
+            lootChance = (0.30 + luck / 100.0).coerceIn(0.0, 1.0),
             tameChance = tameChance,
             smiteBonus = smiteBonus,
             ringBonus = ringBonus,

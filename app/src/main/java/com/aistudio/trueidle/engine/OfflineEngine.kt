@@ -1,5 +1,6 @@
 package com.aistudio.trueidle.engine
 
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.ItemCatalog
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.CombatMath
@@ -160,9 +161,9 @@ object OfflineEngine {
 
         // The level ups the claim will actually apply, so the report can show them instead of 0.
         var levelsGained = 0
-        var levelCursor = s.player.lvl
-        var bankedXp = s.player.xp + xp
-        while (bankedXp >= Balance.playerXpReq(levelCursor)) {
+        var levelCursor = s.player.lvl.coerceIn(1, GameCaps.MAX_LEVEL)
+        var bankedXp = if (levelCursor >= GameCaps.MAX_LEVEL) 0L else s.player.xp + xp
+        while (levelCursor < GameCaps.MAX_LEVEL && bankedXp >= Balance.playerXpReq(levelCursor)) {
             bankedXp -= Balance.playerXpReq(levelCursor)
             levelCursor++
             levelsGained++

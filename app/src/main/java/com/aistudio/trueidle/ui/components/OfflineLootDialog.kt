@@ -35,14 +35,15 @@ private data class LevelProjection(val level: Int, val xp: Long, val levels: Int
 
 /** Mirrors the claim: banked XP rolls through the same player curve the engine uses. */
 private fun projectLevel(level: Int, xp: Long, gain: Long): LevelProjection {
-    var lvl = level.coerceAtLeast(1)
-    var bank = xp + gain
+    var lvl = level.coerceIn(1, GameCaps.MAX_LEVEL)
+    var bank = if (lvl >= GameCaps.MAX_LEVEL) 0L else xp + gain
     var levels = 0
-    while (bank >= XpCurves.player(lvl)) {
+    while (lvl < GameCaps.MAX_LEVEL && bank >= XpCurves.player(lvl)) {
         bank -= XpCurves.player(lvl)
         lvl++
         levels++
     }
+    if (lvl >= GameCaps.MAX_LEVEL) bank = 0L
     return LevelProjection(lvl, bank, levels)
 }
 

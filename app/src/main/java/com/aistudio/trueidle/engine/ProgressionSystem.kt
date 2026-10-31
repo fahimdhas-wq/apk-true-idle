@@ -1,5 +1,7 @@
 package com.aistudio.trueidle.engine
 
+import com.aistudio.trueidle.core.BeastSalvage
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.LogType
 import com.aistudio.trueidle.model.GameState
 import com.aistudio.trueidle.model.LogEntry
@@ -44,12 +46,13 @@ internal class ProgressionSystem(
             )
         }
 
-        var xp = state.necro.xp + 20L
-        var lvl = state.necro.lvl
-        while (xp >= Balance.skillXpReq(lvl)) {
+        var lvl = state.necro.lvl.coerceIn(1, GameCaps.MAX_LEVEL)
+        var xp = if (lvl >= GameCaps.MAX_LEVEL) 0L else state.necro.xp + 20L
+        while (lvl < GameCaps.MAX_LEVEL && xp >= Balance.skillXpReq(lvl)) {
             xp -= Balance.skillXpReq(lvl)
             lvl++
         }
+        if (lvl >= GameCaps.MAX_LEVEL) xp = 0L
         state = state.copy(
             necro = state.necro.copy(
                 boneEssence = state.necro.boneEssence - cost,
@@ -93,6 +96,26 @@ internal class ProgressionSystem(
             logs = (state.logs + logs).takeLast(Balance.LOG_CAP)
         )
         return state
+    }
+
+    /** Converts the selected beasts into Bone Essence and Credits. Unknown or duplicate ids are ignored. */
+    fun salvageBeasts(current: GameState, ids: Collection<String>): ActionOutcome {
+        val selected = ids.toSet()
+        if (selected.isEmpty()) return ActionOutcome(current, false)
+        val doomed = current.beasts.beasts.filter { it.id in selected }
+        if (doomed.isEmpty()) return ActionOutcome(current, false)
+
+        val bones = BeastSalvage.totalBones(doomed)
+        val gold = BeastSalvage.totalGold(doomed)
+        val remaining = current.beasts.beasts.filter { it.id !in selected }
+        val text = "BEAST SALVAGE: ${doomed.size} beast(s) dismantled (+$bones BONE ESSENCE, +$gold CREDITS)."
+        val state = current.copy(
+            player = current.player.copy(gold = BeastSalvage.saturatingAdd(current.player.gold, gold)),
+            necro = current.necro.copy(boneEssence = BeastSalvage.saturatingAdd(current.necro.boneEssence, bones)),
+            beasts = current.beasts.copy(beasts = remaining),
+            logs = (current.logs + log(LogType.LOOT, text)).takeLast(Balance.LOG_CAP)
+        )
+        return ActionOutcome(state, true)
     }
 
     fun trainNode(current: GameState, nodeId: String): GameState {

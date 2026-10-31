@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -57,6 +58,7 @@ fun ClassScreen(
     onCraftEquipment: (String, Int, String, String, Int) -> Unit,
     onBrewPotion: (String, String, Int) -> Unit,
     onMergeBeasts: (String, String) -> Unit,
+    onSalvageBeasts: (Set<String>) -> Unit = {},
     onSummonMinion: (String) -> Unit,
     onTrainNode: (String) -> Unit,
     onToggleSanctifiedAegis: () -> Unit = {},
@@ -159,6 +161,7 @@ fun ClassScreen(
                     GenesisScreen(
                         state = state,
                         onMergeBeasts = onMergeBeasts,
+                        onSalvageBeasts = onSalvageBeasts,
                         onSummonMinion = onSummonMinion,
                         onUpgradeDiscipline = onUpgradeDiscipline
                     )
@@ -241,22 +244,23 @@ fun ClassScreen(
 
                         ClassSubSection.entries.forEach { section ->
                             val selected = currentSection == section
+                            fun lv(l: Int) = if (l >= GameCaps.MAX_LEVEL) "MAX" else "LV $l/${GameCaps.MAX_LEVEL}"
                             val level = when (section) {
                                 ClassSubSection.OVERVIEW -> ""
-                                ClassSubSection.HARVEST -> "LV ${max(state.harvest.farmingLvl, state.harvest.miningLvl)}"
-                                ClassSubSection.FORGE -> "LV ${state.armory.smithingLvl}"
-                                ClassSubSection.ARMORY -> "LV ${max(state.armory.smithingLvl, state.armory.herbloreLvl)}"
-                                ClassSubSection.GENESIS -> "LV ${max(state.beasts.lvl, state.necro.lvl)}"
-                                ClassSubSection.ESSENCE -> "LV ${state.essence.lvl}"
-                                ClassSubSection.TRAINING -> "LV ${state.training.lvl}"
-                                ClassSubSection.SLAYER -> "LV ${state.slayer.lvl}"
+                                ClassSubSection.HARVEST -> lv(max(state.harvest.farmingLvl, state.harvest.miningLvl))
+                                ClassSubSection.FORGE -> lv(state.armory.smithingLvl)
+                                ClassSubSection.ARMORY -> lv(max(state.armory.smithingLvl, state.armory.herbloreLvl))
+                                ClassSubSection.GENESIS -> lv(max(state.beasts.lvl, state.necro.lvl))
+                                ClassSubSection.ESSENCE -> lv(state.essence.lvl)
+                                ClassSubSection.TRAINING -> lv(state.training.lvl)
+                                ClassSubSection.SLAYER -> lv(state.slayer.lvl)
                                 ClassSubSection.TALENTS -> "${state.talent.talentPoints} TP"
                             }
                             Row(
                                 Modifier
                                     .fillMaxWidth()
                                     .heightIn(min = 48.dp)
-                                    .clickable(role = Role.Tab) {
+                                    .selectable(selected = selected, role = Role.Tab) {
                                         onSectionChange(section)
                                         isDrawerOpen = false
                                     }
@@ -286,7 +290,8 @@ fun ClassScreen(
                                     Text(
                                         text = section.label,
                                         style = TrueIdleType.label,
-                                        color = if (selected) section.color else TextLight
+                                        color = if (selected) section.color else TextLight,
+                                        maxLines = 1
                                     )
                                 }
                                 if (level.isNotEmpty()) {

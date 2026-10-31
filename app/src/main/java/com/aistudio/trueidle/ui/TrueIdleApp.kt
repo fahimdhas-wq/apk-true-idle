@@ -315,6 +315,7 @@ fun TrueIdleApp(
                     onCraftEquipment = { name, tier, slot, ore, qty -> viewModel.craftEquipment(name, tier, slot, ore, qty) },
                     onBrewPotion = { name, herb, qty -> viewModel.brewPotion(name, herb, qty) },
                     onMergeBeasts = { id1, id2 -> viewModel.mergeBeasts(id1, id2) },
+                    onSalvageBeasts = { ids -> viewModel.salvageBeasts(ids) },
                     onSummonMinion = { type -> viewModel.summonMinion(type) },
                     onTrainNode = { id -> viewModel.trainNode(id) },
                     onToggleSanctifiedAegis = { viewModel.toggleEssenceAegis() },

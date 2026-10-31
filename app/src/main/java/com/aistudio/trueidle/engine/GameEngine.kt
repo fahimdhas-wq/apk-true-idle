@@ -6,6 +6,7 @@ import com.aistudio.trueidle.core.ContentCatalog
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.DisciplineCategory
+import com.aistudio.trueidle.core.GameCaps
 import com.aistudio.trueidle.core.GameClock
 import com.aistudio.trueidle.core.HarvestXp
 import com.aistudio.trueidle.core.Ids
@@ -566,14 +567,15 @@ class GameEngine(
         skillName: String,
         successText: String
     ): Triple<Long, Int, List<LogEntry>> {
-        var xp = currentXp + amount
-        var lvl = currentLvl
+        var lvl = currentLvl.coerceIn(1, GameCaps.MAX_LEVEL)
+        var xp = if (lvl >= GameCaps.MAX_LEVEL) 0L else (if (Long.MAX_VALUE - currentXp.coerceAtLeast(0L) < amount.coerceAtLeast(0L)) Long.MAX_VALUE else currentXp.coerceAtLeast(0L) + amount.coerceAtLeast(0L))
         val logs = mutableListOf(log(LogType.LOOT, successText))
-        while (xp >= Balance.skillXpReq(lvl)) {
+        while (lvl < GameCaps.MAX_LEVEL && xp >= Balance.skillXpReq(lvl)) {
             xp -= Balance.skillXpReq(lvl)
             lvl++
             logs += log(LogType.SKILL, "CLASS LEVEL UP: $skillName reached Level $lvl!")
         }
+        if (lvl >= GameCaps.MAX_LEVEL) xp = 0L
         return Triple(xp, lvl, logs)
     }
 
@@ -638,6 +640,13 @@ class GameEngine(
 
     fun mergeBeasts(beastId1: String, beastId2: String): GameState {
         state = progression.mergeBeasts(state, beastId1, beastId2)
+        return state
+    }
+
+    fun salvageBeasts(ids: Collection<String>): GameState {
+        val outcome = progression.salvageBeasts(state, ids)
+        state = outcome.state
+        if (outcome.completed) evaluateAchievements(force = true)
         return state
     }
 

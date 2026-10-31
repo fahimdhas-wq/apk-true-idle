@@ -23,7 +23,7 @@ class SlayerAndStatsSystemsTest {
         val state = GameState()
         val engine = GameEngine(state)
         engine.state.training.nodes.forEach { node ->
-            assertEquals("Training node ${node.id} maxRank must be 1,000,000", 1_000_000, node.maxRank)
+            assertEquals("Training node ${node.id} maxRank", com.aistudio.trueidle.core.TrainingCaps.maxRank(node.id), node.maxRank)
         }
     }
 

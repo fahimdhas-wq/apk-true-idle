@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aistudio.trueidle.core.BeastSalvage
 import com.aistudio.trueidle.core.CombatMath
 import com.aistudio.trueidle.core.NumberFormatter
 import com.aistudio.trueidle.core.DisciplineCategory
@@ -45,14 +46,22 @@ fun GenesisScreen(
     onMergeBeasts: (String, String) -> Unit,
     onSummonMinion: (String) -> Unit,
     onUpgradeDiscipline: (DisciplineCategory, String) -> Unit = { _, _ -> },
+    onSalvageBeasts: (Set<String>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var activeSubTab by rememberSaveable { mutableStateOf(GenesisTab.BEASTS) }
     var selectedBeast1 by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedBeast2 by rememberSaveable { mutableStateOf<String?>(null) }
+    var salvageMode by rememberSaveable { mutableStateOf(false) }
+    var salvageIds by remember { mutableStateOf(setOf<String>()) }
+    var confirmSalvage by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     val beasts = state.beasts
+    // Drop selections for beasts that no longer exist (merged, salvaged or removed by a reload).
+    val liveIds = beasts.beasts.map { it.id }.toSet()
+    if (!liveIds.containsAll(salvageIds)) salvageIds = salvageIds.intersect(liveIds)
+    val salvageTargets = beasts.beasts.filter { it.id in salvageIds }
     val necro = state.necro
     val totalBeastDps = CombatMath.beastDps(beasts).toInt()
     val totalArmyDps = CombatMath.armyDps(necro).toInt()
@@ -135,6 +144,34 @@ fun GenesisScreen(
             }
         }
 
+        if (confirmSalvage && salvageTargets.isNotEmpty()) {
+            AlertDialog(
+                onDismissRequest = { confirmSalvage = false },
+                title = { Text("CONFIRM SALVAGE", style = TrueIdleType.title) },
+                text = {
+                    Text(
+                        "Dismantle ${salvageTargets.size} beast(s) permanently for " +
+                            "${NumberFormatter.short(BeastSalvage.totalBones(salvageTargets))} Bone Essence and " +
+                            "${NumberFormatter.short(BeastSalvage.totalGold(salvageTargets))} Credits. This cannot be undone.",
+                        style = TrueIdleType.meta
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onSalvageBeasts(salvageIds)
+                            salvageIds = emptySet()
+                            confirmSalvage = false
+                        },
+                        modifier = Modifier.testTag("salvage_dialog_confirm")
+                    ) { Text("SALVAGE", color = HpRed) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmSalvage = false }) { Text("CANCEL") }
+                }
+            )
+        }
+
         when (activeSubTab) {
             GenesisTab.BEASTS -> {
                 // BEAST COMPANION ROSTER
@@ -152,8 +189,9 @@ fun GenesisScreen(
                         )
                     } else {
                         beasts.beasts.forEach { beast ->
-                            val isSel1 = selectedBeast1 == beast.id
-                            val isSel2 = selectedBeast2 == beast.id
+                            val isSalvageSel = salvageMode && beast.id in salvageIds
+                            val isSel1 = !salvageMode && selectedBeast1 == beast.id
+                            val isSel2 = !salvageMode && selectedBeast2 == beast.id
                             val dpsVal = (beast.dps * beast.rank * (1.0 + (beast.stars - 1) * 0.25)).toInt()
 
                             Card(
@@ -161,16 +199,29 @@ fun GenesisScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 3.dp)
                                     .clickable {
-                                        if (selectedBeast1 == beast.id) selectedBeast1 = null
+                                        if (salvageMode) {
+                                            salvageIds = if (beast.id in salvageIds) salvageIds - beast.id else salvageIds + beast.id
+                                        } else if (selectedBeast1 == beast.id) selectedBeast1 = null
                                         else if (selectedBeast2 == beast.id) selectedBeast2 = null
                                         else if (selectedBeast1 == null) selectedBeast1 = beast.id
                                         else selectedBeast2 = beast.id
                                     },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (isSel1 || isSel2) GreenSuccess.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                                    containerColor = when {
+                                        isSalvageSel -> HpRed.copy(alpha = 0.15f)
+                                        isSel1 || isSel2 -> GreenSuccess.copy(alpha = 0.15f)
+                                        else -> MaterialTheme.colorScheme.surfaceVariant
+                                    }
                                 ),
                                 shape = RectangleShape,
-                                border = BorderStroke(1.dp, if (isSel1 || isSel2) GreenSuccess else MaterialTheme.colorScheme.outline)
+                                border = BorderStroke(
+                                    1.dp,
+                                    when {
+                                        isSalvageSel -> HpRed
+                                        isSel1 || isSel2 -> GreenSuccess
+                                        else -> MaterialTheme.colorScheme.outline
+                                    }
+                                )
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth().padding(8.dp),
@@ -199,13 +250,77 @@ fun GenesisScreen(
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text("$dpsVal DPS", style = TrueIdleType.value, color = GreenSuccess)
                                         Text("HP: ${NumberFormatter.short(beast.hp)}/${NumberFormatter.short(beast.maxHp)}", style = TrueIdleType.meta, color = TextMuted)
+                                        if (salvageMode) {
+                                            Text(
+                                                "+${NumberFormatter.short(BeastSalvage.bones(beast))} BONE · +${NumberFormatter.short(BeastSalvage.gold(beast))} CR",
+                                                style = TrueIdleType.meta,
+                                                color = if (isSalvageSel) HpRed else TextMuted
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(6.dp))
-                        val canMerge = selectedBeast1 != null && selectedBeast2 != null && selectedBeast1 != selectedBeast2
+                        OutlinedButton(
+                            onClick = {
+                                salvageMode = !salvageMode
+                                salvageIds = emptySet()
+                                selectedBeast1 = null
+                                selectedBeast2 = null
+                            },
+                            shape = RectangleShape,
+                            border = BorderStroke(1.dp, if (salvageMode) HpRed else MaterialTheme.colorScheme.outline),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (salvageMode) HpRed.copy(alpha = 0.15f) else Color.Transparent,
+                                contentColor = if (salvageMode) HpRed else TextMuted
+                            ),
+                            modifier = Modifier.fillMaxWidth().testTag("salvage_mode_btn")
+                        ) {
+                            Text(if (salvageMode) "CANCEL SALVAGE MODE" else "SALVAGE BEASTS", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                        }
+                        if (salvageMode) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(
+                                    onClick = {
+                                        salvageIds = if (salvageIds.size == beasts.beasts.size) emptySet() else liveIds
+                                    },
+                                    shape = RectangleShape,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier.weight(1f).testTag("salvage_select_all_btn")
+                                ) {
+                                    Text(
+                                        if (salvageIds.size == beasts.beasts.size) "CLEAR" else "SELECT ALL",
+                                        style = TrueIdleType.tag,
+                                        color = TextMuted
+                                    )
+                                }
+                                val canSalvage = salvageTargets.isNotEmpty()
+                                Button(
+                                    onClick = { if (canSalvage) confirmSalvage = true },
+                                    enabled = canSalvage,
+                                    shape = RectangleShape,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (canSalvage) HpRed else MaterialTheme.colorScheme.surface,
+                                        contentColor = if (canSalvage) Color.Black else TextMuted
+                                    ),
+                                    border = BorderStroke(1.dp, if (canSalvage) HpRed else MaterialTheme.colorScheme.outline),
+                                    modifier = Modifier.weight(2f).testTag("salvage_confirm_btn")
+                                ) {
+                                    Text(
+                                        if (canSalvage) "SALVAGE ${salvageTargets.size} (+${NumberFormatter.short(BeastSalvage.totalBones(salvageTargets))} BONE)"
+                                        else "SELECT BEASTS TO SALVAGE",
+                                        style = TrueIdleType.tag,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val canMerge = !salvageMode && selectedBeast1 != null && selectedBeast2 != null && selectedBeast1 != selectedBeast2
                         Button(
                             onClick = {
                                 if (canMerge) {
