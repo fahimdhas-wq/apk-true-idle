@@ -307,6 +307,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun setNotation(notation: String) = mutate { engine.setNotation(notation) }
     fun fightPromotionBoss() = mutate { engine.fightPromotionBoss() }
     fun clearLogs() = mutate { engine.clearLogs() }
+    fun claimDailyLogin(isSprint: Boolean) = mutate { engine.claimDailyLogin(isSprint) }
+    fun simulateNextDay() = mutate { engine.simulateNextDay() }
 
     // ------------------------------------------------------------- dev panel (debug builds)
 

@@ -276,6 +276,11 @@ internal object StateSanitizer {
                     automation = input.automation.copy(
                         craftMaterialUsagePct = input.automation.craftMaterialUsagePct.coerceIn(0, 100)
                     ),
+                    dailyLogin = input.dailyLogin.copy(
+                        sprint7ClaimedDays = input.dailyLogin.sprint7ClaimedDays.coerceIn(0, 7),
+                        calendar30ClaimedDays = input.dailyLogin.calendar30ClaimedDays.coerceIn(0, 30),
+                        totalLogins = input.dailyLogin.totalLogins.coerceAtLeast(1)
+                    ),
                     meta = input.meta.copy(
                         nextId = nextIdFrom(input).coerceAtLeast(Balance.RESERVED_ID_FLOOR)
                     )

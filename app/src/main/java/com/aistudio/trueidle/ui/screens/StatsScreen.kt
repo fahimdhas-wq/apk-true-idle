@@ -32,11 +32,25 @@ import com.aistudio.trueidle.ui.components.SciFiIconType
 import com.aistudio.trueidle.ui.components.SciFiPanel
 import com.aistudio.trueidle.ui.components.XpProgressBar
 import com.aistudio.trueidle.ui.theme.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.aistudio.trueidle.core.DailyLoginDetector
+import com.aistudio.trueidle.core.DailyRewardCatalog
+import com.aistudio.trueidle.model.DailyLoginState
+import kotlinx.coroutines.delay
 import java.util.Locale
 
 @Composable
 fun StatsScreen(
     state: GameState,
+    onClaimDailyLogin: (Boolean) -> Unit = {},
+    onSimulateNextDay: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -113,7 +127,7 @@ fun StatsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "HERO PROTOCOL",
+                        text = "HERO PROFILE",
                         style = TrueIdleType.title,
                         color = PrimaryNeon,
                         modifier = Modifier.weight(1f)
@@ -142,6 +156,13 @@ fun StatsScreen(
                 )
             }
         }
+
+        // Daily Login Rewards Card (Dual Tabs: 7-Day Sprint & 30-Day Calendar)
+        DailyLoginCard(
+            daily = state.dailyLogin,
+            onClaim = onClaimDailyLogin,
+            onSimulateNextDay = onSimulateNextDay
+        )
 
         // 1. GEAR MATRIX OVERVIEW
         SciFiPanel(
@@ -301,9 +322,9 @@ fun StatsScreen(
             }
         }
 
-        // 2. WEAPONS ARSENAL BREAKDOWN (3 Slots)
+        // 2. WEAPONS BREAKDOWN (3 Slots)
         SciFiPanel(
-            title = "WEAPONS ARSENAL (3 SLOTS)",
+            title = "WEAPONS (3 SLOTS)",
             accent = PrimaryNeon,
             tag = "+${NumberFormatter.short(totalWeaponAtk)} ATK"
         ) {
@@ -314,9 +335,9 @@ fun StatsScreen(
             }
         }
 
-        // 3. ARMOR MATRIX BREAKDOWN (7 Slots)
+        // 3. ARMOR BREAKDOWN (7 Slots)
         SciFiPanel(
-            title = "ARMOR PLATING MATRIX (7 SLOTS)",
+            title = "ARMOR PIECES (7 SLOTS)",
             accent = ShieldBlue,
             tag = "+${NumberFormatter.short(totalArmorDef)} DEF"
         ) {
@@ -331,9 +352,9 @@ fun StatsScreen(
             }
         }
 
-        // 4. SUB-NEURAL NODES BREAKDOWN (3 Slots)
+        // 4. ACCESSORY NODES (3 Slots)
         SciFiPanel(
-            title = "SUB-NEURAL NODES (3 SLOTS)",
+            title = "ACCESSORY NODES (3 SLOTS)",
             accent = NecroPurple,
             tag = "+${NumberFormatter.short(totalNodeDef)} DEF"
         ) {
@@ -344,9 +365,9 @@ fun StatsScreen(
             }
         }
 
-        // 5. COMBAT ATTRIBUTES & MULTIPLIERS
+        // 5. COMBAT ATTRIBUTES
         SciFiPanel(
-            title = "COMBAT MULTIPLIERS & METRICS",
+            title = "COMBAT ATTRIBUTES",
             accent = SecondaryGold,
             tag = "LVL ${p.lvl}/${GameCaps.MAX_LEVEL}"
         ) {
@@ -364,23 +385,23 @@ fun StatsScreen(
                 )
                 StatDotRow("CRITICAL STRIKE CHANCE", String.format(Locale.ROOT, "%.1f%%", d.critChance * 100), null, TextLight)
                 StatDotRow("CRITICAL DAMAGE MULTIPLIER", "${(d.critDamage * 100).toInt()}%", null, SecondaryGold)
-                StatDotRow("KINETIC ARMOR MITIGATION", "${(CombatMath.mitigation(d.armorDef) * 100).toInt()}% ABSORBED", null, SecondaryGold)
-                StatDotRow("TOTAL HIT POINTS (HP)", "${NumberFormatter.short(p.hp)} / ${NumberFormatter.short(d.maxHp)}", GreenSuccess, GreenSuccess)
+                StatDotRow("ARMOR DAMAGE MITIGATION", "${(CombatMath.mitigation(d.armorDef) * 100).toInt()}% ABSORBED", null, SecondaryGold)
+                StatDotRow("TOTAL HEALTH (HP)", "${NumberFormatter.short(p.hp)} / ${NumberFormatter.short(d.maxHp)}", GreenSuccess, GreenSuccess)
                 StatDotRow("ENERGY BARRIER (SHIELD)", "${NumberFormatter.short(p.shield)} / ${NumberFormatter.short(d.maxShield)}", ShieldBlue, ShieldBlue)
-                StatDotRow("ARCANE ENERGY (MANA)", "${NumberFormatter.short(p.mana)} / ${NumberFormatter.short(d.maxMana)}", ManaTeal, ManaTeal)
+                StatDotRow("MANA ENERGY", "${NumberFormatter.short(p.mana)} / ${NumberFormatter.short(d.maxMana)}", ManaTeal, ManaTeal)
                 StatDotRow("XP ACCELERATION", "+${(d.xpGain * 100).toInt()}%", null, TextLight)
             }
         }
 
-        // 6. STRUGGLE & ADAPTATION BREAKDOWN
+        // 6. SURVIVAL DAMAGE PASSIVES
         SciFiPanel(
-            title = "STRUGGLE ADAPTATION TELEMETRY",
+            title = "SURVIVAL PASSIVES PROGRESS",
             accent = HpRed,
             tag = "${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Accumulates combat damage sustained (both absorbed by energy shield and taken directly to HP). Unlocks defensive and offensive permanent thresholds.",
+                    text = "Accumulates damage taken to unlock permanent attribute multipliers.",
                     style = TrueIdleType.body,
                     color = TextMuted
                 )
@@ -394,9 +415,9 @@ fun StatsScreen(
 
         // 6b. TRAINING LIMITS
         SciFiPanel(
-            title = "TRAINING LIMITS",
+            title = "TRAINING CAPS",
             accent = PrimaryNeon,
-            tag = "CAPS"
+            tag = "LIMITS"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 fun nodeRank(id: String) = state.training.nodes.firstOrNull { it.id == id }?.rank ?: 0
@@ -412,40 +433,40 @@ fun StatsScreen(
             }
         }
 
-        // 7. CLASS MASTERIES BREAKDOWN
+        // 7. HERO PROFESSIONS
         SciFiPanel(
-            title = "CLASS MASTERIES",
+            title = "HERO PROFESSIONS",
             accent = PrimaryNeon,
-            tag = "ACADEMY"
+            tag = "SKILLS"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                StatDotRow("TRAINING BAY", "LV ${state.training.lvl} (${state.training.nodes.sumOf { it.rank }} NODES)", PrimaryNeon, TextLight)
-                StatDotRow("SLAYER CORPS", "LV ${state.slayer.lvl} (${state.slayer.slayerPoints} PTS)", HpRed, SecondaryGold)
-                StatDotRow("BIO-FARMING", "LV ${state.harvest.farmingLvl}", GreenSuccess, TextLight)
-                StatDotRow("ORE EXTRACTION", "LV ${state.harvest.miningLvl}", SecondaryGold, TextLight)
-                StatDotRow("ARMORY FORGE", "LV ${state.armory.smithingLvl}", SecondaryGold, TextLight)
-                StatDotRow("NANITE ALCHEMY", "LV ${state.armory.herbloreLvl}", ManaTeal, TextLight)
-                StatDotRow("NECROMANCY CORPS", "LV ${state.necro.lvl} (${state.necro.boneEssence} BONE)", NecroPurple, TextLight)
-                StatDotRow("BEAST SQUADRON", "LV ${state.beasts.lvl} (${state.beasts.beasts.size} BEASTS)", PrimaryNeon, TextLight)
-                StatDotRow("SANCTIFIED ESSENCE", "LV ${state.essence.lvl} (${state.essence.faith} FAITH)", ManaTeal, TextLight)
+                StatDotRow("TRAINING HALL", "LV ${state.training.lvl} (${state.training.nodes.sumOf { it.rank }} NODES)", PrimaryNeon, TextLight)
+                StatDotRow("SLAYER GUILD", "LV ${state.slayer.lvl} (${state.slayer.slayerPoints} PTS)", HpRed, SecondaryGold)
+                StatDotRow("FARMING", "LV ${state.harvest.farmingLvl}", GreenSuccess, TextLight)
+                StatDotRow("MINING", "LV ${state.harvest.miningLvl}", SecondaryGold, TextLight)
+                StatDotRow("FORGE SMITHING", "LV ${state.armory.smithingLvl}", SecondaryGold, TextLight)
+                StatDotRow("HERB ALCHEMY", "LV ${state.armory.herbloreLvl}", ManaTeal, TextLight)
+                StatDotRow("NECROMANCY", "LV ${state.necro.lvl} (${state.necro.boneEssence} BONE)", NecroPurple, TextLight)
+                StatDotRow("BEAST TAMING", "LV ${state.beasts.lvl} (${state.beasts.beasts.size} BEASTS)", PrimaryNeon, TextLight)
+                StatDotRow("SANCTIFIED FAITH", "LV ${state.essence.lvl} (${state.essence.faith} FAITH)", ManaTeal, TextLight)
             }
         }
 
-        // 8. LIFETIME TACTICAL TELEMETRY
+        // 8. LIFETIME ADVENTURE STATS
         SciFiPanel(
-            title = "TACTICAL TELEMETRY",
+            title = "LIFETIME ADVENTURE STATS",
             accent = TextLight,
-            tag = "LIFETIME"
+            tag = "RECORD"
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                StatDotRow("TOTAL HOSTILES ELIMINATED", NumberFormatter.short(state.lifetime.totalKills), null, TextLight)
-                StatDotRow("DEEPEST SECTOR UNLOCKED", "SECTOR ${p.maxUnlockedFloor}", null, PrimaryNeon)
-                StatDotRow("CREDITS IN TREASURY", "${NumberFormatter.short(p.gold)} CR", null, SecondaryGold)
+                StatDotRow("MONSTERS DEFEATED", NumberFormatter.short(state.lifetime.totalKills), null, TextLight)
+                StatDotRow("DEEPEST FLOOR REACHED", "FLOOR ${p.maxUnlockedFloor}", null, PrimaryNeon)
+                StatDotRow("TOTAL GOLD", "${NumberFormatter.short(p.gold)} GOLD", null, SecondaryGold)
                 StatDotRow("DIAMONDS RESERVE", "${p.diamonds} DIA", null, PrimaryNeon)
                 StatDotRow("FAITH ACCUMULATED", "${NumberFormatter.short(state.essence.faith)} FAITH", null, ManaTeal)
                 StatDotRow("SLAYER POINTS", "${NumberFormatter.short(state.slayer.slayerPoints)} PTS", null, HpRed)
                 StatDotRow("TAMED COMPANIONS", "${state.beasts.beasts.size}", null, TextLight)
-                StatDotRow("UNDEAD CORPS SIZE", "${state.necro.army.sumOf { it.count }}", null, TextLight)
+                StatDotRow("UNDEAD MINIONS", "${state.necro.army.sumOf { it.count }}", null, TextLight)
             }
         }
     }
@@ -586,5 +607,257 @@ fun StatDotRow(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun DailyLoginCard(
+    daily: DailyLoginState,
+    onClaim: (Boolean) -> Unit,
+    onSimulateNextDay: () -> Unit = {}
+) {
+    var isSprintTab by remember { mutableStateOf(true) }
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000L)
+            nowMs = System.currentTimeMillis()
+        }
+    }
+
+    val claimedDays = if (isSprintTab) daily.sprint7ClaimedDays else daily.calendar30ClaimedDays
+    val maxDays = if (isSprintTab) 7 else 30
+    val rewards = if (isSprintTab) DailyRewardCatalog.SPRINT_7_REWARDS else DailyRewardCatalog.CALENDAR_30_REWARDS
+    val nextDay = claimedDays + 1
+    val isComplete = claimedDays >= maxDays
+
+    val canClaimToday = if (isSprintTab) {
+        DailyLoginDetector.canClaimSprint(daily, nowMs)
+    } else {
+        DailyLoginDetector.canClaimCalendar(daily, nowMs)
+    }
+    val msUntilMidnight = DailyLoginDetector.msUntilNextDay(nowMs)
+    val countdownStr = DailyLoginDetector.formatCountdown(msUntilMidnight)
+
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("daily_login_card"),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RectangleShape,
+        border = BorderStroke(1.dp, SecondaryGold.copy(alpha = 0.6f))
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("DAILY LOGIN REWARDS", style = TrueIdleType.titleLarge, color = SecondaryGold)
+                    Text("Midnight reset in: $countdownStr", style = TrueIdleType.meta, color = TextMuted)
+                }
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (canClaimToday && !isComplete) GreenSuccess.copy(alpha = 0.2f) else SecondaryGold.copy(alpha = 0.15f),
+                            RectangleShape
+                        )
+                        .border(1.dp, if (canClaimToday && !isComplete) GreenSuccess else SecondaryGold, RectangleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isComplete) "COMPLETED" else if (canClaimToday) "READY TO CLAIM" else "DAY $nextDay OF $maxDays",
+                        style = TrueIdleType.numberSmall,
+                        color = if (canClaimToday && !isComplete) GreenSuccess else SecondaryGold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Dual Tab Switcher
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // 7-Day Sprint Tab Button
+                val sprintClaimable = DailyLoginDetector.canClaimSprint(daily, nowMs)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .background(
+                            if (isSprintTab) SecondaryGold.copy(alpha = 0.2f) else SurfaceVariantDark,
+                            RectangleShape
+                        )
+                        .border(1.dp, if (isSprintTab) SecondaryGold else BorderDark, RectangleShape)
+                        .clickable { isSprintTab = true }
+                        .testTag("tab_login_sprint_7"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "⚡ 7-DAY SPRINT (${daily.sprint7ClaimedDays}/7)${if (sprintClaimable) " ●" else ""}",
+                        style = TrueIdleType.tag.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSprintTab) SecondaryGold else if (sprintClaimable) GreenSuccess else TextMuted
+                    )
+                }
+
+                // 30-Day Calendar Tab Button
+                val calendarClaimable = DailyLoginDetector.canClaimCalendar(daily, nowMs)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(36.dp)
+                        .background(
+                            if (!isSprintTab) PrimaryNeon.copy(alpha = 0.2f) else SurfaceVariantDark,
+                            RectangleShape
+                        )
+                        .border(1.dp, if (!isSprintTab) PrimaryNeon else BorderDark, RectangleShape)
+                        .clickable { isSprintTab = false }
+                        .testTag("tab_login_calendar_30"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "📅 30-DAY CALENDAR (${daily.calendar30ClaimedDays}/30)${if (calendarClaimable) " ●" else ""}",
+                        style = TrueIdleType.tag.copy(fontWeight = FontWeight.Bold),
+                        color = if (!isSprintTab) PrimaryNeon else if (calendarClaimable) GreenSuccess else TextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Horizontal scrollable days list
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(rewards) { reward ->
+                    val isClaimed = reward.day <= claimedDays
+                    val isCurrent = reward.day == nextDay && !isComplete
+                    val accentColor = if (isCurrent) (if (isSprintTab) SecondaryGold else PrimaryNeon)
+                        else if (isClaimed) GreenSuccess else BorderDark
+
+                    Box(
+                        modifier = Modifier
+                            .width(118.dp)
+                            .height(130.dp)
+                            .background(
+                                if (isCurrent) accentColor.copy(alpha = 0.15f) else SurfaceVariantDark,
+                                RectangleShape
+                            )
+                            .border(1.dp, accentColor, RectangleShape)
+                            .padding(6.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("DAY ${reward.day}", style = TrueIdleType.tag, color = if (isCurrent) accentColor else TextLight)
+                                if (isClaimed) {
+                                    Text("✓", style = TrueIdleType.tag, color = GreenSuccess)
+                                }
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                if (reward.gold > 0L) {
+                                    Text("+${NumberFormatter.short(reward.gold)} Gold", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = SecondaryGold)
+                                }
+                                if (reward.diamonds > 0L) {
+                                    Text("+${reward.diamonds} Dia", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = PrimaryNeon)
+                                }
+                                if (reward.faith > 0L) {
+                                    Text("+${reward.faith} Faith", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = ManaTeal)
+                                }
+                                if (reward.bones > 0L) {
+                                    Text("+${reward.bones} Bones", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = NecroPurple)
+                                }
+                                if (reward.potionName.isNotEmpty()) {
+                                    Text("+${reward.potionCount} ${reward.potionName}", style = TrueIdleType.meta.copy(fontSize = 8.sp), color = TextLight, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        if (isClaimed) GreenSuccess.copy(alpha = 0.2f)
+                                        else if (isCurrent && canClaimToday) GreenSuccess.copy(alpha = 0.25f)
+                                        else if (isCurrent) accentColor.copy(alpha = 0.15f)
+                                        else Color(0xFF000000),
+                                        RectangleShape
+                                    )
+                                    .border(1.dp, if (isClaimed) GreenSuccess else if (isCurrent && canClaimToday) GreenSuccess else if (isCurrent) accentColor else BorderDark, RectangleShape)
+                                    .padding(vertical = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isClaimed) "CLAIMED" else if (isCurrent && canClaimToday) "READY" else if (isCurrent) "WAITING" else "LOCKED",
+                                    style = TrueIdleType.meta.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold),
+                                    color = if (isClaimed || (isCurrent && canClaimToday)) GreenSuccess else if (isCurrent) accentColor else TextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Claim Action and Advance Day Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { onClaim(isSprintTab) },
+                    enabled = canClaimToday && !isComplete,
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSprintTab) SecondaryGold else PrimaryNeon,
+                        contentColor = Color.Black,
+                        disabledContainerColor = SurfaceVariantDark,
+                        disabledContentColor = TextMuted
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .testTag("claim_daily_login_btn")
+                ) {
+                    Text(
+                        text = if (isComplete) "ALL REWARDS CLAIMED!"
+                        else if (canClaimToday) "CLAIM DAY $nextDay REWARD"
+                        else "CLAIMED TODAY (NEXT IN $countdownStr)",
+                        style = TrueIdleType.label.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Advance to next day button for testing and simulation
+                OutlinedButton(
+                    onClick = onSimulateNextDay,
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = SecondaryGold
+                    ),
+                    border = BorderStroke(1.dp, SecondaryGold.copy(alpha = 0.8f)),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .testTag("simulate_next_day_btn")
+                ) {
+                    Text(
+                        text = "NEXT DAY (TEST)",
+                        style = TrueIdleType.meta.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
     }
 }

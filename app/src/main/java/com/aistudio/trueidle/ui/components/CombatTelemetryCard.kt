@@ -46,7 +46,7 @@ fun CombatTelemetryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "COMBAT DPS MATRIX",
+                    text = "COMBAT DPS BREAKDOWN",
                     style = TrueIdleType.tag,
                     color = TextMuted
                 )

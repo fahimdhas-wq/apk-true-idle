@@ -126,7 +126,7 @@ fun ClassScreen(
             when (currentSection) {
                 ClassSubSection.OVERVIEW -> ClassOverviewPage(state) { onSectionChange(it) }
                 ClassSubSection.HARVEST -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // HARVEST & EXTRACTION MATRIX") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // HARVEST & MINING") { onSectionChange(ClassSubSection.OVERVIEW) }
                     HarvestScreen(
                         state = state,
                         onHarvestPlot = onHarvestPlot,
@@ -137,7 +137,7 @@ fun ClassScreen(
                     )
                 }
                 ClassSubSection.FORGE -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // FORGE FABRICATION MATRIX") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // BLACKSMITH FORGE") { onSectionChange(ClassSubSection.OVERVIEW) }
                     ForgeScreen(
                         state = state,
                         onCraftEquipment = onCraftEquipment,
@@ -145,7 +145,7 @@ fun ClassScreen(
                     )
                 }
                 ClassSubSection.ARMORY -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // ARMORY & TACTICAL LOADOUT") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // HERO ARSENAL") { onSectionChange(ClassSubSection.OVERVIEW) }
                     ArmoryScreen(
                         state = state,
                         onCraftEquipment = onCraftEquipment,
@@ -157,7 +157,7 @@ fun ClassScreen(
                     )
                 }
                 ClassSubSection.GENESIS -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // GENESIS BIO-REANIMATION") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // COMPANIONS & MINIONS") { onSectionChange(ClassSubSection.OVERVIEW) }
                     GenesisScreen(
                         state = state,
                         onMergeBeasts = onMergeBeasts,
@@ -167,7 +167,7 @@ fun ClassScreen(
                     )
                 }
                 ClassSubSection.ESSENCE -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // ESSENCE PROTOCOL") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // SANCTIFIED FAITH") { onSectionChange(ClassSubSection.OVERVIEW) }
                     EssenceScreen(
                         state = state,
                         onToggleAegis = onToggleSanctifiedAegis,
@@ -176,15 +176,15 @@ fun ClassScreen(
                     )
                 }
                 ClassSubSection.TRAINING -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // NEURAL ENHANCEMENT BAY") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // HERO TRAINING") { onSectionChange(ClassSubSection.OVERVIEW) }
                     TrainingScreen(state = state, onTrainNode = onTrainNode)
                 }
                 ClassSubSection.SLAYER -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // TARGETING DIRECTIVES") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // SLAYER GUILD") { onSectionChange(ClassSubSection.OVERVIEW) }
                     SlayerScreen(state = state, onRerollTask = onRerollSlayerTask)
                 }
                 ClassSubSection.TALENTS -> Column(Modifier.fillMaxSize()) {
-                    SubSectionHeader("CLASS // TACTICAL & STRUGGLE TALENTS") { onSectionChange(ClassSubSection.OVERVIEW) }
+                    SubSectionHeader("CLASS // TALENTS & PASSIVES") { onSectionChange(ClassSubSection.OVERVIEW) }
                     TalentScreen(
                         state = state,
                         onActivateTalent = onActivateTalent,
@@ -389,13 +389,13 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
 
         Card(
             Modifier.fillMaxWidth().testTag("class_master_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
             shape = RectangleShape,
             border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
             Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("CLASS NETWORK // AUTONOMOUS MATRIX", style = TrueIdleType.title, color = PrimaryNeon)
-                Text("NEURAL PROGRESSION ACTIVE · ALL TELEMETRY SYNCHRONIZED", style = TrueIdleType.meta, color = TextMuted)
+                Text("HERO DISCIPLINES & SKILLS", style = TrueIdleType.title, color = PrimaryNeon)
+                Text("OVERVIEW OF ALL PROFESSIONS AND MASTERIES", style = TrueIdleType.meta, color = TextMuted)
             }
         }
 
@@ -429,7 +429,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
                 XpCurves.farmingSkillXp(state.harvest.farmingLvl),
                 XpCurves.miningSkillXp(state.harvest.miningLvl)
             ),
-            status = "EXTRACTION PROTOCOL"
+            status = "GATHERING"
         ) {
             XpProgressBar(
                 "BIO-FARMING",
@@ -461,7 +461,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = state.armory.smithingLvl,
             xp = state.armory.smithingXp,
             requiredXp = XpCurves.skill(state.armory.smithingLvl),
-            status = "FABRICATION MATRIX"
+            status = "CRAFTING"
         ) {
             XpProgressBar("SMITHING FORGE", state.armory.smithingLvl, state.armory.smithingXp, XpCurves.skill(state.armory.smithingLvl), SecondaryGold)
             Spacer(Modifier.height(3.dp))
@@ -479,7 +479,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = max(state.armory.smithingLvl, state.armory.herbloreLvl),
             xp = max(state.armory.smithingXp, state.armory.herbloreXp),
             requiredXp = XpCurves.skill(max(state.armory.smithingLvl, state.armory.herbloreLvl)),
-            status = "TACTICAL LOADOUT"
+            status = "EQUIPMENT"
         ) {
             XpProgressBar("ARMORY MASTERY", max(state.armory.smithingLvl, state.armory.herbloreLvl), max(state.armory.smithingXp, state.armory.herbloreXp), XpCurves.skill(max(state.armory.smithingLvl, state.armory.herbloreLvl)), SecondaryGold)
         }
@@ -495,7 +495,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = max(state.beasts.lvl, state.necro.lvl),
             xp = max(state.beasts.xp, state.necro.xp),
             requiredXp = XpCurves.skill(max(state.beasts.lvl, state.necro.lvl)),
-            status = "BIO-REANIMATION"
+            status = "COMPANIONS"
         ) {
             XpProgressBar("BEAST TAMING", state.beasts.lvl, state.beasts.xp, XpCurves.skill(state.beasts.lvl), GreenSuccess)
             Spacer(Modifier.height(3.dp))
@@ -513,7 +513,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = state.essence.lvl,
             xp = state.essence.xp,
             requiredXp = XpCurves.skill(state.essence.lvl),
-            status = "ENERGY SHIELD"
+            status = "FAITH & AEGIS"
         ) {
             XpProgressBar("ESSENCE FIELD", state.essence.lvl, state.essence.xp, XpCurves.skill(state.essence.lvl), ManaTeal)
         }
@@ -529,7 +529,7 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = state.training.lvl,
             xp = state.training.xp,
             requiredXp = XpCurves.skill(state.training.lvl),
-            status = "NEURAL LINK"
+            status = "HERO TRAINING"
         ) {
             XpProgressBar("CORE TRAINING", state.training.lvl, state.training.xp, XpCurves.skill(state.training.lvl), PrimaryNeon)
         }
@@ -545,14 +545,14 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = state.slayer.lvl,
             xp = state.slayer.xp,
             requiredXp = XpCurves.skill(state.slayer.lvl),
-            status = "ELIMINATION TARGET"
+            status = "SLAYER CONTRACT"
         ) {
             XpProgressBar("SLAYER MASTERY", state.slayer.lvl, state.slayer.xp, XpCurves.skill(state.slayer.lvl), HpRed)
         }
 
         // 08 TALENTS
         ClassCategoryCard(
-            title = "08 // TALENTS & STRUGGLE",
+            title = "08 // TALENTS & PASSIVES",
             icon = "[★]",
             accentColor = SecondaryGold,
             quickSummary = "${state.talent.talentPoints} TP AVAILABLE · ${NumberFormatter.short(state.talent.struggleDamageTaken)} DMG ENDURED",
@@ -561,10 +561,10 @@ fun ClassOverviewPage(state: GameState, onNavigate: (ClassSubSection) -> Unit) {
             level = state.talent.activeTalents.sumOf { it.rank },
             xp = state.talent.struggleDamageTaken,
             requiredXp = XpCurves.skill(state.talent.activeTalents.sumOf { it.rank }.coerceAtLeast(1)),
-            status = "TACTICAL MATRIX"
+            status = "PASSIVES & SKILLS"
         ) {
             Text(
-                text = "STRUGGLE BONUSES: +${NumberFormatter.short(derived.struggleHpBonus)} HP · +${NumberFormatter.short(derived.struggleDefBonus)} DEF · +${NumberFormatter.short(derived.struggleAtkBonus)} ATK",
+                text = "SURVIVAL BONUSES: +${NumberFormatter.short(derived.struggleHpBonus)} HP · +${NumberFormatter.short(derived.struggleDefBonus)} DEF · +${NumberFormatter.short(derived.struggleAtkBonus)} ATK",
                 style = TrueIdleType.tag,
                 color = SecondaryGold
             )

@@ -22,8 +22,9 @@ object XpCurves {
     /** Large-number gathering progression with a hard level-100 cap. */
     const val GATHERING_SKILL_MAX_LEVEL: Int = 100
     private const val GATHERING_XP_GROWTH_PER_LEVEL: Double = 1.2
-    private const val FARMING_XP_BASE: Double = 8.84418650028039E27
-    private const val MINING_XP_BASE: Double = 1.495741475534792E28
+    // Base requirement reduced by 89% as requested by user to accelerate gathering progression
+    private const val FARMING_XP_BASE: Double = 8.84418650028039E27 * 0.11
+    private const val MINING_XP_BASE: Double = 1.495741475534792E28 * 0.11
 
     fun farmingSkillXp(lvl: Int): Double = gatheringRequirement(FARMING_XP_BASE, lvl)
 

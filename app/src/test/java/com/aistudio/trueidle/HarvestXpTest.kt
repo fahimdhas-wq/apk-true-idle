@@ -166,8 +166,9 @@ class HarvestXpTest {
         val farmingYears = estimateOptimizedContinuousHarvestYears(isMining = false)
         val miningYears = estimateOptimizedContinuousHarvestYears(isMining = true)
 
-        assertTrue("Expected 4-5 Farming years, got $farmingYears", farmingYears in 4.0..5.0)
-        assertTrue("Expected 4-5 Mining years, got $miningYears", miningYears in 4.0..5.0)
+        // Target duration scaled down by 89% reduction (approx 0.5 years)
+        assertTrue("Expected 0.3-0.8 Farming years after 89% reduction, got $farmingYears", farmingYears in 0.3..0.8)
+        assertTrue("Expected 0.3-0.8 Mining years after 89% reduction, got $miningYears", miningYears in 0.3..0.8)
     }
 
     /**

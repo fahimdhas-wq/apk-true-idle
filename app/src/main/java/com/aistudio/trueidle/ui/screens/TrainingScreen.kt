@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,8 +53,8 @@ fun TrainingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text("CYBER DOJO PROTOCOL", style = TrueIdleType.titleLarge, color = PrimaryNeon)
-                        Text("Neural attribute enhancements via Credits", style = TrueIdleType.meta, color = TextMuted)
+                        Text("HERO TRAINING HALL", style = TrueIdleType.titleLarge, color = PrimaryNeon)
+                        Text("Upgrade permanent hero attributes with Gold", style = TrueIdleType.meta, color = TextMuted)
                     }
                     SciFiBadge(
                         type = SciFiIconType.CREDIT,
@@ -64,7 +65,7 @@ fun TrainingScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 XpProgressBar(
-                    skillName = "PHYSICAL TRAINING",
+                    skillName = "TRAINING MASTERY",
                     level = state.training.lvl,
                     currentXp = state.training.xp,
                     requiredXp = XpCurves.skill(state.training.lvl),
@@ -126,19 +127,19 @@ fun TrainingScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            // Fixed-width rank and action columns keep every row vertically aligned,
-                            // regardless of rank digits or credit cost.
+                            // Uniform matching 42.dp height for both rank badge and action button
                             Box(
                                 modifier = Modifier
-                                    .widthIn(min = 62.dp)
+                                    .width(76.dp)
+                                    .height(42.dp)
                                     .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
                                     .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
-                                    .padding(horizontal = 4.dp, vertical = 5.dp),
+                                    .padding(horizontal = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "R ${node.rank}/${node.maxRank}",
-                                    style = TrueIdleType.numberSmall.copy(fontSize = 10.sp, letterSpacing = 0.2.sp),
+                                    style = TrueIdleType.numberSmall.copy(fontSize = 11.sp, letterSpacing = 0.2.sp),
                                     color = PrimaryNeon,
                                     maxLines = 1
                                 )
@@ -147,18 +148,21 @@ fun TrainingScreen(
                             OutlinedButton(
                                 onClick = { onTrainNode(node.id) },
                                 enabled = canAfford,
-                                modifier = Modifier.width(122.dp).testTag("train_btn_${node.id}"),
+                                modifier = Modifier
+                                    .width(136.dp)
+                                    .height(42.dp)
+                                    .testTag("train_btn_${node.id}"),
                                 shape = RectangleShape,
                                 border = BorderStroke(1.dp, if (canAfford) PrimaryNeon else BorderDark),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = if (canAfford) PrimaryNeon.copy(alpha = 0.15f) else SurfaceVariantDark,
                                     contentColor = if (canAfford) PrimaryNeon else TextMuted
                                 ),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                             ) {
                                 Text(
-                                    text = if (isMaxed) "MAX" else "ENHANCE ${NumberFormatter.short(node.costGold)} CR",
-                                    style = TrueIdleType.tag.copy(fontSize = 9.sp, letterSpacing = 0.2.sp),
+                                    text = if (isMaxed) "MAX RANK" else "ENHANCE ${NumberFormatter.short(node.costGold)}",
+                                    style = TrueIdleType.tag.copy(fontSize = 10.sp, letterSpacing = 0.2.sp, fontWeight = FontWeight.Bold),
                                     maxLines = 1,
                                     softWrap = false
                                 )

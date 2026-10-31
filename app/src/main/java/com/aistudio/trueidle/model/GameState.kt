@@ -495,6 +495,17 @@ data class PotionSettings(
     val selectedMpPotion: String = "Mana Infusion Tonic"
 )
 
+@Serializable
+data class DailyLoginState(
+    val lastClaimWallMs: Long = 0L,
+    val lastSprintClaimEpochDay: Long = -1L,
+    val lastCalendarClaimEpochDay: Long = -1L,
+    val sprint7ClaimedDays: Int = 0,
+    val calendar30ClaimedDays: Int = 0,
+    val totalLogins: Int = 1,
+    val lastLoginEpochDay: Long = -1L
+)
+
 /**
  * Dev-only overrides used by the debug Dev Panel. Persisted so a tester's game speed survives a
  * restart; release builds never expose the panel that writes them.
@@ -524,6 +535,7 @@ data class GameState(
     val promotion: PromotionState = PromotionState(),
     val potionSettings: PotionSettings = PotionSettings(),
     val activeBuffs: List<ActiveBuff> = emptyList(),
+    val dailyLogin: DailyLoginState = DailyLoginState(),
     val dev: DevSettings = DevSettings(),
     val inventory: List<InventoryItem> = listOf(
         InventoryItem(id = "item_rifle_f", name = "F- Rifle", category = "Equipment", count = 1, tier = 1, slot = "Rifle", statDesc = "+12 ATK", sellValue = 35L, isEquipped = true, atk = 12.0),

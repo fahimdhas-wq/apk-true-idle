@@ -44,9 +44,9 @@ fun TalentScreen(
         // 1. TALENT SYSTEM HEADER
         Card(
             modifier = Modifier.fillMaxWidth().testTag("talent_header_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = SurfaceDark),
             shape = RectangleShape,
-            border = BorderStroke(1.dp, PrimaryNeon)
+            border = BorderStroke(1.dp, PrimaryNeon.copy(alpha = 0.5f))
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(11.dp),
@@ -54,10 +54,10 @@ fun TalentScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("TACTICAL TALENT PROTOCOL", style = TrueIdleType.titleLarge, color = PrimaryNeon)
+                    Text("HERO TALENTS", style = TrueIdleType.titleLarge, color = PrimaryNeon)
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Earn Talent Points from sector exploration, player level ups, and defeating dungeon bosses.",
+                        text = "Earn Talent Points (TP) by leveling up and defeating dungeon bosses.",
                         style = TrueIdleType.meta,
                         color = TextMuted
                     )
@@ -65,7 +65,7 @@ fun TalentScreen(
                 Box(
                     modifier = Modifier
                         .background(PrimaryNeon.copy(alpha = 0.15f), RectangleShape)
-                        .border(1.5.dp, PrimaryNeon, RectangleShape)
+                        .border(1.dp, PrimaryNeon, RectangleShape)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -78,14 +78,14 @@ fun TalentScreen(
             }
         }
 
-        // 1b. AUTOMATED SIMULTANEOUS EXECUTION STATUS
+        // 1b. AUTOMATED SKILLS EXECUTION
         SciFiPanel(
-            title = "AUTO-EXECUTION PROTOCOL",
+            title = "AUTO COMBAT SKILLS",
             accent = GreenSuccess,
             tag = "${talent.activeTalents.count { it.rank > 0 }}/${talent.activeTalents.size} POWERS ONLINE"
         ) {
             Text(
-                text = "Every unlocked power (rank > 0) fires automatically the moment its cooldown expires. Abilities run on independent timers, so several effects can be active at the same time.",
+                text = "All unlocked combat skills (Rank > 0) trigger automatically when off cooldown. Abilities run on independent timers and can be active at the same time.",
                 style = TrueIdleType.body,
                 color = TextMuted
             )
@@ -101,7 +101,7 @@ fun TalentScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(act.name.uppercase(), style = TrueIdleType.label, color = MaterialTheme.colorScheme.onSurface)
+                    Text(act.name.uppercase(), style = TrueIdleType.label, color = TextLight)
                     Text(
                         text = status,
                         style = TrueIdleType.tag,
@@ -111,16 +111,16 @@ fun TalentScreen(
             }
         }
 
-        // 2. THE STRUGGLE - KINETIC ADAPTATION PASSIVES
+        // 2. SURVIVAL PASSIVES
         SciFiPanel(
-            title = "THE STRUGGLE // ADAPTIVE PASSIVES",
+            title = "SURVIVAL PASSIVES",
             accent = HpRed,
             tag = "DAMAGE ENDURED: ${NumberFormatter.short(talent.struggleDamageTaken)}"
         ) {
             Text(
-                text = "The more the hero struggles and endures hostile attacks, the deeper the nano-fiber chassis reinforces itself. Every point of combat damage taken permanently augments your attributes.",
+                text = "Every point of combat damage taken permanently augments your attributes, even while shields absorb damage.",
                 style = TrueIdleType.body,
-                color = MaterialTheme.colorScheme.onSurface
+                color = TextLight
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -139,9 +139,9 @@ fun TalentScreen(
 
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceDark),
                     shape = RectangleShape,
-                    border = BorderStroke(1.dp, if (canUpgrade) HpRed.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(1.dp, if (canUpgrade) HpRed.copy(alpha = 0.6f) else BorderDark)
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Row(
@@ -150,13 +150,13 @@ fun TalentScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(st.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                                Text(st.name, style = TrueIdleType.title, color = TextLight)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.surface, RectangleShape)
+                                        .background(SurfaceVariantDark, RectangleShape)
                                         .border(1.dp, HpRed)
-                                        .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${st.rank}/${st.maxRank}", style = TrueIdleType.numberSmall, color = HpRed)
                                 }
@@ -176,7 +176,7 @@ fun TalentScreen(
                             progress = { currentProgress },
                             modifier = Modifier.fillMaxWidth().height(4.dp),
                             color = HpRed,
-                            trackColor = MaterialTheme.colorScheme.surface
+                            trackColor = SurfaceVariantDark
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -185,14 +185,14 @@ fun TalentScreen(
                             enabled = canUpgrade,
                             shape = RectangleShape,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (canUpgrade) HpRed else MaterialTheme.colorScheme.surface,
+                                containerColor = if (canUpgrade) HpRed else SurfaceVariantDark,
                                 contentColor = if (canUpgrade) Color.White else TextMuted
                             ),
-                            border = BorderStroke(1.dp, if (canUpgrade) HpRed else MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.fillMaxWidth().testTag("upgrade_struggle_${st.id}")
+                            border = BorderStroke(1.dp, if (canUpgrade) HpRed else BorderDark),
+                            modifier = Modifier.fillMaxWidth().height(40.dp).testTag("upgrade_struggle_${st.id}")
                         ) {
                             Text(
-                                text = if (st.rank >= st.maxRank) "MAX RANK REACHED" else "ENHANCE STRUGGLE MULTIPLIER (1 TP)",
+                                text = if (st.rank >= st.maxRank) "MAX RANK REACHED" else "UPGRADE PASSIVE (1 TP)",
                                 style = TrueIdleType.tag,
                                 fontWeight = FontWeight.Bold
                             )
@@ -202,11 +202,11 @@ fun TalentScreen(
             }
         }
 
-        // 3. TACTICAL ACTIVE ABILITIES
+        // 3. ACTIVE COMBAT SKILLS
         SciFiPanel(
-            title = "TACTICAL COMBAT OVERCLOCKS",
+            title = "ACTIVE COMBAT SKILLS",
             accent = SecondaryGold,
-            tag = "ACTIVE POWERS"
+            tag = "AUTOMATIC POWERS"
         ) {
             talent.activeTalents.forEach { act ->
                 val isOnCd = act.cooldownRemaining > 0.0
@@ -216,10 +216,10 @@ fun TalentScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isActive) SecondaryGold.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = if (isActive) SecondaryGold.copy(alpha = 0.12f) else SurfaceDark
                     ),
                     shape = RectangleShape,
-                    border = BorderStroke(1.dp, if (isActive) SecondaryGold else MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(1.dp, if (isActive) SecondaryGold else BorderDark)
                 ) {
                     Column(modifier = Modifier.padding(8.dp)) {
                         Row(
@@ -228,13 +228,13 @@ fun TalentScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(act.name, style = TrueIdleType.title, color = MaterialTheme.colorScheme.onSurface)
+                                Text(act.name, style = TrueIdleType.title, color = TextLight)
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Box(
                                     modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.surface, RectangleShape)
+                                        .background(SurfaceVariantDark, RectangleShape)
                                         .border(1.dp, SecondaryGold)
-                                        .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
                                 ) {
                                     Text("RANK ${act.rank}/${act.maxRank}", style = TrueIdleType.numberSmall, color = SecondaryGold)
                                 }
@@ -254,7 +254,7 @@ fun TalentScreen(
                                         else if (isOnCd) HpRed
                                         else PrimaryNeon
                                     )
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = if (isActive) "ACTIVE (${act.durationRemaining.toInt()}s)"
@@ -282,13 +282,13 @@ fun TalentScreen(
                                 enabled = !isOnCd,
                                 shape = RectangleShape,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (!isOnCd) SecondaryGold else MaterialTheme.colorScheme.surface,
+                                    containerColor = if (!isOnCd) SecondaryGold else SurfaceVariantDark,
                                     contentColor = if (!isOnCd) Color.Black else TextMuted
                                 ),
-                                border = BorderStroke(1.dp, if (!isOnCd) SecondaryGold else MaterialTheme.colorScheme.outline),
-                                modifier = Modifier.weight(1f).testTag("activate_talent_${act.id}")
+                                border = BorderStroke(1.dp, if (!isOnCd) SecondaryGold else BorderDark),
+                                modifier = Modifier.weight(1f).height(40.dp).testTag("activate_talent_${act.id}")
                             ) {
-                                Text(if (isOnCd) "COOLDOWN..." else "ACTIVATE", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
+                                Text(if (isOnCd) "COOLDOWN..." else "TRIGGER NOW", style = TrueIdleType.tag, fontWeight = FontWeight.Bold)
                             }
 
                             // UPGRADE BUTTON
@@ -296,12 +296,12 @@ fun TalentScreen(
                                 onClick = { onUpgradeTalent(act.id) },
                                 enabled = canUpgrade,
                                 shape = RectangleShape,
-                                border = BorderStroke(1.dp, if (canUpgrade) PrimaryNeon else MaterialTheme.colorScheme.outline),
+                                border = BorderStroke(1.dp, if (canUpgrade) PrimaryNeon else BorderDark),
                                 colors = ButtonDefaults.outlinedButtonColors(
                                     containerColor = if (canUpgrade) PrimaryNeon.copy(alpha = 0.15f) else Color.Transparent,
                                     contentColor = if (canUpgrade) PrimaryNeon else TextMuted
                                 ),
-                                modifier = Modifier.weight(1f).testTag("upgrade_talent_${act.id}")
+                                modifier = Modifier.weight(1f).height(40.dp).testTag("upgrade_talent_${act.id}")
                             ) {
                                 Text(if (act.rank >= act.maxRank) "MAX" else "UPGRADE (1 TP)", style = TrueIdleType.tag)
                             }

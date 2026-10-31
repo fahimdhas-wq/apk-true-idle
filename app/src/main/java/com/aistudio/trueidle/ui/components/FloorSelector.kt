@@ -93,6 +93,24 @@ fun FloorControls(
                     }
                 }
 
+                // Sector indicator positioned centrally between floor navigation and auto toggle
+                Box(
+                    modifier = Modifier
+                        .height(48.dp)
+                        .background(SurfaceVariantDark, RectangleShape)
+                        .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
+                        .padding(horizontal = 8.dp)
+                        .testTag("floor_sector_badge"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SECTOR ${currentFloor.toString().padStart(2, '0')}",
+                        style = TrueIdleType.tag,
+                        color = PrimaryNeon,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+
                 OutlinedButton(
                     onClick = { onToggleAuto() },
                     modifier = Modifier

@@ -123,7 +123,7 @@ fun CombatScreen(
 
         // 2. HOSTILE ENEMY CARD (Single-Column, Full Width)
         SciFiPanel(
-            title = "HOSTILE // ${m.name.uppercase()}",
+            title = "ENEMY // ${m.name.uppercase()}",
             accent = if (m.isBoss) HpRed else PrimaryNeon,
             tag = if (m.isBoss) "BOSS Lv${m.lvl}" else "NORMAL Lv${m.lvl}",
             borderColor = if (m.isBoss) HpRed else BorderDark,
@@ -169,13 +169,12 @@ fun CombatScreen(
             }
         }
 
-        // 3. CLASH TELEMETRY STATUS BANNER (§7.6)
-        // Memoised so an unchanged value never re-enters the formatter on a combat tick.
+        // 3. BATTLE STATUS BANNER
         val dpsOutText = rememberStableShort(effDps)
         val dpsInText = rememberStableShort(incomingRate)
         val clashStatusText = when {
-            p.recoverLeft > 0.0 -> "SYSTEM RECOVERING (${String.format(Locale.ROOT, "%.1f", p.recoverLeft)}s)"
-            else -> "CLASH ACTIVE · $dpsOutText DPS OUT · $dpsInText DPS IN"
+            p.recoverLeft > 0.0 -> "HERO RECOVERING (${String.format(Locale.ROOT, "%.1f", p.recoverLeft)}s)"
+            else -> "BATTLE ACTIVE · $dpsOutText DPS OUT · $dpsInText DPS IN"
         }
         val clashColor = if (p.recoverLeft > 0.0) Warn else PrimaryNeon
         Box(
@@ -194,9 +193,9 @@ fun CombatScreen(
             )
         }
 
-        // 4. HERO PROTOCOL CARD (Single-Column, Full Width)
+        // 4. HERO STATUS CARD
         SciFiPanel(
-            title = "HERO // PROTOCOL",
+            title = "HERO STATUS",
             accent = PrimaryNeon,
             tag = "LVL ${p.lvl}",
             modifier = Modifier.testTag("hero_combat_card")
@@ -223,8 +222,6 @@ fun CombatScreen(
             )
 
             Spacer(modifier = Modifier.height(6.dp))
-            // The XP bar lives in the hero panel: a dedicated full-width card for one progress bar
-            // pushed the combat stack past a single screen on small devices.
             XpProgressBar(
                 skillName = "HERO EXPERIENCE",
                 level = p.lvl,
@@ -232,72 +229,48 @@ fun CombatScreen(
                 requiredXp = reqXp,
                 barColor = PrimaryNeon
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // Weapon Card
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SciFiBadge(SciFiIconType.WEAPON, "WEAPON", textColor = SecondaryGold)
-                            Text("+${NumberFormatter.short(derived.weaponDmg)} ATK", style = TrueIdleType.numberSmall, color = SecondaryGold)
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = Equipment.equippedName(state, Equipment.SLOT_RIFLE, Equipment.equippedName(state, Equipment.SLOT_WEAPON, "BARE HANDS")),
-                            style = TrueIdleType.label,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+        }
 
-                // Armor Card
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RectangleShape)
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SciFiBadge(SciFiIconType.SHIELD, "ARMOR", textColor = ShieldBlue)
-                            Text("+${NumberFormatter.short(derived.armorDef)} DEF", style = TrueIdleType.numberSmall, color = ShieldBlue)
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = Equipment.equippedName(state, Equipment.SLOT_VEST, Equipment.equippedName(state, Equipment.SLOT_ARMOR, "NONE")),
-                            style = TrueIdleType.label,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+        // 4a. EQUIPPED WEAPONS (3 SLOTS)
+        SciFiPanel(
+            title = "EQUIPPED WEAPONS (3 SLOTS)",
+            accent = SecondaryGold,
+            tag = "+${NumberFormatter.short(derived.weaponDmg)} ATK"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Equipment.WEAPON_SLOTS.forEach { slot ->
+                    val item = Equipment.equipped(state, slot)
+                    CompactEquipRow(slot = slot, item = item, isWeapon = true)
                 }
             }
         }
 
-        // 4b. STACKED HEALTH / MANA QUICK-DEPLOY POTS
+        // 4b. EQUIPPED ARMOR & NODES (10 SLOTS)
+        val totalArmorDef = (Equipment.ARMOR_SLOTS + Equipment.NODE_SLOTS).sumOf { Equipment.baseDefense(Equipment.equipped(state, it)) }
+        val totalArmorVit = (Equipment.ARMOR_SLOTS + Equipment.NODE_SLOTS).sumOf { Equipment.baseVit(Equipment.equipped(state, it)) }
         SciFiPanel(
-            title = "POTION QUICK-DEPLOY",
+            title = "EQUIPPED ARMOR & NODES (10 SLOTS)",
+            accent = ShieldBlue,
+            tag = "+${NumberFormatter.short(totalArmorDef)} DEF"
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("DEFENSIVE ARMOR (7 SLOTS)", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = TextMuted)
+                Equipment.ARMOR_SLOTS.forEach { slot ->
+                    val item = Equipment.equipped(state, slot)
+                    CompactEquipRow(slot = slot, item = item, isWeapon = false)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("ACCESSORY NODES (3 SLOTS)", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = TextMuted)
+                Equipment.NODE_SLOTS.forEach { slot ->
+                    val item = Equipment.equipped(state, slot)
+                    CompactEquipRow(slot = slot, item = item, isWeapon = false)
+                }
+            }
+        }
+
+        // 4c. STACKED HEALTH / MANA QUICK-USE POTIONS
+        SciFiPanel(
+            title = "POTION QUICK-USE",
             accent = ManaTeal,
             tag = "AUTO-USE"
         ) {
@@ -312,7 +285,7 @@ fun CombatScreen(
             )
         }
 
-        // 5. SUPPORT SQUAD MODULE (§7.5, §7.6)
+        // 5. SUPPORT SQUAD MODULE
         SupportModule(
             beasts = beastsGroup,
             undead = undeadGroup,
@@ -320,10 +293,10 @@ fun CombatScreen(
             modifier = Modifier.testTag("combat_support_module")
         )
 
-        // 6. ACTIVE SLAYER DIRECTIVE BANNER (§7.6)
+        // 6. ACTIVE SLAYER CONTRACT
         val task = state.slayer.currentTask
         SciFiPanel(
-            title = "TACTICAL DIRECTIVE",
+            title = "SLAYER CONTRACT",
             accent = HpRed,
             tag = if (task.isCompleted) "CLAIMABLE" else "IN PROGRESS"
         ) {
@@ -591,6 +564,85 @@ private fun PotionQuickBar(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CompactEquipRow(
+    slot: String,
+    item: com.aistudio.trueidle.model.InventoryItem?,
+    isWeapon: Boolean
+) {
+    val tierInfo = item?.let { com.aistudio.trueidle.core.TierConfig.forOrdinal(it.tier) }
+    val tierColor = tierInfo?.let { Color(it.color) } ?: BorderDark
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(SurfaceVariantDark, RectangleShape)
+            .border(1.dp, BorderDark, RectangleShape)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f).padding(end = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(tierColor.copy(alpha = 0.2f), RectangleShape)
+                    .border(1.dp, tierColor, RectangleShape)
+                    .padding(horizontal = 4.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = if (item != null) "[${tierInfo?.id ?: "F-"}]" else "[-]",
+                    style = TrueIdleType.tag.copy(fontSize = 9.sp),
+                    color = if (item != null) tierColor else TextMuted
+                )
+            }
+            Text(
+                text = "${slot.uppercase()}:",
+                style = TrueIdleType.meta.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                color = TextMuted
+            )
+            Text(
+                text = item?.name?.uppercase() ?: "EMPTY",
+                style = TrueIdleType.label.copy(fontSize = 10.sp),
+                color = if (item != null) TextLight else TextMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (item != null) {
+            if (isWeapon) {
+                val atk = Equipment.baseAttack(item)
+                Text(
+                    text = "+${NumberFormatter.short(atk)} ATK",
+                    style = TrueIdleType.value.copy(fontSize = 10.sp),
+                    color = SecondaryGold
+                )
+            } else {
+                val def = Equipment.baseDefense(item)
+                val vit = Equipment.baseVit(item)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "+${NumberFormatter.short(def)} DEF",
+                        style = TrueIdleType.value.copy(fontSize = 10.sp),
+                        color = ShieldBlue
+                    )
+                    if (vit > 0.0) {
+                        Text(
+                            text = "+${NumberFormatter.short(vit)} VIT",
+                            style = TrueIdleType.tag.copy(fontSize = 9.sp),
+                            color = GreenSuccess
+                        )
+                    }
+                }
+            }
+        } else {
+            Text("—", style = TrueIdleType.meta.copy(fontSize = 9.sp), color = TextMuted)
         }
     }
 }

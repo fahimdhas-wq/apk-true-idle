@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.PlayArrow
@@ -43,6 +44,7 @@ import com.aistudio.trueidle.ui.components.rememberStableShort
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aistudio.trueidle.BuildConfig
 import com.aistudio.trueidle.R
+import com.aistudio.trueidle.core.DailyLoginDetector
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.ui.state.LocalDerived
 import com.aistudio.trueidle.core.DerivedStats
@@ -144,63 +146,44 @@ fun TrueIdleApp(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text("◈ ", color = PrimaryNeon, style = TrueIdleType.title)
                         Text(
                             text = "TRUE IDLE",
                             style = TrueIdleType.title,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                                .border(1.dp, PrimaryNeon.copy(alpha = 0.6f), RectangleShape)
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "SECTOR ${state.player.currentFloor.toString().padStart(2, '0')}",
-                                style = TrueIdleType.tag,
-                                color = PrimaryNeon
-                            )
-                        }
                     }
 
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                                .border(1.dp, SecondaryGold.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        // Stacked Gold and Diamonds display, pushed left by 20%
+                        Column(
+                            modifier = Modifier.padding(end = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            horizontalAlignment = Alignment.End
                         ) {
-                            SciFiBadge(
-                                type = SciFiIconType.CREDIT,
-                                label = rememberStableShort(state.player.gold),
-                                textColor = SecondaryGold
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                                .border(1.dp, NecroPurple.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            SciFiBadge(
-                                type = SciFiIconType.ESSENCE,
-                                label = rememberStableShort(state.necro.boneEssence),
-                                textColor = NecroPurple
-                            )
-                        }
-                        // Diamonds were awarded for boss first clears but nothing ever displayed them.
-                        if (state.player.diamonds > 0L) {
                             Box(
                                 modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
-                                .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                                    .border(1.dp, SecondaryGold.copy(alpha = 0.5f), RectangleShape)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                SciFiBadge(
+                                    type = SciFiIconType.CREDIT,
+                                    label = rememberStableShort(state.player.gold),
+                                    textColor = SecondaryGold
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.surfaceVariant, RectangleShape)
+                                    .border(1.dp, PrimaryNeon.copy(alpha = 0.5f), RectangleShape)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 SciFiBadge(
                                     type = SciFiIconType.DIAMOND,
@@ -209,6 +192,7 @@ fun TrueIdleApp(
                                 )
                             }
                         }
+
                         // Top bar shortcut: Settings / Interface. Min 48dp touch target.
                         Box(
                             modifier = Modifier
@@ -240,6 +224,7 @@ fun TrueIdleApp(
                     val isSelected = (currentTab == tab)
                     val tint = if (isSelected) PrimaryNeon else TextMuted
                     val label = stringResource(tab.labelRes)
+                    val hasReward = (tab == TrueIdleTab.STATS && DailyLoginDetector.hasAnyUnclaimedReward(state.dailyLogin))
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -259,14 +244,24 @@ fun TrueIdleApp(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = tab.icon,
-                            // The visible label already names the tab; a duplicate description
-                            // would be read twice by TalkBack.
-                            contentDescription = null,
-                            tint = tint,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(contentAlignment = Alignment.TopEnd) {
+                            Icon(
+                                imageVector = tab.icon,
+                                // The visible label already names the tab; a duplicate description
+                                // would be read twice by TalkBack.
+                                contentDescription = null,
+                                tint = tint,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            if (hasReward) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .offset(x = 3.dp, y = (-2).dp)
+                                        .background(SecondaryGold, CircleShape)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = label,
@@ -328,7 +323,9 @@ fun TrueIdleApp(
                     onAutoEquip = { viewModel.toggleAutoEquipBestGear() }
                 )
                 TrueIdleTab.STATS -> StatsScreen(
-                    state = state
+                    state = state,
+                    onClaimDailyLogin = { isSprint -> viewModel.claimDailyLogin(isSprint) },
+                    onSimulateNextDay = { viewModel.simulateNextDay() }
                 )
                 TrueIdleTab.INVENTORY -> InventoryScreen(
                     state = state,

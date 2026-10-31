@@ -33,7 +33,9 @@ object Balance {
     const val RESPAWN_GAP_SECONDS = 0.5
 
     /** Ordinary floors require this many kills; boss floors require a single kill. */
-    const val KILLS_PER_FLOOR = 10
+    const val KILLS_PER_FLOOR_EARLY = 10
+    const val KILLS_PER_FLOOR_SCALED = 100
+    const val KILLS_PER_FLOOR = 100
     const val BOSS_KILLS_PER_FLOOR = 1
 
     /** Consecutive defeats before the retreat protocol engages. */
@@ -107,8 +109,11 @@ object Balance {
 
     fun isBossFloor(floor: Int): Boolean = floor % 10 == 0
 
-    fun killsRequiredFor(floor: Int): Int =
-        if (isBossFloor(floor)) BOSS_KILLS_PER_FLOOR else KILLS_PER_FLOOR
+    fun killsRequiredFor(floor: Int): Int = when {
+        isBossFloor(floor) -> BOSS_KILLS_PER_FLOOR
+        floor <= 5 -> KILLS_PER_FLOOR_EARLY
+        else -> KILLS_PER_FLOOR_SCALED
+    }
 
     val MOB_NAMES = listOf(
         "Cave Rat", "Goblin Scout", "Crypt Spider", "Skeletal Raider",

@@ -3,6 +3,7 @@ package com.aistudio.trueidle.engine
 import com.aistudio.trueidle.core.BigNumberFormatter
 import com.aistudio.trueidle.core.ClockSnapshot
 import com.aistudio.trueidle.core.ContentCatalog
+import com.aistudio.trueidle.core.DailyLoginDetector
 import com.aistudio.trueidle.core.Derived
 import com.aistudio.trueidle.core.DerivedStats
 import com.aistudio.trueidle.core.DisciplineCategory
@@ -222,6 +223,26 @@ class GameEngine(
             harvest = harvest,
             essence = drainedEssence
         )
+        checkDayRollover()
+    }
+
+    private fun checkDayRollover() {
+        val nowMs = nowWallMs()
+        val currentDay = DailyLoginDetector.currentEpochDay(nowMs)
+        val daily = state.dailyLogin
+        if (daily.lastLoginEpochDay != currentDay) {
+            val isFirstInit = daily.lastLoginEpochDay == -1L
+            state = state.copy(
+                dailyLogin = daily.copy(
+                    lastLoginEpochDay = currentDay,
+                    totalLogins = if (isFirstInit) daily.totalLogins else daily.totalLogins + 1
+                ),
+                logs = if (!isFirstInit) {
+                    (state.logs + log(LogType.MILESTONE, "A NEW DAY HAS ARRIVED: Daily login rewards are available to claim!"))
+                        .takeLast(Balance.LOG_CAP)
+                } else state.logs
+            )
+        }
     }
 
     private fun drainFaith(essence: EssenceState, awayMs: Long): EssenceState {
@@ -255,6 +276,7 @@ class GameEngine(
     // ------------------------------------------------------------------ tick
 
     fun tick(deltaSeconds: Float): GameState {
+        checkDayRollover()
         // Dev speed scales simulated time for every subsystem (combat, regeneration, harvesting).
         val speed = state.dev.gameSpeed.coerceIn(DEV_MIN_SPEED, DEV_MAX_SPEED)
         val scaledSeconds = deltaSeconds * speed
@@ -978,6 +1000,96 @@ class GameEngine(
         state = state.copy(
             logs = (state.logs + log(LogType.SYSTEM, "SYSTEM RESET: factory protocol restored."))
                 .takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    fun claimDailyLogin(isSprint: Boolean): GameState {
+        val daily = state.dailyLogin
+        val nowMs = nowWallMs()
+        val currentDay = DailyLoginDetector.currentEpochDay(nowMs)
+
+        if (isSprint) {
+            if (!DailyLoginDetector.canClaimSprint(daily, nowMs)) return state
+        } else {
+            if (!DailyLoginDetector.canClaimCalendar(daily, nowMs)) return state
+        }
+
+        val nextDay = if (isSprint) daily.sprint7ClaimedDays + 1 else daily.calendar30ClaimedDays + 1
+        val maxDays = if (isSprint) 7 else 30
+        if (nextDay > maxDays) return state
+
+        val reward = if (isSprint) {
+            com.aistudio.trueidle.core.DailyRewardCatalog.SPRINT_7_REWARDS.getOrNull(nextDay - 1) ?: return state
+        } else {
+            com.aistudio.trueidle.core.DailyRewardCatalog.CALENDAR_30_REWARDS.getOrNull(nextDay - 1) ?: return state
+        }
+
+        var player = state.player.copy(
+            gold = state.player.gold + reward.gold,
+            diamonds = state.player.diamonds + reward.diamonds
+        )
+        var essence = state.essence
+        if (reward.faith > 0L) {
+            essence = essence.copy(faith = essence.faith + reward.faith)
+        }
+        var necro = state.necro
+        if (reward.bones > 0L) {
+            necro = necro.copy(boneEssence = necro.boneEssence + reward.bones)
+        }
+        val inventory = state.inventory.toMutableList()
+        if (reward.potionName.isNotEmpty() && reward.potionCount > 0) {
+            addToInventory(inventory, reward.potionName, reward.potionCount)
+        }
+
+        val updatedDaily = if (isSprint) {
+            daily.copy(
+                sprint7ClaimedDays = nextDay,
+                lastClaimWallMs = nowMs,
+                lastSprintClaimEpochDay = currentDay,
+                lastLoginEpochDay = currentDay
+            )
+        } else {
+            daily.copy(
+                calendar30ClaimedDays = nextDay,
+                lastClaimWallMs = nowMs,
+                lastCalendarClaimEpochDay = currentDay,
+                lastLoginEpochDay = currentDay
+            )
+        }
+
+        state = state.copy(
+            player = player,
+            essence = essence,
+            necro = necro,
+            inventory = inventory,
+            dailyLogin = updatedDaily,
+            logs = (state.logs + log(
+                LogType.MILESTONE,
+                "DAILY REWARD CLAIMED [${if (isSprint) "7-DAY SPRINT" else "30-DAY CALENDAR"}]: " +
+                    "Day $nextDay (${reward.title}) -> +${NumberFormatter.short(reward.gold)} CR, +${reward.diamonds} DIA"
+            )).takeLast(Balance.LOG_CAP)
+        )
+        return state
+    }
+
+    /** Simulates rolling over to the next calendar day to test daily login rewards. */
+    fun simulateNextDay(): GameState {
+        val daily = state.dailyLogin
+        val currentDay = DailyLoginDetector.currentEpochDay(nowWallMs())
+        val nextDay = if (daily.lastLoginEpochDay > 0L) daily.lastLoginEpochDay + 1 else currentDay + 1
+        val updatedDaily = daily.copy(
+            lastSprintClaimEpochDay = -1L,
+            lastCalendarClaimEpochDay = -1L,
+            lastLoginEpochDay = nextDay,
+            totalLogins = daily.totalLogins + 1
+        )
+        state = state.copy(
+            dailyLogin = updatedDaily,
+            logs = (state.logs + log(
+                LogType.SYSTEM,
+                "CALENDAR ADVANCE: Day rollover simulated! New daily rewards ready to claim."
+            )).takeLast(Balance.LOG_CAP)
         )
         return state
     }

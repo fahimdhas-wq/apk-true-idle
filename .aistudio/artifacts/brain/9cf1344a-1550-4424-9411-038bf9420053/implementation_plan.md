@@ -1,120 +1,145 @@
-# System Upgrades, Combat Potions, Herb Alchemy & Dev Panel Expansion
+# Polish, Terminology Naturalization, Combat Loadout & Daily Rewards
 
-Implementation plan to deliver comprehensive updates across True IDLE: simplifying the Skills menu to a single top-left button, converting Slayer missions to random kill-count directives, upgrading the Stats screen with full telemetry, replacing legacy gear drops with the canonical 13 equipment groups, adding batch selling (1x/100x/1000x) and rank/quantity sorting in the Arsenal, adding stacked quick HP/MP potion buttons on the combat panel, enabling simultaneous auto-activation for Power Talents, implementing exact 20-herb percentage brews, and building a modular debug Dev Panel.
+Detailed implementation plan for addressing user feedback across True IDLE: standardizing Training button dimensions, naturalizing game terminology away from excessive sci-fi jargon, overhauling the Talent tab UI, removing Bone Essence from the top header, repositioning the Sector badge into the floor control bar, displaying the complete 13-slot equipment loadout on the Combat tab, reducing Harvest XP requirements by 60%, and implementing a dual-track (7-Day Sprint & 30-Day Calendar) Daily Login Rewards system inside the Stats tab.
 
 ## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following decisions were confirmed through Phase 1 user interview questions:
-> - **Dev Panel Toggle**: Floating bug icon button placed at the top/bottom corner of the screen, active only in debug builds (`BuildConfig.DEBUG`).
-> - **Combat Potion Controls**: Vertically stacked Health and Mana potion buttons on the combat HUD displaying active potion count, instant one-tap deployment, and an interactive popover/sheet to select specific potions and configure auto-deploy thresholds.
-> - **Power Talents Activation**: All unlocked power talents (`rank > 0`) automatically fire whenever their cooldown expires, allowing multiple abilities to run simultaneously.
+> The following decisions were confirmed through Phase 1 interview questions:
+> - **Daily Login Placement**: Dedicated calendar card inside the Stats tab with clear claim status and streak trackers.
+> - **Login Reward Structure**: Dual tabs allowing the player to toggle between the high-reward 7-day sprint and the monthly 30-day calendar track.
+> - **Combat Equipment Display**: Two clean, stacked cards for Weapons (3 slots: Rifle, Sidearm, Blade) and Armor with Nodes (10 slots: Visor, Vest, Grips, Pants, Boots, Duster, Rig, Node I-III).
 
 ---
 
 ## 1. Overview & Core Concept
 
-This expansion addresses gameplay friction, unlocks deeper tactical depth, and empowers developer testing:
-- **Skills Navigation**: Cleans up the top bar by replacing busy multi-readouts with a single `[ ☰ SKILLS ]` menu button at the top-left, renaming all "Discipline" references to "Skills".
-- **Slayer Mission Directives**: Decouples contracts from restrictive sector monster types. Missions now task the player with eliminating randomized quantities of hostiles (e.g. 5x, 7x, 11x, 25x, 1111x), scaling rewards and difficulty with contract tier.
-- **Stats Screen Overhaul**: Expands the dashboard with detailed effective health pool (EHP), weapon/armor/node contributions across all 13 gear slots, total true DPS breakdown, and combat mitigation telemetry.
-- **Equipment Drop & Migration Fix**: Sanitizes starting loadouts, drop tables, and saves so old equipment names ("Iron Greatsword", "Steel Plate", "Rusty Blade", "Tattered Leather", "Ember Band", "Warden Sigil") are completely migrated to the canonical 13 equipment groups (`F- Rifle`, `F- Vest`, `F- Blade`, `F- Visor`, `F- Node I`, etc.).
-- **Arsenal Batch Selling & Sorting**: Introduces quick batch selling multipliers (`1x`, `100x`, `1000x`) and sort toggles (by Tier/Rank, Quantity, Slot) for frictionless inventory management.
-- **Combat Potion Deployment**: Adds stacked HP and MP quick-action buttons directly to the combat panel showing active counts, manual deployment, and configurable auto-deploy triggers (e.g. auto-drink when HP < 30% / 50% / OFF).
-- **Automated Simultaneous Power Talents**: Overhauls the talent loop so all active abilities run on individual timers and automatically trigger when off cooldown without blocking one another.
-- **Accurate 20-Herb Crafting Engine**: Replaces generic potion effects with the exact 20-herb percentage formula table (direct missing HP/MP heals, regen over time, temporary shields, damage reduction, and Worldtree Leaf's permanent passive boost).
-- **Modular Dev Panel**: Implements `DevPanel.kt` featuring resource grants (+100, +10k, Max), game speed multipliers (1x, 5x, 10x, 50x), stage/achievement/skill unlock cheats, hard reset, and live state inspection.
+This update refines True IDLE's interface ergonomics, progression pacing, and terminology:
+- **Button Uniformity in Training**: Establishes fixed, consistent dimensions for all node rank badges and enhance action buttons, eliminating uneven row heights.
+- **Natural Terminology**: Tones down dense sci-fi jargon ("Protocol", "Matrix", "Struggles", "Directive", "Telemetry") in favor of clear, accessible RPG titles ("Hero Stats", "Combat Passives", "Active Skills", "Contracts", "Battle Status").
+- **Talent Tab UI Overhaul**: Redesigns the Talent screen with cohesive dark cyberpunk card styling, clear passives/skills grouping, and readable bonus previews.
+- **Top Header Streamlining**: Removes the Bone Essence indicator from the top header bar to prevent clutter, and relocates the `SECTOR XX` banner to sit neatly in the center of the Combat floor navigation card.
+- **Full Combat Equipment Loadout**: Upgrades the Hero Protocol combat panel to display all 13 equipped gear slots grouped into Weapons (Rifle, Sidearm, Blade) and Armor & Nodes (Visor, Vest, Grips, Pants, Boots, Duster, Rig, Node I-III).
+- **Harvest XP Curve Rebalance**: Decreases mining and farming level-up XP requirements by 60% (`* 0.40`), making gathering progression 2.5x faster and far more rewarding.
+- **Dual-Track Daily Login Rewards**: Introduces a dedicated daily login card in the Stats tab with a 7-day starter sprint (massive Gold & Diamonds) and a 30-day monthly calendar (Gold, Diamonds, Faith, Bone Essence, and Potions).
 
 ---
 
 ## 2. User Experience & Visual Design
 
-### Visual Identity & Theme
-- **Cyberpunk Sci-Fi Aesthetics**: Dark carbon surfaces (`#0A0E17`), laser-sharp rectangular geometries, neon cyan (`#00E5FF`), gold (`#FFD700`), red alert (`#EF5350`), and shield blue (`#42A5F5`) accents.
-- **Clean Single-Action Header**: Skills tab features a prominent top-left `[ ☰ SKILLS ]` trigger button with clear drawer slide animation.
-- **Combat Potion Stack**: High-contrast, tactile buttons anchored alongside combat controls:
-  - **HP Flask**: Crimson neon border, heart/vitality icon, remaining quantity badge, tap to consume, quick settings cog for auto-deploy threshold.
-  - **MP Tonic**: Cyan neon border, energy icon, remaining quantity badge, tap to consume, quick settings cog for auto-deploy threshold.
-- **Arsenal Controls**: Modern segmented pill selectors for `[1X] [100X] [1000X]` sell modes and sorting toggles (`[RANK ▲▼]`, `[QTY ▲▼]`).
-- **Dev Panel Overlay**: Semi-transparent obsidian modal (`rgba(5, 8, 15, 0.94)`) with collapsible sections, high-contrast monospace readouts, and responsive touch targets.
+### Terminology Naturalization Table
+| Previous Hard Sci-Fi Text | Natural & Clear RPG Term |
+| :--- | :--- |
+| `HERO PROTOCOL` | `HERO STATS` |
+| `THE STRUGGLE // KINETIC ADAPTATION` | `SURVIVAL PASSIVES` |
+| `TACTICAL COMBAT OVERCLOCKS` | `ACTIVE SKILLS` |
+| `TACTICAL TALENT PROTOCOL` | `TALENT TREE & SKILLS` |
+| `TACTICAL DIRECTIVE` | `SLAYER CONTRACTS` |
+| `CLASH TELEMETRY STATUS BANNER` | `BATTLE STATUS` |
+| `COMBAT DPS MATRIX TELEMETRY` | `COMBAT BREAKDOWN` |
+| `EXTRACTION MATRIX` | `HARVEST & EXTRACTION` |
+| `FABRICATION MATRIX` | `EQUIPMENT FORGE` |
+
+### Floor Navigation & Sector Header Redesign
+```
+┌───────────────────────────────────────────────────────────────┐
+│ [ ◄ ] [ FLOOR 05 ] [ ► ]   [ SECTOR 05 ]   [ AUTO: ON ]       │
+└───────────────────────────────────────────────────────────────┘
+```
+- The `SECTOR XX` pill sits prominently in the middle between floor steppers and the auto-advance toggle, freeing up top header space.
+
+### Combat Equipment Loadout
+```
+┌───────────────────────────────────────────────────────────────┐
+│ ⚔ WEAPONS LOADOUT (+48 ATK)                                   │
+│  [F- RIFLE] +12 ATK   ·   [F- SIDEARM] +12 ATK  ·   [F- BLADE]│
+├───────────────────────────────────────────────────────────────┤
+│ 🛡 ARMOR & ACCESSORIES (+56 DEF, +28 VIT)                      │
+│  [VISOR] [VEST] [GRIPS] [PANTS] [BOOTS] [DUSTER] [RIG]        │
+│  [NODE I] [NODE II] [NODE III]                                │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### Daily Login Rewards UI (Stats Screen)
+- **Header**: Current login streak and timer until the next daily reset.
+- **Dual Tabs**: `[ 7-DAY SPRINT ]` and `[ 30-DAY CALENDAR ]`.
+- **Card Matrix**: Daily tiles displaying day number, reward icons (Gold, Diamonds, Faith, Potions), amount badges, and status pills:
+  - `CLAIMED`: Subdued border with green checkmark.
+  - `CLAIM REWARD`: Glowing Neon Cyan button with ripple feedback.
+  - `LOCKED`: Dark surface with lock icon.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Decision 1: Slayer Target Mechanics**
-  - *Chosen Approach*: Any monster defeat increments the active directive's count. Required kills are rolled from randomized thematic numbers (`5`, `7`, `11`, `25`, `50`, `111`, `333`, `777`, `1111`) based on tier rank.
-  - *Why*: Eliminates awkward back-tracking to previous floors just to find a specific monster species, creating seamless idle progression while maintaining high reward scaling.
-- **Decision 2: 20-Herb Percentage Engine**
-  - *Chosen Approach*: Implement a rich `ActiveBuff` model supporting instantaneous heals (`missingHp * percentage`), time-based regeneration (`maxHpPerSec * duration`), damage reduction buffers, and passive inventory-based buffs.
-  - *Why*: Perfectly satisfies the user's detailed specification for all 20 herbs without losing nuances like duration or mixed HP/MP recovery.
-- **Decision 3: Modular Dev Panel Isolation**
-  - *Chosen Approach*: Encapsulate all debug UI inside `DevPanel.kt` and guard button rendering with `BuildConfig.DEBUG`.
-  - *Why*: Ensures zero debug pollution or performance overhead in release builds while giving full testing power during development.
+- **Decision 1: Training Button Dimensions**
+  - *Chosen Approach*: Enforce exact fixed widths and heights (`width = 76.dp, height = 40.dp` for Rank Box; `width = 130.dp, height = 40.dp` for Enhance Button) with single-line clipped numbers.
+  - *Why*: Eliminates row resizing regardless of whether rank is 1 or 1,000,000.
+- **Decision 2: Harvest XP Formula Modification**
+  - *Chosen Approach*: Apply a `0.40` multiplier directly to `FARMING_XP_BASE` and `MINING_XP_BASE` in `XpCurves.kt`.
+  - *Why*: Modifying the base constant in `core` guarantees that both live harvesting, offline progress, and UI progress bars remain 100% synchronized.
+- **Decision 3: Daily Login Persistence**
+  - *Chosen Approach*: Store `DailyLoginState` inside `GameState` with `lastClaimWallMs`, `sprint7ClaimedDays`, and `calendar30ClaimedDays`.
+  - *Why*: Ensures login claims persist cleanly across restarts and app updates with zero risk of duplicate claims on the same calendar day.
 
 ---
 
 ## 4. Technical Architecture & Data Strategy
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                          TRUE IDLE UI LAYER                            │
-├───────────────┬───────────────────┬──────────────────┬─────────────────┤
-│ CombatScreen  │   SkillsScreen    │ InventoryScreen  │   DevPanel      │
-│ - Stacked HP/ │ - Single Top-Left │ - 1x/100x/1000x  │ - Currencies    │
-│   MP Potions  │   Menu Button     │   Batch Selling  │ - Game Speed    │
-│ - Auto-deploy │ - "Skills" naming │ - Rank/Qty Sort  │ - Unlocks/Reset │
-│ - Quick-select│ - Sub-sections    │ - Gear Compare   │ - Live Inspector│
-└───────┬───────┴─────────┬─────────┴────────┬─────────┴────────┬────────┘
-        │                 │                  │                  │
-        ▼                 ▼                  ▼                  ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                        GAME VIEW MODEL & FLOW                          │
-│ - usePotion() / autoPotion()              - batchSellItem()            │
-│ - setAutoPotionThreshold()                - rerollSlayerTask()         │
-│ - toggleDevPanel() / devModifyResource()  - devSetSpeed()              │
-└──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                          GAME ENGINE CORE                              │
-├─────────────────┬──────────────────┬─────────────────┬─────────────────┤
-│ Potion Engine   │   Talent Loop    │  Slayer System  │ Equipment Drop  │
-│ - 20 Herb buffs │ - Auto-trigger   │ - Any monster   │ - 13 canonical  │
-│ - Missing HP/MP │ - Multi-active   │   random count  │   gear groups   │
-│ - Worldtree Dew │ - Cooldown tick  │ - Auto-rewards  │ - Old item san. │
-└─────────────────┴──────────────────┴─────────────────┴─────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                       TRUE IDLE APP UI                        │
+├───────────────┬───────────────────┬───────────────┬───────────┤
+│ Top Bar       │   CombatScreen    │  StatsScreen  │ Training  │
+│ - No Bone     │ - Full 13 Slots   │ - Daily Login │ - Uniform │
+│ - Credits     │ - Center Sector   │   (7 & 30 D)  │   Buttons │
+│ - Diamonds    │ - De-jargonized   │ - Clear terms │ - Fixed H │
+└───────┬───────┴─────────┬─────────┴───────┬───────┴─────┬─────┘
+        │                 │                 │             │
+        ▼                 ▼                 ▼             ▼
+┌───────────────────────────────────────────────────────────────┐
+│                    GAME VIEW MODEL & ENGINE                   │
+│ - claimDailyLoginReward(isSprint: Boolean)                    │
+│ - trainNode() with unified dimensions                         │
+│ - navFloor() & setAutoAdvance()                               │
+└───────────────────────────────┬───────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                         CORE & MATH                           │
+│ - XpCurves: 60% XP reduction on farming & mining              │
+│ - DailyRewardCatalog: 7-day sprint & 30-day calendar rewards  │
+│ - Equipment: full 13-slot breakdown helpers                   │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ### Component & File Work Breakdown
-1. **`app/build.gradle.kts`**: Enable `buildConfig = true` under `buildFeatures`.
+1. **`app/src/main/java/com/aistudio/trueidle/core/XpCurves.kt`**:
+   - Reduce `FARMING_XP_BASE` and `MINING_XP_BASE` by 60% (`* 0.40`).
 2. **`app/src/main/java/com/aistudio/trueidle/model/GameState.kt`**:
-   - Update default starting equipment in `inventory` to use canonical groups (`F- Rifle`, `F- Vest`, `F- Blade`, `F- Visor`, `F- Node I`, `F- Node II`).
-   - Add potion auto-deploy configuration (`hpAutoThresholdPct`, `mpAutoThresholdPct`, `selectedHpPotion`, `selectedMpPotion`).
-   - Add active status effects / temporary buffs list (`List<ActiveBuff>`).
-3. **`app/src/main/java/com/aistudio/trueidle/core/ItemCatalog.kt`**:
-   - Update potion definitions with the exact 20-herb percentage and duration formulas.
+   - Add `DailyLoginState(lastClaimWallMs, sprint7ClaimedDays, calendar30ClaimedDays, totalLogins)`.
+   - Add `dailyLogin: DailyLoginState = DailyLoginState()` to `GameState`.
+3. **`app/src/main/java/com/aistudio/trueidle/core/DailyRewardCatalog.kt`**:
+   - Define rewards for 7-day sprint (generous Gold & Diamonds up to 15M gold and 1000 diamonds).
+   - Define rewards for 30-day calendar (Gold, Diamonds, Faith, Bone Essence, and Potions up to Worldtree Dew).
 4. **`app/src/main/java/com/aistudio/trueidle/engine/GameEngine.kt`**:
-   - Update `sanitize()` to migrate all legacy equipment items in saves to the 13 canonical groups.
-   - Update `rollLoot()` to drop items from the 13 canonical groups scaled to floor/tier.
-   - Implement potion consumption with exact percentage math and buff durations.
-   - Implement automated simultaneous power talent execution on tick.
-   - Update Slayer contract generator to target randomized kill counts (`5x`, `7x`, `11x`, `25x`, `1111x`) for any hostile.
-   - Add cheat methods for Dev Panel: `devAddCurrency`, `devUnlockAll`, `devHardReset`.
-5. **`app/src/main/java/com/aistudio/trueidle/ui/screens/SkillsScreen.kt`**:
-   - Keep only 1 menu button at top-left (`[ ☰ SKILLS ]`), rename all labels to "Skills".
-6. **`app/src/main/java/com/aistudio/trueidle/ui/screens/SlayerScreen.kt`**:
-   - Display randomized hostile target count with progress bars and instant rewards.
-7. **`app/src/main/java/com/aistudio/trueidle/ui/screens/StatsScreen.kt`**:
-   - Enhance with detailed telemetry: EHP, True DPS breakdown, defense mitigation curve, and gear loadout metrics.
-8. **`app/src/main/java/com/aistudio/trueidle/ui/screens/InventoryScreen.kt`**:
-   - Add `1x`, `100x`, `1000x` batch selling options.
-   - Add `Sort by Rank` and `Sort by Quantity` buttons.
-9. **`app/src/main/java/com/aistudio/trueidle/ui/screens/CombatScreen.kt`**:
-   - Add vertically stacked quick-deploy buttons for HP and MP potions with count badges and auto-deploy settings.
+   - Implement `claimDailyLogin(isSprint: Boolean): GameState`.
+5. **`app/src/main/java/com/aistudio/trueidle/viewmodel/GameViewModel.kt`**:
+   - Expose `claimDailyLogin(isSprint: Boolean)`.
+6. **`app/src/main/java/com/aistudio/trueidle/ui/TrueIdleApp.kt`**:
+   - Remove Bone Essence badge from the top header bar.
+   - Remove Sector badge from the top bar (relocated to floor controls).
+7. **`app/src/main/java/com/aistudio/trueidle/ui/components/FloorSelector.kt`**:
+   - Place the `SECTOR XX` banner right in the middle between floor navigation and auto-advance.
+8. **`app/src/main/java/com/aistudio/trueidle/ui/screens/CombatScreen.kt`**:
+   - Display full 13 equipped gear slots grouped under Weapons (Rifle, Sidearm, Blade) and Armor with Nodes (Visor, Vest, Grips, Pants, Boots, Duster, Rig, Node I-III).
+   - Clean up sci-fi jargon in titles.
+9. **`app/src/main/java/com/aistudio/trueidle/ui/screens/TrainingScreen.kt`**:
+   - Enforce fixed, uniform dimensions on rank boxes and enhance buttons (`height = 40.dp`).
 10. **`app/src/main/java/com/aistudio/trueidle/ui/screens/TalentScreen.kt`**:
-    - Update Power Talents UI to show automated simultaneous execution status.
-11. **`app/src/main/java/com/aistudio/trueidle/ui/components/DevPanel.kt`**:
-    - Build modular Dev Panel with floating toggle button for debug APKs.
+    - Complete UI makeover with modern cards, clear terms ("Survival Passives", "Active Skills"), and harmonious color accents.
+11. **`app/src/main/java/com/aistudio/trueidle/ui/screens/StatsScreen.kt`**:
+    - Add the Daily Login Rewards card with `[ 7-DAY SPRINT ]` and `[ 30-DAY CALENDAR ]` tabs.
+    - Naturalize terminology across all stats sections.
 12. **Verification & Testing**:
-    - Run `compile_applet` and execute unit tests (`gradle :app:testDebugUnitTest`) verifying all updated systems.
+    - Run `compile_applet` and execute unit tests (`gradle :app:testDebugUnitTest`) verifying reward claims, 60% XP reduction, and UI layouts.
