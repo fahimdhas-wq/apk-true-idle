@@ -103,7 +103,7 @@ object ContentCatalog {
         TrainingNode(id = "crit_bonus", name = "Precision Targeting", stat = "+0.5% Crit Chance per rank (max 100%)", rank = 0, maxRank = TrainingCaps.CRIT_MAX_RANK, costGold = 150L),
         TrainingNode(id = "shield_bonus", name = "Layered Plating", stat = "+5% Max Shield per rank", rank = 0, maxRank = 1_000_000, costGold = 140L),
         TrainingNode(id = "regen_bonus", name = "Cellular Repair", stat = "+4% HP & Shield regen per rank", rank = 0, maxRank = 1_000_000, costGold = 120L),
-        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank (max 100,000 ranks)", rank = 0, maxRank = TrainingCaps.XP_MAX_RANK, costGold = 130L)
+        TrainingNode(id = "xp_bonus", name = "Data Assimilation", stat = "+2% XP gain per rank (max +100,000%)", rank = 0, maxRank = TrainingCaps.XP_MAX_RANK, costGold = 130L)
     )
 
     // ---- Talents ------------------------------------------------------------

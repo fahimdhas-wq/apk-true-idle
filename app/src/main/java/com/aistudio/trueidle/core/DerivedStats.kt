@@ -181,7 +181,7 @@ object DerivedStats {
             dmgMultiplier = dmgMultiplier,
             critChance = critChance,
             critDamage = critDamage,
-            xpGain = 1.0 + 0.02 * lvl + 0.02 * rank("xp_bonus"),
+            xpGain = 1.0 + 0.02 * lvl + (0.02 * rank("xp_bonus")).coerceAtMost(TrainingCaps.XP_BONUS_CAP),
             physicalDamage = physicalDmg,
             gearScore = computedGearScore,
             healthRegen = totalHpRegen,

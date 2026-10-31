@@ -8,14 +8,17 @@ package com.aistudio.trueidle.core
  * - speed_bonus: +5% attack speed per rank   -> 20 ranks reach +100%.
  * - luck_bonus : +5% drop chance per rank    -> 13 ranks reach 100% total drop chance
  *                (base 30% + 5% base luck + 5% per rank).
- * - xp_bonus   : rank limit of 100,000.
+ * - xp_bonus   : +2% XP per rank -> 50,000 ranks reach the +100,000% limit.
  */
 object TrainingCaps {
     const val DEFAULT_MAX_RANK = 1_000_000
     const val CRIT_MAX_RANK = 200
     const val SPEED_MAX_RANK = 20
     const val LUCK_MAX_RANK = 13
-    const val XP_MAX_RANK = 100_000
+    const val XP_MAX_RANK = 50_000
+
+    /** XP bonus from the node is capped at +100,000% (1000.0 as a fraction): 50,000 ranks of 2%. */
+    const val XP_BONUS_CAP = 1000.0
 
     /** Attack speed from the node is capped at +100% (x2.0). */
     const val SPEED_BONUS_CAP = 1.0

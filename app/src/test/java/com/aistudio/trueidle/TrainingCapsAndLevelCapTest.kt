@@ -46,6 +46,19 @@ class TrainingCapsAndLevelCapTest {
     }
 
     @Test
+    fun xpBonusNodeIsLimitedToOneHundredThousandPercent() {
+        val base = DerivedStats.of(GameState()).xpGain
+        val atCap = DerivedStats.of(
+            stateWith(TrainingNode(id = "xp_bonus", rank = TrainingCaps.XP_MAX_RANK, maxRank = TrainingCaps.XP_MAX_RANK))
+        ).xpGain
+        val overCap = DerivedStats.of(
+            stateWith(TrainingNode(id = "xp_bonus", rank = 900_000, maxRank = 1_000_000))
+        ).xpGain
+        assertEquals(base + 1000.0, atCap, 1e-6)
+        assertEquals(atCap, overCap, 1e-6)
+    }
+
+    @Test
     fun overRankedSaveIsStillBoundedAndSanitized() {
         val raw = stateWith(
             TrainingNode(id = "crit_bonus", rank = 900_000, maxRank = 1_000_000),

@@ -176,6 +176,6 @@ internal fun trainingEffectLabel(id: String, rank: Int): String? = when (id) {
     "crit_bonus" -> "CURRENT +%.1f%% / MAX 100%% CRIT".format(rank * 0.5)
     "speed_bonus" -> "CURRENT +%d%% / MAX +%d%% SPEED".format(rank * 5, (TrainingCaps.SPEED_BONUS_CAP * 100).toInt())
     "luck_bonus" -> "CURRENT +%d%% / DROP CHANCE CAPS AT 100%%".format(rank * 5)
-    "xp_bonus" -> "CURRENT +%s%% XP".format(NumberFormatter.short((rank * 2).toLong()))
+    "xp_bonus" -> "CURRENT +%s%% / MAX +100,000%% XP".format(NumberFormatter.short((rank * 2L).coerceAtMost(100_000L)))
     else -> null
 }

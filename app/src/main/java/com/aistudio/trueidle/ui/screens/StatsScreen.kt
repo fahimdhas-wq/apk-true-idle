@@ -407,7 +407,7 @@ fun StatsScreen(
                 StatDotRow("CRITICAL CHANCE (MAX 100%)", String.format(Locale.ROOT, "%.1f%% · %s", d.critChance * 100, capLabel("crit_bonus")), PrimaryNeon, TextLight)
                 StatDotRow("ATTACK SPEED NODE (MAX +100%)", String.format(Locale.ROOT, "+%d%% · %s", (nodeRank("speed_bonus") * 5).coerceAtMost(100), capLabel("speed_bonus")), PrimaryNeon, TextLight)
                 StatDotRow("DROP CHANCE (MAX 100%)", String.format(Locale.ROOT, "%.0f%% · %s", d.lootChance * 100, capLabel("luck_bonus")), PrimaryNeon, TextLight)
-                StatDotRow("XP BONUS NODE", "${capLabel("xp_bonus")}", PrimaryNeon, TextLight)
+                StatDotRow("XP BONUS NODE (MAX +100,000%)", capLabel("xp_bonus"), PrimaryNeon, TextLight)
             }
         }
 
